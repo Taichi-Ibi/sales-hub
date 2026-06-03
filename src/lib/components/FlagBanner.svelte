@@ -1,13 +1,13 @@
 <script lang="ts">
-	import type { AccountFlag } from '$lib/data/types';
+	import type { NoteFlag } from '$lib/data/types';
 
-	let { flags }: { flags: AccountFlag[] } = $props();
+	let { flags }: { flags: NoteFlag[] } = $props();
 
 	const meta = {
-		allergy: { icon: '⚠️', label: '重要警告', cls: 'allergy' },
+		critical: { icon: '⚠️', label: '重要', cls: 'critical' },
 		caution: { icon: '⚡', label: '注意', cls: 'caution' },
 		info: { icon: 'ℹ️', label: '情報', cls: 'info' }
-	};
+	} as const;
 </script>
 
 {#if flags.length}
@@ -56,19 +56,19 @@
 		border-radius: 4px;
 		background: rgba(255, 255, 255, 0.6);
 	}
-	.allergy {
-		background: var(--triage-critical-soft);
+	.critical {
+		background: var(--bad-soft);
 		border-color: #f5b5ae;
-		color: var(--triage-critical);
+		color: var(--bad);
 	}
 	.caution {
-		background: var(--triage-warning-soft);
+		background: var(--warn-soft);
 		border-color: #f0d28a;
-		color: var(--triage-warning);
+		color: var(--warn);
 	}
 	.info {
-		background: var(--primary-soft);
-		border-color: #b6dde7;
-		color: var(--primary-strong);
+		background: var(--info-soft);
+		border-color: #b6ccef;
+		color: var(--info);
 	}
 </style>

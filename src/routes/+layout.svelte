@@ -8,7 +8,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Sales Hub — Clinical CRM</title>
+	<title>Sales Hub — 顧客中心CRM</title>
 </svelte:head>
 
 <div class="app">
