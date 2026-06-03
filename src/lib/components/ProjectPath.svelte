@@ -46,9 +46,9 @@
 		place-items: center;
 		font-size: 12px;
 		font-weight: 700;
-		background: var(--surface-2);
+		background: var(--surface);
 		color: var(--ink-3);
-		border: 2px solid var(--border);
+		border: 1.5px solid var(--border-strong);
 		z-index: 1;
 	}
 	.lbl {
@@ -62,32 +62,35 @@
 		top: 14px;
 		left: 50%;
 		width: 100%;
-		height: 2px;
-		background: var(--border);
+		height: 1px;
+		background: var(--border-strong);
 	}
 	.conn.filled {
-		background: var(--primary);
+		background: var(--ink);
+		height: 2px;
 	}
 	.step.done .node {
-		background: var(--primary);
-		border-color: var(--primary);
+		background: var(--ink);
+		border-color: var(--ink);
 		color: #fff;
 	}
 	.step.done .lbl {
 		color: var(--ink-2);
 	}
 	.step.current .node {
-		background: #fff;
-		border-color: var(--primary);
-		color: var(--primary-strong);
-		box-shadow: 0 0 0 4px var(--primary-soft);
+		background: var(--surface);
+		border-color: var(--ink);
+		color: var(--ink);
+		box-shadow:
+			0 0 0 2px var(--surface),
+			0 0 0 3.5px var(--ink);
 	}
 	.step.current .lbl {
-		color: var(--primary-strong);
+		color: var(--ink);
 		font-weight: 700;
 	}
 	.lostnote {
-		color: var(--bad);
+		color: var(--ink);
 		font-size: 12px;
 		margin: 12px 0 0;
 	}

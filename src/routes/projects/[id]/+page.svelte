@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import {
-		attachmentIcon,
 		deriveProjectStatus,
 		isWon,
 		projectAttachments,
@@ -76,7 +75,7 @@
 
 <!-- ステータス進行 -->
 <section class="card" style="margin-top:14px">
-	<div class="card-head"><h3>🧭 案件ステータス</h3></div>
+	<div class="card-head"><h3>案件ステータス</h3></div>
 	<div class="card-body"><ProjectPath {status} /></div>
 </section>
 
@@ -84,7 +83,7 @@
 	<!-- 案件タイムライン -->
 	<section class="card">
 		<div class="card-head">
-			<h3>🗂️ 案件タイムライン</h3>
+			<h3>案件タイムライン</h3>
 			<span class="muted" style="font-size:12px">{log.length}件のイベント</span>
 		</div>
 		<div class="card-body">
@@ -95,7 +94,7 @@
 	<!-- サイド: 概要・資料・契約 -->
 	<aside class="side">
 		<section class="card">
-			<div class="card-head"><h3>📋 案件概要</h3></div>
+			<div class="card-head"><h3>案件概要</h3></div>
 			<div class="card-body" style="font-size:13px">
 				<dl class="dl">
 					<dt>顧客</dt>
@@ -111,14 +110,13 @@
 		</section>
 
 		<section class="card">
-			<div class="card-head"><h3>📎 提案書・見積書</h3></div>
+			<div class="card-head"><h3>提案書・見積書</h3></div>
 			<div class="card-body" style="display:flex;flex-direction:column;gap:8px">
 				{#if byKind.提案書.length === 0 && byKind.見積書.length === 0}
 					<p class="muted" style="margin:0">まだ提出済み資料はありません。</p>
 				{:else}
 					{#each [...byKind.提案書, ...byKind.見積書] as a (a.attachment.name)}
 						<div class="att">
-							<span>{attachmentIcon[a.attachment.kind]}</span>
 							<div>
 								<strong style="font-size:13px">{a.attachment.name}</strong>
 								<div class="muted small">{a.attachment.kind}・{a.event.date}</div>
@@ -130,7 +128,7 @@
 		</section>
 
 		<section class="card">
-			<div class="card-head"><h3>✍️ 契約情報</h3></div>
+			<div class="card-head"><h3>契約情報</h3></div>
 			<div class="card-body" style="font-size:13px">
 				{#if orderEvent}
 					<dl class="dl">
@@ -145,7 +143,6 @@
 					</dl>
 					{#each byKind.契約書 as a (a.attachment.name)}
 						<div class="att" style="margin-top:8px">
-							<span>{attachmentIcon[a.attachment.kind]}</span>
 							<strong style="font-size:13px">{a.attachment.name}</strong>
 						</div>
 					{/each}

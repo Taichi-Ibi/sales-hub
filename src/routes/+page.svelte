@@ -6,7 +6,6 @@
 		customerRevenue,
 		dashboardMetrics,
 		daysBetween,
-		eventIcon,
 		lastContact,
 		relativeDays,
 		yen
@@ -109,7 +108,7 @@
 	<!-- 全社イベントフィード -->
 	<section class="card">
 		<div class="card-head">
-			<h3>🕒 最新の活動</h3>
+			<h3>最新の活動</h3>
 			<span class="muted" style="font-size:12px">全顧客のイベント</span>
 		</div>
 		<div class="card-body" style="padding:0">
@@ -117,7 +116,6 @@
 				{@const c = getCustomer(ev.customerId)}
 				{@const proj = ev.projectId ? getProject(ev.projectId) : undefined}
 				<a href={resolve('/customers/[id]', { id: ev.customerId })} class="frow">
-					<span class="ficon">{eventIcon[ev.type]}</span>
 					<div class="fbody">
 						<div class="row between">
 							<strong>{c?.name}</strong>
@@ -138,7 +136,7 @@
 	<div class="side">
 		<!-- 要フォロー顧客 -->
 		<section class="card">
-			<div class="card-head"><h3>📌 要フォロー顧客</h3></div>
+			<div class="card-head"><h3>要フォロー顧客</h3></div>
 			<div class="card-body" style="padding:0">
 				{#each followUp as f (f.customer.id)}
 					{@const stale = f.days >= 14}
@@ -158,7 +156,7 @@
 
 		<!-- LTV上位 -->
 		<section class="card">
-			<div class="card-head"><h3>💎 売上累計 上位顧客</h3></div>
+			<div class="card-head"><h3>売上累計 上位顧客</h3></div>
 			<div class="card-body" style="padding:0">
 				{#each topCustomers as t (t.customer.id)}
 					<a href={resolve('/customers/[id]', { id: t.customer.id })} class="frow">
@@ -203,8 +201,8 @@
 		padding: 16px 18px;
 	}
 	.kgi {
-		background: linear-gradient(180deg, var(--primary-soft), #fff);
-		border-color: #d8defc;
+		background: var(--surface);
+		border-color: var(--border-strong);
 	}
 	.klabel {
 		font-size: 12px;
@@ -273,17 +271,6 @@
 	}
 	.frow:hover {
 		background: var(--surface-2);
-	}
-	.ficon {
-		width: 30px;
-		height: 30px;
-		border-radius: 8px;
-		background: var(--surface-2);
-		border: 1px solid var(--border);
-		display: grid;
-		place-items: center;
-		font-size: 15px;
-		flex-shrink: 0;
 	}
 	.fbody {
 		flex: 1;
