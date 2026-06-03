@@ -7,16 +7,14 @@
 	const projectsPath = resolve('/projects');
 
 	const nav = [
-		{ href: home, icon: '📊', label: 'ダッシュボード', match: (p: string) => p === home },
+		{ href: home, label: 'ダッシュボード', match: (p: string) => p === home },
 		{
 			href: customersPath,
-			icon: '🏢',
 			label: '顧客',
 			match: (p: string) => p.startsWith(customersPath)
 		},
 		{
 			href: projectsPath,
-			icon: '📁',
 			label: '案件',
 			match: (p: string) => p.startsWith(projectsPath)
 		}
@@ -35,7 +33,6 @@
 	<div class="nav-label">メニュー</div>
 	{#each nav as item (item.href)}
 		<a href={item.href} class="nav-item" class:active={item.match(page.url.pathname)}>
-			<span class="ico">{item.icon}</span>
 			{item.label}
 		</a>
 	{/each}
@@ -45,8 +42,8 @@
 	<div class="me">
 		<span class="avatar">佐</span>
 		<div>
-			<div style="color:#fff;font-size:13px;font-weight:600">佐藤 健太</div>
-			<div style="font-size:11px;color:#8089a8">営業担当 / 第一営業部</div>
+			<div style="color:var(--ink);font-size:13px;font-weight:600">佐藤 健太</div>
+			<div style="font-size:11px;color:var(--ink-3)">営業担当 / 第一営業部</div>
 		</div>
 	</div>
 </aside>

@@ -1,41 +1,43 @@
-/* Sales Hub — モダンSaaS CRM のデザインシステム
-   顧客中心 × イベントソーシング。落ち着いたインディゴ基調 + 状態色。 */
+/* Sales Hub — デッサン（素描）のデザインシステム
+   色・影・装飾を削ぎ、グラファイト一色の濃淡と罫線・余白で構造を立てる。
+   状態は色相ではなく「線の太さ・濃さ・文字」で示す。 */
 
 :root {
-	/* base palette — クリーンなニュートラルグレー */
-	--bg: #f4f5f8;
+	/* paper & ink — 紙とグラファイト */
+	--bg: #ffffff;
 	--surface: #ffffff;
-	--surface-2: #f7f8fa;
-	--border: #e5e8ee;
-	--ink: #1a2030;
-	--ink-2: #56607a;
-	--ink-3: #8a93a8;
+	--surface-2: #f5f5f4;
+	--border: #e0e0de;
+	--border-strong: #c4c4c1;
+	--ink: #1c1c1c;
+	--ink-2: #5c5c5a;
+	--ink-3: #969693;
 
-	/* primary — indigo */
-	--primary: #4f46e5;
-	--primary-strong: #4338ca;
-	--primary-soft: #eef2ff;
+	/* accent — 最も濃い一本の線。色相は持たせない */
+	--primary: #1c1c1c;
+	--primary-strong: #000000;
+	--primary-soft: #efefee;
 
-	/* 状態色 — 受注=緑 / 進行=青 / 注意=橙 / 失注・リスク=赤 */
-	--ok: #15803d;
-	--ok-soft: #dcfce7;
-	--info: #1d4ed8;
-	--info-soft: #dbeafe;
-	--warn: #b45309;
-	--warn-soft: #fef3c7;
-	--bad: #b91c1c;
-	--bad-soft: #fee2e2;
+	/* 状態 — すべて墨の濃淡。意味は文字とコントラストで担う */
+	--ok: #1c1c1c;
+	--ok-soft: #f0f0ef;
+	--info: #3a3a38;
+	--info-soft: #f0f0ef;
+	--warn: #3a3a38;
+	--warn-soft: #f0f0ef;
+	--bad: #000000;
+	--bad-soft: #ebebe9;
 
-	/* 顧客ランク */
-	--rank-s: #7c3aed;
-	--rank-a: #4f46e5;
-	--rank-b: #0891b2;
-	--rank-c: #64748b;
+	/* 顧客ランク — 濃淡のみで序列を示す */
+	--rank-s: #1c1c1c;
+	--rank-a: #4a4a48;
+	--rank-b: #767674;
+	--rank-c: #a0a09d;
 
-	--radius: 14px;
-	--radius-sm: 9px;
-	--shadow: 0 1px 2px rgba(20, 28, 51, 0.05), 0 4px 14px rgba(20, 28, 51, 0.05);
-	--shadow-lg: 0 8px 30px rgba(20, 28, 51, 0.1);
+	--radius: 4px;
+	--radius-sm: 3px;
+	--shadow: none;
+	--shadow-lg: none;
 
 	--font: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, system-ui, sans-serif;
 	--mono: 'SFMono-Regular', ui-monospace, 'Roboto Mono', Menlo, monospace;
@@ -77,20 +79,21 @@ h4 {
 /* ---------- layout ---------- */
 .app {
 	display: grid;
-	grid-template-columns: 236px 1fr;
+	grid-template-columns: 220px 1fr;
 	min-height: 100vh;
 }
 
 .sidebar {
-	background: #11162a;
-	color: #c6cce0;
+	background: var(--surface);
+	color: var(--ink-2);
 	padding: 20px 14px;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 2px;
 	position: sticky;
 	top: 0;
 	height: 100vh;
+	border-right: 1px solid var(--border);
 }
 
 .sidebar .brand {
@@ -98,27 +101,28 @@ h4 {
 	align-items: center;
 	gap: 10px;
 	padding: 6px 10px 18px;
-	color: #fff;
-	font-weight: 800;
+	color: var(--ink);
+	font-weight: 700;
 	font-size: 16px;
 	letter-spacing: 0.02em;
 }
 
 .sidebar .brand .logo {
-	width: 32px;
-	height: 32px;
+	width: 30px;
+	height: 30px;
 	display: grid;
 	place-items: center;
-	background: var(--primary);
-	border-radius: 9px;
-	font-size: 16px;
+	border: 1px solid var(--ink);
+	border-radius: var(--radius-sm);
+	font-size: 14px;
+	color: var(--ink);
 }
 
 .sidebar .brand small {
 	display: block;
 	font-size: 10px;
 	font-weight: 500;
-	color: #8089a8;
+	color: var(--ink-3);
 	letter-spacing: 0.08em;
 }
 
@@ -128,33 +132,28 @@ h4 {
 	gap: 10px;
 	padding: 9px 12px;
 	border-radius: var(--radius-sm);
-	color: #aab2cc;
+	color: var(--ink-2);
 	font-weight: 600;
 	font-size: 13px;
-	transition:
-		background 0.12s,
-		color 0.12s;
+	border-left: 2px solid transparent;
+	transition: background 0.12s;
 }
 
 .nav-item:hover {
-	background: #1c2340;
-	color: #fff;
+	background: var(--surface-2);
+	color: var(--ink);
 }
 
 .nav-item.active {
-	background: var(--primary);
-	color: #fff;
-}
-
-.nav-item .ico {
-	width: 18px;
-	text-align: center;
+	background: var(--surface-2);
+	color: var(--ink);
+	border-left-color: var(--ink);
 }
 
 .sidebar .nav-label {
 	font-size: 10px;
 	letter-spacing: 0.12em;
-	color: #626c8c;
+	color: var(--ink-3);
 	padding: 16px 12px 6px;
 	font-weight: 700;
 }
@@ -168,7 +167,7 @@ h4 {
 	align-items: center;
 	gap: 10px;
 	padding: 10px 12px;
-	border-top: 1px solid #242c4a;
+	border-top: 1px solid var(--border);
 	margin-top: 8px;
 }
 
@@ -176,8 +175,9 @@ h4 {
 	width: 30px;
 	height: 30px;
 	border-radius: 50%;
-	background: var(--primary-soft);
-	color: var(--primary-strong);
+	background: var(--surface);
+	border: 1px solid var(--border-strong);
+	color: var(--ink-2);
 	display: grid;
 	place-items: center;
 	font-weight: 700;
@@ -196,6 +196,8 @@ h4 {
 	justify-content: space-between;
 	gap: 16px;
 	margin-bottom: 20px;
+	padding-bottom: 14px;
+	border-bottom: 1px solid var(--border);
 }
 
 .page-head .title h1 {
@@ -215,7 +217,8 @@ h4 {
 }
 
 .breadcrumb a:hover {
-	color: var(--primary);
+	color: var(--ink);
+	text-decoration: underline;
 }
 
 /* ---------- cards ---------- */
@@ -251,63 +254,58 @@ h4 {
 }
 
 /* ---------- badges & chips ---------- */
+/* すべて同じ輪郭のチップ。意味は文字で示し、強調のみ濃さで差をつける */
 .badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
 	padding: 2px 9px;
-	border-radius: 999px;
+	border-radius: var(--radius-sm);
 	font-size: 11px;
 	font-weight: 700;
 	white-space: nowrap;
+	background: transparent;
+	color: var(--ink-2);
+	border: 1px solid var(--border-strong);
 }
 
-.badge.ok {
-	background: var(--ok-soft);
-	color: var(--ok);
-}
-.badge.info {
-	background: var(--info-soft);
-	color: var(--info);
-}
-.badge.warn {
-	background: var(--warn-soft);
-	color: var(--warn);
-}
-.badge.bad {
-	background: var(--bad-soft);
-	color: var(--bad);
-}
-.badge.neutral {
-	background: var(--surface-2);
-	color: var(--ink-2);
-	border: 1px solid var(--border);
-}
+.badge.ok,
+.badge.info,
+.badge.warn,
+.badge.neutral,
 .badge.primary {
-	background: var(--primary-soft);
-	color: var(--primary-strong);
+	background: transparent;
+	color: var(--ink-2);
+	border-color: var(--border-strong);
+}
+
+/* 強調すべき状態（リスク・重要）は最も濃い一本で示す */
+.badge.bad {
+	background: var(--ink);
+	color: #fff;
+	border-color: var(--ink);
 }
 
 .dot {
-	width: 8px;
-	height: 8px;
+	width: 7px;
+	height: 7px;
 	border-radius: 50%;
 	flex-shrink: 0;
+	background: var(--ink-3);
+	border: 1px solid var(--ink-2);
 }
-.dot.ok {
-	background: var(--ok);
-}
-.dot.info {
-	background: var(--info);
-}
+.dot.ok,
+.dot.info,
 .dot.warn {
-	background: var(--warn);
+	background: var(--ink-2);
 }
 .dot.bad {
-	background: var(--bad);
+	background: var(--ink);
+	border-color: var(--ink);
 }
 .dot.plain {
-	background: var(--ink-3);
+	background: transparent;
+	border-color: var(--border-strong);
 }
 
 /* ---------- rank chip ---------- */
@@ -316,7 +314,7 @@ h4 {
 	place-items: center;
 	width: 22px;
 	height: 22px;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	font-size: 12px;
 	font-weight: 800;
 	color: #fff;
@@ -334,21 +332,22 @@ h4 {
 	background: var(--rank-c);
 }
 
-/* status left border accent */
+/* status left border accent — 濃淡で進行を示す */
 .status-bar {
-	border-left: 4px solid var(--border);
+	border-left: 3px solid var(--border-strong);
 }
 .status-bar.ok {
-	border-left-color: var(--ok);
+	border-left-color: var(--ink);
 }
 .status-bar.info {
-	border-left-color: var(--info);
+	border-left-color: var(--ink-2);
 }
 .status-bar.warn {
-	border-left-color: var(--warn);
+	border-left-color: var(--ink-2);
 }
 .status-bar.bad {
-	border-left-color: var(--bad);
+	border-left-color: var(--ink);
+	border-left-style: dashed;
 }
 
 /* ---------- buttons ---------- */
@@ -356,7 +355,7 @@ h4 {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	border: 1px solid var(--border);
+	border: 1px solid var(--border-strong);
 	background: var(--surface);
 	color: var(--ink);
 	padding: 7px 14px;
@@ -371,14 +370,16 @@ h4 {
 }
 .btn:hover {
 	background: var(--surface-2);
+	border-color: var(--ink-3);
 }
 .btn.primary {
-	background: var(--primary);
-	border-color: var(--primary);
+	background: var(--ink);
+	border-color: var(--ink);
 	color: #fff;
 }
 .btn.primary:hover {
 	background: var(--primary-strong);
+	border-color: var(--primary-strong);
 }
 .btn.sm {
 	padding: 4px 10px;
@@ -418,6 +419,8 @@ h4 {
 		flex-direction: row;
 		flex-wrap: wrap;
 		align-items: center;
+		border-right: none;
+		border-bottom: 1px solid var(--border);
 	}
 	.sidebar .spacer,
 	.sidebar .nav-label {

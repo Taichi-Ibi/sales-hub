@@ -111,10 +111,10 @@
 		flex-wrap: wrap;
 	}
 	.tab {
-		border: 1px solid var(--border);
+		border: 1px solid var(--border-strong);
 		background: var(--surface);
 		padding: 7px 14px;
-		border-radius: 999px;
+		border-radius: var(--radius-sm);
 		font-size: 13px;
 		font-weight: 600;
 		cursor: pointer;
@@ -125,14 +125,14 @@
 		align-items: center;
 	}
 	.tab.active {
-		background: var(--primary);
-		border-color: var(--primary);
+		background: var(--ink);
+		border-color: var(--ink);
 		color: #fff;
 	}
 	.cnt {
 		font-size: 11px;
 		background: rgba(0, 0, 0, 0.08);
-		border-radius: 999px;
+		border-radius: var(--radius-sm);
 		padding: 0 7px;
 	}
 	.tab.active .cnt {

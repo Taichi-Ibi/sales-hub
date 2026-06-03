@@ -2,7 +2,7 @@
 	import { resolve } from '$app/paths';
 	import type { SalesEvent } from '$lib/data/types';
 	import { getProject } from '$lib/data/mock';
-	import { attachmentIcon, eventIcon, eventTone, relativeDays, yen } from '$lib/data/utils';
+	import { eventTone, relativeDays, yen } from '$lib/data/utils';
 
 	let { events, showProject = false }: { events: SalesEvent[]; showProject?: boolean } = $props();
 </script>
@@ -12,7 +12,7 @@
 		{@const proj = ev.projectId ? getProject(ev.projectId) : undefined}
 		<div class="entry">
 			<div class="rail">
-				<div class="bullet {eventTone[ev.type]}">{eventIcon[ev.type]}</div>
+				<div class="bullet {eventTone[ev.type]}"></div>
 			</div>
 			<div class="content">
 				<div class="ehead">
@@ -23,7 +23,7 @@
 						</span>
 						{#if showProject && proj}
 							<a class="plink" href={resolve('/projects/[id]', { id: proj.id })}>
-								📁 {proj.name}
+								{proj.name}
 							</a>
 						{/if}
 					</div>
@@ -39,7 +39,7 @@
 				{#if ev.attachments?.length}
 					<div class="atts">
 						{#each ev.attachments as a (a.name)}
-							<span class="att">{attachmentIcon[a.kind]} {a.name}</span>
+							<span class="att">{a.kind}・{a.name}</span>
 						{/each}
 					</div>
 				{/if}
@@ -55,8 +55,8 @@
 	}
 	.entry {
 		display: grid;
-		grid-template-columns: 40px 1fr;
-		gap: 10px;
+		grid-template-columns: 24px 1fr;
+		gap: 12px;
 	}
 	.rail {
 		display: flex;
@@ -65,39 +65,35 @@
 	}
 	.rail::before {
 		content: '';
-		flex: 0 0 6px;
-		width: 2px;
+		flex: 0 0 8px;
+		width: 1px;
 		background: var(--border);
 	}
 	.entry:first-child .rail::before {
 		background: transparent;
 	}
 	.bullet {
-		width: 34px;
-		height: 34px;
+		width: 11px;
+		height: 11px;
 		border-radius: 50%;
-		background: var(--surface-2);
-		border: 1px solid var(--border);
-		display: grid;
-		place-items: center;
-		font-size: 15px;
+		background: var(--surface);
+		border: 1.5px solid var(--ink-3);
 		flex-shrink: 0;
 	}
-	.bullet.info {
-		border-color: var(--info);
-		box-shadow: 0 0 0 3px var(--info-soft);
+	.bullet.info,
+	.bullet.warn {
+		border-color: var(--ink-2);
 	}
 	.bullet.ok {
-		border-color: var(--ok);
-		box-shadow: 0 0 0 3px var(--ok-soft);
-	}
-	.bullet.warn {
-		border-color: var(--warn);
-		box-shadow: 0 0 0 3px var(--warn-soft);
+		background: var(--ink);
+		border-color: var(--ink);
 	}
 	.bullet.bad {
-		border-color: var(--bad);
-		box-shadow: 0 0 0 3px var(--bad-soft);
+		background: var(--ink);
+		border-color: var(--ink);
+		box-shadow:
+			0 0 0 2px var(--surface),
+			0 0 0 3.5px var(--ink);
 	}
 	.rail::after {
 		content: '';
@@ -124,8 +120,11 @@
 	}
 	.plink {
 		font-size: 12px;
-		color: var(--primary-strong);
+		color: var(--ink);
 		font-weight: 600;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+		text-decoration-color: var(--border-strong);
 	}
 	.plink:hover {
 		text-decoration: underline;
@@ -142,13 +141,13 @@
 	.payload {
 		margin-top: 6px;
 		font-size: 12px;
-		color: var(--ok);
-		background: var(--ok-soft);
+		color: var(--ink);
+		border: 1px solid var(--border-strong);
 		display: inline-flex;
 		gap: 8px;
 		align-items: center;
 		padding: 3px 10px;
-		border-radius: 6px;
+		border-radius: var(--radius-sm);
 	}
 	.atts {
 		display: flex;

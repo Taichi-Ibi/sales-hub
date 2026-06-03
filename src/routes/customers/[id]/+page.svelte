@@ -109,7 +109,7 @@
 	<!-- 中核: イベントタイムライン -->
 	<section class="card">
 		<div class="card-head">
-			<h3>🗂️ タイムライン</h3>
+			<h3>タイムライン</h3>
 			<button class="btn primary sm" onclick={() => (formOpen = !formOpen)}>
 				{formOpen ? '閉じる' : '＋ イベントを記録'}
 			</button>
@@ -141,7 +141,7 @@
 	<aside class="side">
 		<section class="card">
 			<div class="card-head">
-				<h3>📁 案件一覧</h3>
+				<h3>案件一覧</h3>
 				<span class="muted" style="font-size:12px">{projects.length}件</span>
 			</div>
 			<div class="card-body" style="padding:0">
@@ -165,7 +165,7 @@
 		</section>
 
 		<section class="card">
-			<div class="card-head"><h3>👥 担当者</h3></div>
+			<div class="card-head"><h3>担当者</h3></div>
 			<div class="card-body" style="display:flex;flex-direction:column;gap:8px">
 				{#each customer.contacts as ct (ct.name)}
 					<div class="row between">
@@ -180,7 +180,7 @@
 		</section>
 
 		<section class="card">
-			<div class="card-head"><h3>🏢 基本情報</h3></div>
+			<div class="card-head"><h3>基本情報</h3></div>
 			<div class="card-body" style="font-size:13px">
 				<dl class="dl">
 					<dt>業種</dt>
