@@ -1,29 +1,28 @@
 <script lang="ts">
-	import { SALES_PATH, type Stage } from '$lib/data/types';
+	import { PROJECT_PATH, type ProjectStatus } from '$lib/data/types';
 
-	let { stage }: { stage: Stage } = $props();
+	let { status }: { status: ProjectStatus } = $props();
 
-	// 失注は別扱い。受注は最終ステージ。
-	const idx = $derived(SALES_PATH.indexOf(stage));
-	const lost = $derived(stage === '失注');
+	const idx = $derived(PROJECT_PATH.indexOf(status));
+	const lost = $derived(status === '失注');
 </script>
 
 <div class="path" class:lost>
-	{#each SALES_PATH as s, i (s)}
+	{#each PROJECT_PATH as s, i (s)}
 		{@const state = lost ? 'lost' : i < idx ? 'done' : i === idx ? 'current' : 'todo'}
 		<div class="step {state}">
 			<div class="node">
 				{#if state === 'done'}✓{:else}{i + 1}{/if}
 			</div>
 			<div class="lbl">{s}</div>
-			{#if i < SALES_PATH.length - 1}
+			{#if i < PROJECT_PATH.length - 1}
 				<div class="conn" class:filled={!lost && i < idx}></div>
 			{/if}
 		</div>
 	{/each}
 </div>
 {#if lost}
-	<p class="lostnote">この商談は失注として記録されています。</p>
+	<p class="lostnote">この案件は失注として記録されています。</p>
 {/if}
 
 <style>
@@ -88,7 +87,7 @@
 		font-weight: 700;
 	}
 	.lostnote {
-		color: var(--triage-critical);
+		color: var(--bad);
 		font-size: 12px;
 		margin: 12px 0 0;
 	}
