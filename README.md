@@ -1,42 +1,58 @@
-# sv
+# Sales Hub — 営業支援ツール モックアップ
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+「案件＝チケットを職能横断でリレーし、申し送りが構造的に漏れない」という
+コンセプトを伝えるための **フロントエンドのみ** のモックアップです。
+データは **ブラウザ（localStorage）** に保存され、サーバーやバックエンドはありません。
 
-## Creating a project
+> 要件定義書（案件リレー型 軽量ワークフローツール v1）の世界観を、実際に触って
+> 確認できる形にしたものです。本物のSSO・Slack連携・DBは持たず、すべて模擬しています。
 
-If you're seeing this, you've probably already done this step. Congrats!
+## このモックで体験できること
 
-```sh
-# create a new project
-npx sv create my-app
+- **イベントソーシング志向**（要件 第7章）
+  全ての状態変化を「出来事（イベント）」として追記保存し、現在状態はそこから導出。
+  案件詳細の右側に、消えないイベントタイムラインを表示します。
+- **法務レビューのゲート化**（第4.4）
+  「特殊条項の有無 / 申し送り事項」が未入力だと、法務レビュー依頼ボタンが押せません。
+  申し送り漏れを業務フロー上で構造的に防ぎます。
+- **職能リレーと権限**（第3章）
+  ヘッダー右上の **ロール切替（GWS SSO 模擬）** で、営業 / PSE / 法務 / PM / 課長 / 閲覧者
+  を切り替えると、操作できるボタンが権限マトリクスに従って変化します。
+- **メインフロー**：リード → 商談 → 提案 → クローズ（受注 / 失注）。受注時はPMへハンドオフ。
+- **サブフロー（並行・独立）**：法務レビュー、リソース要件（5項目＋自由記述／課長が対応ステータス返信）。
+- **Slack通知（模擬）**：ヘッダーの🔔から、各トリガーで流れる通知フィードを確認できます。
+- **機密案件フラグ**：指定メンバー以外には一覧・詳細で伏せられます。
+- **CSV初回インポート（模擬）**：「サンプル初期化」でサンプル案件を投入します。
+
+## デモの流れ（一例）
+
+1. **営業**で「B社 SaaS導入支援」を開く → 法務依頼はゲートで止まっている。
+2. 「やり取り履歴・特殊事情」で特殊条項の有無と申し送りを入力 → 依頼ボタンが解放される。
+3. 法務レビューを依頼 → ロールを **法務** に切替えて承認 / 差し戻し。
+4. ロールを **PSE** にしてリソース要件（5項目）を登録 → **課長** で「手配中 / 対応済」を返信。
+5. **営業** で提案 → 受注 → PMへハンドオフ。🔔通知とタイムラインに全イベントが残る。
+
+## 技術スタック
+
+SvelteKit（Svelte 5 runes）+ TypeScript + `adapter-static`。追加の実行時依存はありません。
+
+```bash
+bun install
+bun run dev     # 開発サーバー
+bun run build   # 静的ビルド（build/ に出力）
+bun run check   # 型チェック
 ```
 
-To recreate this project with the same configuration:
+## 主なファイル
 
-```sh
-# recreate this project
-bun x sv@0.15.3 create --template minimal --types ts --add prettier eslint sveltekit-adapter="adapter:static" --no-download-check --install bun .
+```
+src/lib/types.ts            ドメイン型（Deal / DealEvent / Role …）
+src/lib/events.ts           イベント列 → 現在状態・通知の導出
+src/lib/store.svelte.ts     状態 + localStorage 永続化（イベント追記API）
+src/lib/seed.ts             サンプル案件（CSVインポート模擬）
+src/lib/permissions.ts      ロール × 操作の可否
+src/lib/components/         画面コンポーネント一式
+src/routes/+page.svelte     画面合成（単一ページSPA）
 ```
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+> モックアップのため、認証・通知・永続化は実サービスに接続していません。
