@@ -48,13 +48,14 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 16px;
+		gap: 12px;
 		padding: 10px 20px;
 		background: var(--surface);
 		border-bottom: 1px solid var(--border);
 		position: sticky;
 		top: 0;
 		z-index: 20;
+		flex-wrap: wrap;
 	}
 	.brand {
 		display: flex;
@@ -122,5 +123,27 @@
 	.user select {
 		width: auto;
 		padding: 6px 8px;
+	}
+
+	@media (max-width: 600px) {
+		.hdr {
+			padding: 10px 14px;
+		}
+		.right {
+			gap: 10px;
+		}
+		/* ロゴ下の補足とメールは省スペースのため非表示 */
+		.brand .sub,
+		.user-mail {
+			display: none;
+		}
+		.user {
+			gap: 8px;
+		}
+	}
+	@media (max-width: 380px) {
+		.user-meta {
+			display: none;
+		}
 	}
 </style>

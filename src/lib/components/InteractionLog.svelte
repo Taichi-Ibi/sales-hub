@@ -159,6 +159,18 @@
 		gap: 8px;
 		margin: 8px 0 12px;
 	}
+	.add input {
+		flex: 1;
+		min-width: 0;
+	}
+	@media (max-width: 480px) {
+		.add {
+			flex-wrap: wrap;
+		}
+		.add input {
+			flex: 1 1 100%;
+		}
+	}
 	.items {
 		list-style: none;
 		margin: 0;
