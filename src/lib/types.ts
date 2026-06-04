@@ -21,13 +21,28 @@ export type LegalStatus = '未依頼' | '依頼中' | '承認' | '差し戻し';
 /** リソース要件サブフローの対応ステータス（第4.5節） */
 export type ResourceStatus = '未登録' | '登録済' | '手配中' | '対応済';
 
-/** リソース要件（5項目で確定 / 第4.5節） */
+/** ローテ希望（メンバー登録時に聞き取る稼働形態） */
+export type RotationPreference = 'フル稼働' | '一部稼働（週3）' | '一部稼働（週2）' | '応相談';
+
+export const ROTATION_PREFERENCES: RotationPreference[] = [
+	'フル稼働',
+	'一部稼働（週3）',
+	'一部稼働（週2）',
+	'応相談'
+];
+
+/** 体制メンバー（1人ずつ登録。ローテ希望を聞きながら追加する / 第4.5節） */
+export interface ResourceMember {
+	skill: string; // 役割・必要スキル（言語・領域 等）
+	rotation: RotationPreference; // ローテ希望（稼働形態）
+	note: string; // 補足（任意）
+}
+
+/** リソース要件（体制を1人ずつ登録 / 第4.5節） */
 export interface ResourceRequirement {
-	skills: string; // 1. 必要スキル（言語・領域 等）
-	headcount: string; // 2. 人数
-	startTime: string; // 3. 開始時期
-	duration: string; // 4. 想定期間
-	utilization: string; // 5. 稼働率（フル / 一部 等）
+	members: ResourceMember[]; // 体制（必要人数はメンバー数から導出）
+	startTime: string; // 開始時期
+	duration: string; // 想定期間
 	note: string; // 補足用の自由記述欄
 }
 
