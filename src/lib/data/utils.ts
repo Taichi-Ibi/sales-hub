@@ -74,12 +74,12 @@ export function companyOpenDeals(companyId: string): number {
 }
 
 export const stageColor: Record<DealStage, string> = {
-	Qualification: '#6C5CE7',
-	Discovery: '#0984E3',
-	Proposal: '#00B894',
-	Negotiation: '#FDCB6E',
-	'Closed Won': '#00B894',
-	'Closed Lost': '#636E72'
+	Qualification: '#4f46e5',
+	Discovery: '#3b82f6',
+	Proposal: '#10b981',
+	Negotiation: '#f59e0b',
+	'Closed Won': '#10b981',
+	'Closed Lost': '#6b7280'
 };
 
 export const activityTypeLabel: Record<ActivityType, string> = {
