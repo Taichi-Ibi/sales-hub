@@ -297,4 +297,30 @@
 			grid-template-columns: 1fr;
 		}
 	}
+	@media (max-width: 640px) {
+		.pad {
+			padding: 14px;
+		}
+		.head .spread {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+		.head h2 {
+			font-size: 17px;
+		}
+		/* メインステータスのラベルは省き、丸数字のみで段組みを保つ */
+		.stepper .lbl {
+			display: none;
+		}
+		.stepper .step.cur .lbl {
+			display: inline;
+		}
+		.actions {
+			flex-wrap: wrap;
+		}
+		.handoff {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
 </style>

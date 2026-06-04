@@ -237,4 +237,10 @@
 		font-size: 12px;
 		margin: 4px 0 0;
 	}
+	@media (max-width: 480px) {
+		.grid,
+		.spec {
+			grid-template-columns: 1fr;
+		}
+	}
 </style>

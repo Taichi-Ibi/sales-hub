@@ -91,4 +91,18 @@
 		margin: 4px 0 0;
 		max-width: 720px;
 	}
+	@media (max-width: 640px) {
+		main {
+			padding: 14px;
+		}
+		.toolbar {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 12px;
+		}
+		/* 操作ボタンは横いっぱいに広げて押しやすく */
+		.toolbar .row {
+			justify-content: flex-end;
+		}
+	}
 </style>

@@ -64,6 +64,30 @@
 		gap: 12px;
 		align-items: start;
 	}
+	/* タブレット〜中画面: 横スクロールのカンバンに切り替え */
+	@media (max-width: 1100px) {
+		.board {
+			grid-auto-flow: column;
+			grid-template-columns: none;
+			grid-auto-columns: minmax(240px, 1fr);
+			overflow-x: auto;
+			padding-bottom: 8px;
+			scroll-snap-type: x proximity;
+			-webkit-overflow-scrolling: touch;
+		}
+		.col {
+			scroll-snap-align: start;
+		}
+	}
+	/* スマホ: 縦積みの1カラムに */
+	@media (max-width: 640px) {
+		.board {
+			grid-auto-flow: row;
+			grid-auto-columns: auto;
+			grid-template-columns: 1fr;
+			overflow-x: visible;
+		}
+	}
 	.col {
 		background: var(--gray-weak);
 		border-radius: 10px;
