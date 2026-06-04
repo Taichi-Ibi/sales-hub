@@ -9,6 +9,6 @@ export function entries() {
 
 export function load({ params }: { params: { id: string } }) {
 	const company = getCompany(params.id);
-	if (!company) throw error(404, 'Company not found');
+	if (!company) throw error(404, '企業が見つかりません');
 	return { company };
 }

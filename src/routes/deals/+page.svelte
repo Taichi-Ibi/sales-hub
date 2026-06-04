@@ -4,7 +4,7 @@
 	import { deals, getCompany } from '$lib/data/mock';
 	import type { DealStage } from '$lib/data/types';
 	import { PIPELINE_STAGES } from '$lib/data/types';
-	import { formatCurrency, relativeDate, stageColor, stageLabel } from '$lib/data/utils';
+	import { formatCurrency, formatDate, relativeDate, stageColor, stageLabel } from '$lib/data/utils';
 
 	let view = $state<'board' | 'list'>('board');
 
@@ -114,7 +114,7 @@
 						</td>
 						<td class="num" style="font-weight:600">{formatCurrency(r.deal.value)}</td>
 						<td class="num text-secondary">{r.deal.probability}%</td>
-						<td class="text-secondary">{r.deal.expectedCloseDate}</td>
+						<td class="text-secondary">{formatDate(r.deal.expectedCloseDate)}</td>
 					</tr>
 				{/each}
 			</tbody>

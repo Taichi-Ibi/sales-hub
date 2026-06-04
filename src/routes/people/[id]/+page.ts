@@ -9,6 +9,6 @@ export function entries() {
 
 export function load({ params }: { params: { id: string } }) {
 	const person = getPerson(params.id);
-	if (!person) throw error(404, 'Person not found');
+	if (!person) throw error(404, '担当者が見つかりません');
 	return { person };
 }

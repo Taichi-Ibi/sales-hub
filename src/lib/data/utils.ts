@@ -4,8 +4,10 @@ import type { ActivityType, DealStage } from './types';
 const MS_PER_DAY = 86_400_000;
 
 export function formatCurrency(amount: number): string {
-	if (amount >= 100_000_000) return `¥${(amount / 100_000_000).toFixed(1)}B`;
-	if (amount >= 10_000_000) return `¥${(amount / 1_000_000).toFixed(1)}M`;
+	if (amount >= 100_000_000) {
+		const oku = amount / 100_000_000;
+		return Number.isInteger(oku) ? `¥${oku.toLocaleString()}億` : `¥${oku.toFixed(1)}億`;
+	}
 	if (amount >= 10_000) return `¥${Math.round(amount / 10_000).toLocaleString()}万`;
 	return `¥${amount.toLocaleString()}`;
 }

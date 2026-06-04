@@ -9,6 +9,6 @@ export function entries() {
 
 export function load({ params }: { params: { id: string } }) {
 	const deal = getDeal(params.id);
-	if (!deal) throw error(404, 'Deal not found');
+	if (!deal) throw error(404, '案件が見つかりません');
 	return { deal };
 }
