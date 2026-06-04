@@ -97,44 +97,6 @@
 {/if}
 
 <div class="detail-layout" style="margin-top:20px">
-	<div class="detail-main">
-		<section class="card">
-			<div class="card-header">
-				<h3>アクティビティ</h3>
-				<span class="text-tertiary" style="font-size:12px">{acts.length}件</span>
-			</div>
-			{#if acts.length === 0}
-				<div class="card-body">
-					<p class="text-tertiary" style="margin:0">アクティビティはまだありません。</p>
-				</div>
-			{:else}
-				<div class="activity-feed" style="padding:0 20px">
-					{#each acts as act (act.id)}
-						{@const user = getUser(act.userId)}
-						<div class="activity-item">
-							<div class="activity-icon {act.type}">
-								{activityIcons[act.type] ?? '•'}
-							</div>
-							<div class="activity-content">
-								<div class="activity-header">
-									<span class="activity-title">{act.title}</span>
-									<span class="activity-date">{relativeDate(act.date)}</span>
-								</div>
-								<div class="activity-body">{act.body}</div>
-								{#if user}
-									<div class="activity-meta">
-										<span class="badge neutral">{activityTypeLabel[act.type]}</span>
-										<span>{user.name}</span>
-									</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		</section>
-	</div>
-
 	<aside class="detail-aside">
 		<section class="card">
 			<div class="card-header"><h3>案件詳細</h3></div>
@@ -184,7 +146,7 @@
 				<div class="card-header"><h3>担当者</h3></div>
 				<div style="padding:0">
 					<a href={resolve('/people/[id]', { id: contact.id })} class="record-row">
-						<div class="avatar sm" style="background:#6C5CE7">{contact.lastName[0]}</div>
+						<div class="avatar sm" style="background:#4f46e5">{contact.lastName[0]}</div>
 						<div class="record-info">
 							<div class="record-name">{contact.lastName} {contact.firstName}</div>
 							<div class="record-sub">{contact.title}</div>
@@ -205,6 +167,44 @@
 			</section>
 		{/if}
 	</aside>
+
+	<div class="detail-main">
+		<section class="card">
+			<div class="card-header">
+				<h3>アクティビティ</h3>
+				<span class="text-tertiary" style="font-size:12px">{acts.length}件</span>
+			</div>
+			{#if acts.length === 0}
+				<div class="card-body">
+					<p class="text-tertiary" style="margin:0">アクティビティはまだありません。</p>
+				</div>
+			{:else}
+				<div class="activity-feed" style="padding:0 20px">
+					{#each acts as act (act.id)}
+						{@const user = getUser(act.userId)}
+						<div class="activity-item">
+							<div class="activity-icon {act.type}">
+								{activityIcons[act.type] ?? '•'}
+							</div>
+							<div class="activity-content">
+								<div class="activity-header">
+									<span class="activity-title">{act.title}</span>
+									<span class="activity-date">{relativeDate(act.date)}</span>
+								</div>
+								<div class="activity-body">{act.body}</div>
+								{#if user}
+									<div class="activity-meta">
+										<span class="badge neutral">{activityTypeLabel[act.type]}</span>
+										<span>{user.name}</span>
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</section>
+	</div>
 </div>
 
 <style>
@@ -216,8 +216,8 @@
 		padding: 24px;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-sm);
+		border-left: 3px solid var(--accent);
+		border-radius: var(--radius);
 	}
 	.deal-header-left {
 		display: flex;

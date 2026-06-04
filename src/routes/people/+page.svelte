@@ -41,7 +41,7 @@
 						<div style="display:flex;align-items:center;gap:10px">
 							<div
 								class="avatar sm"
-								style="background:{r.person.isPrimary ? '#6C5CE7' : '#9AA0A6'}"
+								style="background:{r.person.isPrimary ? '#4f46e5' : '#9ca3af'}"
 							>
 								{r.person.lastName[0]}
 							</div>

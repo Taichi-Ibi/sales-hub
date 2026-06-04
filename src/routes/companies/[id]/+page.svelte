@@ -77,38 +77,6 @@
 </div>
 
 <div class="detail-layout" style="margin-top:24px">
-	<div class="detail-main">
-		<section class="card">
-			<div class="card-header">
-				<h3>アクティビティ</h3>
-				<span class="text-tertiary" style="font-size:12px">{acts.length}件</span>
-			</div>
-			<div class="activity-feed" style="padding:0 20px">
-				{#each acts as act (act.id)}
-					{@const user = getUser(act.userId)}
-					<div class="activity-item">
-						<div class="activity-icon {act.type}">
-							{activityIcons[act.type] ?? '•'}
-						</div>
-						<div class="activity-content">
-							<div class="activity-header">
-								<span class="activity-title">{act.title}</span>
-								<span class="activity-date">{relativeDate(act.date)}</span>
-							</div>
-							<div class="activity-body">{act.body}</div>
-							{#if user}
-								<div class="activity-meta">
-									<span class="badge neutral">{activityTypeLabel[act.type]}</span>
-									<span>{user.name}</span>
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
-		</section>
-	</div>
-
 	<aside class="detail-aside">
 		<section class="card">
 			<div class="card-header"><h3>概要</h3></div>
@@ -157,7 +125,7 @@
 					>
 						<div
 							class="avatar sm"
-							style="background:{person.isPrimary ? '#6C5CE7' : '#9AA0A6'}"
+							style="background:{person.isPrimary ? '#4f46e5' : '#9ca3af'}"
 						>
 							{person.lastName[0]}
 						</div>
@@ -195,6 +163,38 @@
 			</div>
 		</section>
 	</aside>
+
+	<div class="detail-main">
+		<section class="card">
+			<div class="card-header">
+				<h3>アクティビティ</h3>
+				<span class="text-tertiary" style="font-size:12px">{acts.length}件</span>
+			</div>
+			<div class="activity-feed" style="padding:0 20px">
+				{#each acts as act (act.id)}
+					{@const user = getUser(act.userId)}
+					<div class="activity-item">
+						<div class="activity-icon {act.type}">
+							{activityIcons[act.type] ?? '•'}
+						</div>
+						<div class="activity-content">
+							<div class="activity-header">
+								<span class="activity-title">{act.title}</span>
+								<span class="activity-date">{relativeDate(act.date)}</span>
+							</div>
+							<div class="activity-body">{act.body}</div>
+							{#if user}
+								<div class="activity-meta">
+									<span class="badge neutral">{activityTypeLabel[act.type]}</span>
+									<span>{user.name}</span>
+								</div>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+		</section>
+	</div>
 </div>
 
 <style>
@@ -206,8 +206,8 @@
 		padding: 24px;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-sm);
+		border-left: 3px solid var(--accent);
+		border-radius: var(--radius);
 	}
 	.company-header-left {
 		display: flex;

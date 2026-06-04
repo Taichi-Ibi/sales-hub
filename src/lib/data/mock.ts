@@ -3,9 +3,9 @@ import type { Activity, Company, Deal, Person, User } from './types';
 export const TODAY = '2026-06-04';
 
 export const users: User[] = [
-	{ id: 'u1', name: '佐藤 健太', email: 'k.sato@example.com', avatarColor: '#6C5CE7' },
-	{ id: 'u2', name: '鈴木 美咲', email: 'm.suzuki@example.com', avatarColor: '#00B894' },
-	{ id: 'u3', name: '高橋 涼', email: 'r.takahashi@example.com', avatarColor: '#E17055' }
+	{ id: 'u1', name: '佐藤 健太', email: 'k.sato@example.com', avatarColor: '#4f46e5' },
+	{ id: 'u2', name: '鈴木 美咲', email: 'm.suzuki@example.com', avatarColor: '#10b981' },
+	{ id: 'u3', name: '高橋 涼', email: 'r.takahashi@example.com', avatarColor: '#ef4444' }
 ];
 
 export const companies: Company[] = [
