@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { store } from '$lib/store.svelte';
 	import Header from '$lib/components/Header.svelte';
 	import DealList from '$lib/components/DealList.svelte';
@@ -6,18 +10,27 @@
 	import NotificationPanel from '$lib/components/NotificationPanel.svelte';
 	import NewDealModal from '$lib/components/NewDealModal.svelte';
 
-	// 単一ページSPA: 選択中の案件IDでビューを切り替える
-	let selectedId = $state<string | null>(null);
+	// 単一ページSPA: 選択中の案件IDはURL（?deal=...）に持たせる。
+	// こうすることで、ブラウザの戻る/進む・リロード・URL共有でも案件詳細へ
+	// 遷移できる（状態をコンポーネント内に閉じ込めるSPAの弊害を回避）。
 	let showNotifications = $state(false);
 	let showNewDeal = $state(false);
 
+	// 静的プリレンダリング時はクエリを参照できない（HTMLはクエリ非依存）。
+	// 一覧をプリレンダリングし、案件の選択はブラウザ側でURLから解決する。
+	const selectedId = $derived(browser ? page.url.searchParams.get('deal') : null);
 	const selectedDeal = $derived(
 		selectedId ? (store.deals.find((d) => d.id === selectedId) ?? null) : null
 	);
 
 	function openDeal(id: string) {
-		selectedId = id;
 		showNotifications = false;
+		// ベースパスは resolve('/') で付与済み。クエリ文字列は resolve() の対象外なので連結する。
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(`${resolve('/')}?deal=${encodeURIComponent(id)}`, { keepFocus: true, noScroll: true });
+	}
+	function backToList() {
+		goto(resolve('/'), { keepFocus: true, noScroll: true });
 	}
 	function onCreated(id: string) {
 		showNewDeal = false;
@@ -28,7 +41,7 @@
 			confirm('サンプルデータで初期化します（CSV初回インポートの模擬）。現在のデータは消えます。')
 		) {
 			store.reset();
-			selectedId = null;
+			backToList();
 		}
 	}
 </script>
@@ -40,7 +53,7 @@
 
 <main>
 	{#if selectedDeal}
-		<DealDetail deal={selectedDeal} onBack={() => (selectedId = null)} />
+		<DealDetail deal={selectedDeal} onBack={backToList} />
 	{:else}
 		<div class="toolbar">
 			<div>
