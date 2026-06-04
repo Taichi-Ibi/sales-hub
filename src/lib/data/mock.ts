@@ -11,75 +11,75 @@ export const users: User[] = [
 export const companies: Company[] = [
 	{
 		id: 'co1',
-		name: 'Toyo Medical Manufacturing',
+		name: '東洋メディカル製造',
 		domain: 'toyo-medical.co.jp',
-		industry: 'Healthcare',
+		industry: 'ヘルスケア',
 		employees: 1200,
-		annualRevenue: '¥12B',
-		description: 'Leading medical device manufacturer specializing in diagnostic equipment.',
+		annualRevenue: '120億円',
+		description: '診断機器を専門とする大手医療機器メーカー。',
 		createdAt: '2024-02-15',
 		ownerId: 'u1',
-		tags: ['Enterprise', 'Healthcare']
+		tags: ['エンタープライズ', 'ヘルスケア']
 	},
 	{
 		id: 'co2',
-		name: 'Sakura Logistics Holdings',
+		name: 'サクラロジスティクスホールディングス',
 		domain: 'sakura-logi.co.jp',
-		industry: 'Logistics',
+		industry: '物流',
 		employees: 4500,
-		annualRevenue: '¥45B',
-		description: 'National warehousing and logistics network with DX transformation initiatives.',
+		annualRevenue: '450億円',
+		description: '全国規模の倉庫・物流ネットワークを持ち、DX変革に取り組む企業。',
 		createdAt: '2026-05-01',
 		ownerId: 'u2',
-		tags: ['Enterprise', 'Logistics']
+		tags: ['エンタープライズ', '物流']
 	},
 	{
 		id: 'co3',
-		name: 'Greenfield Foods',
+		name: 'グリーンフィールド食品',
 		domain: 'greenfield-foods.co.jp',
-		industry: 'Food & Beverage',
+		industry: '食品・飲料',
 		employees: 600,
-		annualRevenue: '¥3.2B',
-		description: 'Mid-market food manufacturer expanding DX capabilities.',
+		annualRevenue: '32億円',
+		description: 'DX対応を拡大している中堅食品メーカー。',
 		createdAt: '2026-05-12',
 		ownerId: 'u3',
-		tags: ['Mid-Market', 'Referral']
+		tags: ['ミッドマーケット', '紹介']
 	},
 	{
 		id: 'co4',
-		name: 'Miyako Construction',
+		name: '都建設',
 		domain: 'miyako-const.co.jp',
-		industry: 'Construction',
+		industry: '建設',
 		employees: 2800,
-		annualRevenue: '¥28B',
-		description: 'Major construction company seeking project management modernization.',
+		annualRevenue: '280億円',
+		description: 'プロジェクト管理の刷新を目指す大手建設会社。',
 		createdAt: '2026-05-10',
 		ownerId: 'u1',
-		tags: ['Enterprise', 'Construction']
+		tags: ['エンタープライズ', '建設']
 	},
 	{
 		id: 'co5',
-		name: 'Nexus Information Systems',
+		name: 'ネクサス情報システム',
 		domain: 'nexus-is.co.jp',
-		industry: 'Technology',
+		industry: 'テクノロジー',
 		employees: 900,
-		annualRevenue: '¥8B',
-		description: 'System integrator with strict technical evaluation process.',
+		annualRevenue: '80億円',
+		description: '厳格な技術評価プロセスを持つシステムインテグレーター。',
 		createdAt: '2026-05-20',
 		ownerId: 'u2',
-		tags: ['Mid-Market', 'Technology']
+		tags: ['ミッドマーケット', 'テクノロジー']
 	},
 	{
 		id: 'co6',
-		name: 'Kita Nihon Beverages',
+		name: '北日本ビバレッジ',
 		domain: 'kitanihon-bev.co.jp',
-		industry: 'Food & Beverage',
+		industry: '食品・飲料',
 		employees: 3200,
-		annualRevenue: '¥35B',
-		description: 'Premium account with 3-year relationship, repeat buyer, key reference customer.',
+		annualRevenue: '350億円',
+		description: '3年間の取引実績を持つ重要顧客。リピート購入があり、主要なリファレンス顧客。',
 		createdAt: '2023-04-10',
 		ownerId: 'u3',
-		tags: ['Enterprise', 'Key Account']
+		tags: ['エンタープライズ', '重要顧客']
 	}
 ];
 
@@ -90,7 +90,7 @@ export const people: Person[] = [
 		lastName: '大野',
 		email: 't.ohno@toyo-medical.co.jp',
 		phone: '03-1234-5678',
-		title: 'Director of IT',
+		title: 'IT部長',
 		companyId: 'co1',
 		createdAt: '2024-02-20',
 		ownerId: 'u1',
@@ -101,7 +101,7 @@ export const people: Person[] = [
 		firstName: '彩',
 		lastName: '西村',
 		email: 'a.nishimura@toyo-medical.co.jp',
-		title: 'Sales Planning Manager',
+		title: '営業企画マネージャー',
 		companyId: 'co1',
 		createdAt: '2024-02-20',
 		ownerId: 'u1'
@@ -112,7 +112,7 @@ export const people: Person[] = [
 		lastName: '田所',
 		email: 'k.tadokoro@sakura-logi.co.jp',
 		phone: '06-2345-6789',
-		title: 'Logistics DX Manager',
+		title: '物流DXマネージャー',
 		companyId: 'co2',
 		createdAt: '2026-05-08',
 		ownerId: 'u2',
@@ -124,7 +124,7 @@ export const people: Person[] = [
 		lastName: '森',
 		email: 'd.mori@greenfield-foods.co.jp',
 		phone: '052-3456-7890',
-		title: 'CEO',
+		title: '代表取締役社長',
 		companyId: 'co3',
 		createdAt: '2026-05-18',
 		ownerId: 'u3',
@@ -135,7 +135,7 @@ export const people: Person[] = [
 		firstName: '直樹',
 		lastName: '岡田',
 		email: 'n.okada@greenfield-foods.co.jp',
-		title: 'Head of Corporate Planning',
+		title: '経営企画部長',
 		companyId: 'co3',
 		createdAt: '2026-05-18',
 		ownerId: 'u3'
@@ -145,7 +145,7 @@ export const people: Person[] = [
 		firstName: '浩二',
 		lastName: '山本',
 		email: 'k.yamamoto@miyako-const.co.jp',
-		title: 'Administration Manager',
+		title: '管理部マネージャー',
 		companyId: 'co4',
 		createdAt: '2026-05-10',
 		ownerId: 'u1',
@@ -157,7 +157,7 @@ export const people: Person[] = [
 		lastName: '近藤',
 		email: 't.kondo@nexus-is.co.jp',
 		phone: '03-4567-8901',
-		title: 'Technical Lead',
+		title: 'テクニカルリード',
 		companyId: 'co5',
 		createdAt: '2026-05-28',
 		ownerId: 'u2',
@@ -169,7 +169,7 @@ export const people: Person[] = [
 		lastName: '三浦',
 		email: 'm.miura@kitanihon-bev.co.jp',
 		phone: '011-5678-9012',
-		title: 'Executive Officer / CDO',
+		title: '執行役員 / CDO',
 		companyId: 'co6',
 		createdAt: '2023-04-10',
 		ownerId: 'u3',
@@ -180,7 +180,7 @@ export const people: Person[] = [
 		firstName: '香織',
 		lastName: '今井',
 		email: 'k.imai@kitanihon-bev.co.jp',
-		title: 'DX Division Director',
+		title: 'DX推進部長',
 		companyId: 'co6',
 		createdAt: '2024-09-01',
 		ownerId: 'u3'
@@ -190,7 +190,7 @@ export const people: Person[] = [
 		firstName: '亮',
 		lastName: '長谷川',
 		email: 'r.hasegawa@kitanihon-bev.co.jp',
-		title: 'IT Infrastructure Manager',
+		title: 'ITインフラマネージャー',
 		companyId: 'co6',
 		createdAt: '2024-09-01',
 		ownerId: 'u3'
@@ -200,7 +200,7 @@ export const people: Person[] = [
 export const deals: Deal[] = [
 	{
 		id: 'd1',
-		name: 'Sales Platform Replacement',
+		name: '営業基盤リプレース',
 		companyId: 'co1',
 		contactId: 'pe1',
 		stage: 'Proposal',
@@ -210,11 +210,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2026-06-30',
 		createdAt: '2026-04-08',
 		ownerId: 'u1',
-		description: 'Replace legacy CRM with modern sales platform. Key concern: migration support.'
+		description: 'レガシーCRMを最新の営業基盤へ刷新。主な懸念点：移行支援。'
 	},
 	{
 		id: 'd2',
-		name: 'Support & Maintenance Contract',
+		name: '保守・サポート契約',
 		companyId: 'co1',
 		contactId: 'pe1',
 		stage: 'Closed Won',
@@ -224,11 +224,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2024-04-25',
 		createdAt: '2024-03-01',
 		ownerId: 'u1',
-		description: 'Annual maintenance and support contract.'
+		description: '年間保守・サポート契約。'
 	},
 	{
 		id: 'd3',
-		name: 'Warehouse CRM Integration',
+		name: '倉庫CRM連携',
 		companyId: 'co2',
 		contactId: 'pe3',
 		stage: 'Negotiation',
@@ -238,11 +238,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2026-06-20',
 		createdAt: '2026-05-10',
 		ownerId: 'u2',
-		description: 'CRM integration with proprietary WMS. API connectivity is a hard requirement.'
+		description: '自社WMSとのCRM連携。API連携が必須要件。'
 	},
 	{
 		id: 'd4',
-		name: 'SFA New Implementation',
+		name: 'SFA新規導入',
 		companyId: 'co3',
 		contactId: 'pe4',
 		stage: 'Closed Won',
@@ -252,11 +252,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2026-06-01',
 		createdAt: '2026-05-18',
 		ownerId: 'u3',
-		description: 'Fast-track SFA rollout for 25 sales reps. Referral deal from Kita Nihon.'
+		description: '営業担当25名向けのSFA早期展開。北日本ビバレッジからの紹介案件。'
 	},
 	{
 		id: 'd5',
-		name: 'Project Management System',
+		name: 'プロジェクト管理システム',
 		companyId: 'co4',
 		contactId: 'pe6',
 		stage: 'Discovery',
@@ -266,11 +266,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2026-08-29',
 		createdAt: '2026-05-15',
 		ownerId: 'u1',
-		description: 'Company-wide visibility into project progress. Board approval required (15th each month).'
+		description: '全社的なプロジェクト進捗の可視化。取締役会の承認が必要（毎月15日）。'
 	},
 	{
 		id: 'd6',
-		name: 'SFA Proof of Concept',
+		name: 'SFA概念実証（PoC）',
 		companyId: 'co5',
 		contactId: 'pe7',
 		stage: 'Qualification',
@@ -280,11 +280,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2026-09-30',
 		createdAt: '2026-05-28',
 		ownerId: 'u2',
-		description: 'PoC evaluation with strict technical criteria. Quality of PoC design is critical.'
+		description: '厳格な技術基準でのPoC評価。PoC設計の品質が重要。'
 	},
 	{
 		id: 'd7',
-		name: 'SFA Initial Deployment',
+		name: 'SFA初期導入',
 		companyId: 'co6',
 		contactId: 'pe8',
 		stage: 'Closed Won',
@@ -294,11 +294,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2023-06-20',
 		createdAt: '2023-04-20',
 		ownerId: 'u3',
-		description: 'First deal. Established the relationship foundation.'
+		description: '最初の案件。関係構築の基盤を築いた。'
 	},
 	{
 		id: 'd8',
-		name: 'BI Analytics Platform',
+		name: 'BI分析基盤',
 		companyId: 'co6',
 		contactId: 'pe9',
 		stage: 'Closed Won',
@@ -308,11 +308,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2024-11-15',
 		createdAt: '2024-09-05',
 		ownerId: 'u3',
-		description: 'Upsell from SFA success. Executive dashboard now in daily use.'
+		description: 'SFAの成功からのアップセル。経営層向けダッシュボードが日常的に活用されている。'
 	},
 	{
 		id: 'd9',
-		name: 'AI Demand Forecasting',
+		name: 'AI需要予測',
 		companyId: 'co6',
 		contactId: 'pe8',
 		stage: 'Closed Won',
@@ -322,11 +322,11 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2026-03-10',
 		createdAt: '2026-01-15',
 		ownerId: 'u3',
-		description: 'Third consecutive deal. Largest engagement to date. Development in progress.'
+		description: '3件連続の案件。これまでで最大規模。現在開発中。'
 	},
 	{
 		id: 'd10',
-		name: 'BI Dashboard Project',
+		name: 'BIダッシュボード案件',
 		companyId: 'co1',
 		contactId: 'pe2',
 		stage: 'Closed Lost',
@@ -336,7 +336,7 @@ export const deals: Deal[] = [
 		expectedCloseDate: '2026-02-15',
 		createdAt: '2025-12-10',
 		ownerId: 'u1',
-		description: 'Lost to competitor due to existing platform affinity. Price gap was minimal.'
+		description: '既存プラットフォームとの親和性により競合に失注。価格差は僅かだった。'
 	}
 ];
 
@@ -344,8 +344,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a1',
 		type: 'meeting',
-		title: 'Initial discovery call',
-		body: 'Discussed current pain points with legacy CRM. Reporting takes hours weekly. Running competitor A + Excel.',
+		title: '初回ヒアリング',
+		body: '既存CRMの課題についてヒアリング。レポート作成に毎週数時間を要している。競合A製品とExcelを併用中。',
 		date: '2026-04-10',
 		userId: 'u1',
 		companyId: 'co1',
@@ -355,8 +355,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a2',
 		type: 'note',
-		title: 'Proposal submitted',
-		body: 'Presented to IT Director and Sales Planning Manager. Integration capabilities well received. Competitor A contract expires 2026/12.',
+		title: '提案書を提出',
+		body: 'IT部長と営業企画マネージャーに提案。連携機能が好評。競合A製品の契約は2026年12月で満了。',
 		date: '2026-04-28',
 		userId: 'u1',
 		companyId: 'co1',
@@ -366,8 +366,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a3',
 		type: 'call',
-		title: 'Follow-up on proposal concerns',
-		body: '"We struggled with support last time. Will you actually provide hands-on onboarding?" Strong concern about implementation support.',
+		title: '提案に関する懸念のフォローアップ',
+		body: '「前回はサポートに苦労した。本当に手厚い導入支援をしてもらえるのか？」導入支援に強い懸念。',
 		date: '2026-05-12',
 		userId: 'u1',
 		companyId: 'co1',
@@ -377,8 +377,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a4',
 		type: 'email',
-		title: 'Initial outreach from webinar',
-		body: 'Connected with DX team lead after logistics webinar signup. Interest in warehouse system integration.',
+		title: 'ウェビナーからの初回アプローチ',
+		body: '物流ウェビナー申込後にDXチームリーダーと接触。倉庫システム連携に関心。',
 		date: '2026-05-08',
 		userId: 'u2',
 		companyId: 'co2',
@@ -387,8 +387,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a5',
 		type: 'meeting',
-		title: 'Requirements gathering',
-		body: 'WMS (in-house) integration is a hard requirement. Need API connectivity proof. Asked for case studies.',
+		title: '要件ヒアリング',
+		body: '自社WMSとの連携が必須要件。API連携の実証が必要。事例の提示を依頼された。',
 		date: '2026-05-14',
 		userId: 'u2',
 		companyId: 'co2',
@@ -398,8 +398,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a6',
 		type: 'note',
-		title: 'Proposal with WMS case study',
-		body: 'Presented WMS integration case study. Manager impressed with functionality. Moving to commercial discussion.',
+		title: 'WMS連携事例を交えた提案',
+		body: 'WMS連携の事例を提示。マネージャーが機能性を高く評価。条件交渉フェーズへ移行。',
 		date: '2026-05-20',
 		userId: 'u2',
 		companyId: 'co2',
@@ -409,8 +409,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a7',
 		type: 'note',
-		title: 'Pricing discussion — competitive pressure',
-		body: '"20% higher than other vendors. Need ROI justification for approval." Preparing ROI analysis (est. 1,800 hrs/yr savings).',
+		title: '価格交渉 — 競合プレッシャー',
+		body: '「他社より20%高い。承認にはROIの根拠が必要だ。」ROI分析を準備中（年間約1,800時間の削減見込み）。',
 		date: '2026-05-26',
 		userId: 'u2',
 		companyId: 'co2',
@@ -420,8 +420,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a8',
 		type: 'meeting',
-		title: 'First meeting via referral',
-		body: 'CEO and Head of Corporate Planning attended. "We want the same results as Kita Nihon." High expectations, positive energy.',
+		title: '紹介による初回面談',
+		body: '代表取締役社長と経営企画部長が出席。「北日本ビバレッジと同じ成果を出したい。」期待が高く前向きな雰囲気。',
 		date: '2026-05-18',
 		userId: 'u3',
 		companyId: 'co3',
@@ -431,8 +431,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a9',
 		type: 'stage_change',
-		title: 'Deal closed — SFA New Implementation',
-		body: 'Referral-driven fast close. Contract signed at ¥6.2M. 14-day cycle from first contact.',
+		title: '受注 — SFA新規導入',
+		body: '紹介による早期受注。620万円で契約締結。初回接触から14日でクローズ。',
 		date: '2026-06-01',
 		userId: 'u3',
 		companyId: 'co3',
@@ -442,8 +442,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a10',
 		type: 'meeting',
-		title: 'Discovery session',
-		body: '"Each site tracks progress differently. We need company-wide visibility." Board approval required — next window June 15.',
+		title: 'ニーズ把握ミーティング',
+		body: '「各現場で進捗管理の方法がバラバラ。全社的な可視化が必要だ。」取締役会の承認が必要 — 次回は6月15日。',
 		date: '2026-05-20',
 		userId: 'u1',
 		companyId: 'co4',
@@ -453,8 +453,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a11',
 		type: 'meeting',
-		title: 'Technical evaluation kick-off',
-		body: '"First we need to verify technical feasibility against our requirements." Strict evaluation framework expected.',
+		title: '技術評価のキックオフ',
+		body: '「まず当社の要件に対する技術的な実現可能性を検証する必要がある。」厳格な評価フレームワークが想定される。',
 		date: '2026-05-28',
 		userId: 'u2',
 		companyId: 'co5',
@@ -464,8 +464,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a12',
 		type: 'meeting',
-		title: 'Monthly review — expansion opportunity',
-		body: 'AI forecasting dev on track. Client floated group company expansion. Major upsell potential.',
+		title: '月次レビュー — 拡大の機会',
+		body: 'AI予測の開発は順調。顧客からグループ会社への展開の打診あり。大型アップセルの可能性。',
 		date: '2026-05-15',
 		userId: 'u3',
 		companyId: 'co6',
@@ -475,8 +475,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a13',
 		type: 'stage_change',
-		title: 'AI Demand Forecasting — development started',
-		body: 'Requirements finalized. Moving to development phase. Target delivery: 2026-10-31.',
+		title: 'AI需要予測 — 開発開始',
+		body: '要件が確定。開発フェーズへ移行。納品目標：2026年10月31日。',
 		date: '2026-04-01',
 		userId: 'u3',
 		companyId: 'co6',
@@ -485,8 +485,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a14',
 		type: 'task',
-		title: 'Prepare ROI analysis for Sakura Logistics',
-		body: 'Need detailed ROI calculation showing 1,800 hr/year savings to justify 20% price premium.',
+		title: 'サクラロジスティクス向けROI分析の作成',
+		body: '20%の価格プレミアムを正当化するため、年間1,800時間削減を示す詳細なROI試算が必要。',
 		date: '2026-05-27',
 		userId: 'u2',
 		companyId: 'co2',
@@ -495,8 +495,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a15',
 		type: 'task',
-		title: 'Draft implementation support plan',
-		body: 'Address Toyo Medical concerns about onboarding. Need concrete timeline and dedicated support structure.',
+		title: '導入支援計画の草案作成',
+		body: '東洋メディカルの導入に関する懸念に対応。具体的なスケジュールと専任サポート体制が必要。',
 		date: '2026-05-13',
 		userId: 'u1',
 		companyId: 'co1',
@@ -505,8 +505,8 @@ export const activities: Activity[] = [
 	{
 		id: 'a16',
 		type: 'stage_change',
-		title: 'BI Dashboard — Lost to competitor',
-		body: 'Competitor A platform affinity was the deciding factor. Price gap was minimal.',
+		title: 'BIダッシュボード — 競合に失注',
+		body: '競合A製品のプラットフォーム親和性が決め手となった。価格差は僅かだった。',
 		date: '2026-02-15',
 		userId: 'u1',
 		companyId: 'co1',
