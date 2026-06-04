@@ -102,12 +102,17 @@ export function seedEvents(): DealEvent[] {
 				role: 'PSE',
 				payload: {
 					requirement: {
-						skills: 'Java / Spring, PostgreSQL, 基幹システム移行経験',
-						headcount: '2名',
+						members: [
+							{
+								skill: 'Java / Spring（リード）',
+								rotation: 'フル稼働',
+								note: '金融ドメイン経験者が望ましい。'
+							},
+							{ skill: 'PostgreSQL / 基幹システム移行', rotation: 'フル稼働', note: '' }
+						],
 						startTime: '2026年7月',
 						duration: '約6ヶ月',
-						utilization: 'フル稼働',
-						note: '金融ドメイン経験者が望ましい。'
+						note: ''
 					}
 				}
 			},
@@ -178,11 +183,11 @@ export function seedEvents(): DealEvent[] {
 				role: 'PSE',
 				payload: {
 					requirement: {
-						skills: 'BigQuery, dbt, データモデリング',
-						headcount: '1名',
+						members: [
+							{ skill: 'BigQuery / dbt / データモデリング', rotation: '一部稼働（週3）', note: '' }
+						],
 						startTime: '2026年6月',
 						duration: '約3ヶ月',
-						utilization: '一部稼働（週3）',
 						note: ''
 					}
 				}

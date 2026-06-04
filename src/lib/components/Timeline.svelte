@@ -5,7 +5,8 @@
 
 	let { dealId }: { dealId: string } = $props();
 
-	const events = $derived(store.eventsOf(dealId));
+	// 新しいデータが上に来るように、新しい順（降順）で表示する
+	const events = $derived([...store.eventsOf(dealId)].reverse());
 
 	function detail(e: DealEvent): string {
 		const p = e.payload;
@@ -25,8 +26,13 @@
 			case 'legal_resolved':
 				return `${p.result}: ${p.comment}`;
 			case 'resource_requested': {
-				const r = p.requirement as { skills: string; headcount: string };
-				return `${r.skills} / ${r.headcount}`;
+				const r = p.requirement as { members?: { skill: string }[] };
+				const members = r.members ?? [];
+				const skills = members
+					.map((m) => m.skill)
+					.filter(Boolean)
+					.join('・');
+				return `体制 ${members.length}名${skills ? `: ${skills}` : ''}`;
 			}
 			case 'resource_responded':
 				return `${p.status}: ${p.comment}`;
