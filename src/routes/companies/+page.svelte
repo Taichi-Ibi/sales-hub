@@ -18,8 +18,8 @@
 <div class="page-header">
 	<div class="page-header-row">
 		<div>
-			<h1>Companies</h1>
-			<p>{companies.length} companies in workspace</p>
+			<h1>企業</h1>
+			<p>ワークスペース内の{companies.length}社</p>
 		</div>
 	</div>
 </div>
@@ -28,12 +28,12 @@
 	<table class="data-table">
 		<thead>
 			<tr>
-				<th>Company</th>
-				<th>Industry</th>
-				<th>Employees</th>
-				<th class="num">Revenue</th>
-				<th class="num">Open Deals</th>
-				<th>Created</th>
+				<th>企業名</th>
+				<th>業種</th>
+				<th>従業員数</th>
+				<th class="num">売上</th>
+				<th class="num">進行中案件</th>
+				<th>作成日</th>
 			</tr>
 		</thead>
 		<tbody>

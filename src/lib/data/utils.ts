@@ -16,17 +16,17 @@ export function daysBetween(from: string, to: string = TODAY): number {
 
 export function relativeDate(date: string): string {
 	const d = daysBetween(date);
-	if (d === 0) return 'Today';
-	if (d === 1) return 'Yesterday';
-	if (d < 7) return `${d}d ago`;
-	if (d < 30) return `${Math.floor(d / 7)}w ago`;
-	if (d < 365) return `${Math.floor(d / 30)}mo ago`;
-	return `${Math.floor(d / 365)}y ago`;
+	if (d === 0) return '今日';
+	if (d === 1) return '昨日';
+	if (d < 7) return `${d}日前`;
+	if (d < 30) return `${Math.floor(d / 7)}週間前`;
+	if (d < 365) return `${Math.floor(d / 30)}ヶ月前`;
+	return `${Math.floor(d / 365)}年前`;
 }
 
 export function formatDate(date: string): string {
 	const d = new Date(date);
-	return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 export function companyPeople(companyId: string) {
@@ -81,12 +81,21 @@ export const stageColor: Record<DealStage, string> = {
 };
 
 export const activityTypeLabel: Record<ActivityType, string> = {
-	note: 'Note',
-	email: 'Email',
-	call: 'Call',
-	meeting: 'Meeting',
-	stage_change: 'Update',
-	task: 'Task'
+	note: 'メモ',
+	email: 'メール',
+	call: '電話',
+	meeting: '会議',
+	stage_change: '更新',
+	task: 'タスク'
+};
+
+export const stageLabel: Record<DealStage, string> = {
+	Qualification: '見込み評価',
+	Discovery: 'ニーズ把握',
+	Proposal: '提案',
+	Negotiation: '交渉',
+	'Closed Won': '受注',
+	'Closed Lost': '失注'
 };
 
 export interface DashboardMetrics {

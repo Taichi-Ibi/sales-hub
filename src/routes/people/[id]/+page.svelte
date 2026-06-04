@@ -8,7 +8,8 @@
 		personActivities,
 		personDeals,
 		relativeDate,
-		stageColor
+		stageColor,
+		stageLabel
 	} from '$lib/data/utils';
 
 	let { data } = $props();
@@ -30,9 +31,9 @@
 </script>
 
 <div class="breadcrumb">
-	<a href={resolve('/')}>Home</a>
+	<a href={resolve('/')}>ホーム</a>
 	<span class="breadcrumb-sep">/</span>
-	<a href={resolve('/people')}>People</a>
+	<a href={resolve('/people')}>担当者</a>
 	<span class="breadcrumb-sep">/</span>
 	<span>{person.lastName} {person.firstName}</span>
 </div>
@@ -56,7 +57,7 @@
 				{/if}
 			</div>
 			{#if person.isPrimary}
-				<span class="badge accent" style="margin-top:8px">Primary Contact</span>
+				<span class="badge accent" style="margin-top:8px">主担当</span>
 			{/if}
 		</div>
 	</div>
@@ -66,12 +67,12 @@
 	<div class="detail-main">
 		<section class="card">
 			<div class="card-header">
-				<h3>Activity</h3>
-				<span class="text-tertiary" style="font-size:12px">{acts.length} events</span>
+				<h3>アクティビティ</h3>
+				<span class="text-tertiary" style="font-size:12px">{acts.length}件</span>
 			</div>
 			{#if acts.length === 0}
 				<div class="card-body">
-					<p class="text-tertiary" style="margin:0">No activity recorded yet.</p>
+					<p class="text-tertiary" style="margin:0">アクティビティはまだありません。</p>
 				</div>
 			{:else}
 				<div class="activity-feed" style="padding:0 20px">
@@ -103,33 +104,33 @@
 
 	<aside class="detail-aside">
 		<section class="card">
-			<div class="card-header"><h3>Contact Info</h3></div>
+			<div class="card-header"><h3>連絡先情報</h3></div>
 			<div class="card-body">
 				<div class="attr-list">
 					<div class="attr-row">
-						<span class="attr-label">Email</span>
+						<span class="attr-label">メール</span>
 						<span class="attr-value">{person.email}</span>
 					</div>
 					{#if person.phone}
 						<div class="attr-row">
-							<span class="attr-label">Phone</span>
+							<span class="attr-label">電話</span>
 							<span class="attr-value">{person.phone}</span>
 						</div>
 					{/if}
 					<div class="attr-row">
-						<span class="attr-label">Title</span>
+						<span class="attr-label">役職</span>
 						<span class="attr-value">{person.title}</span>
 					</div>
 					<div class="attr-row">
-						<span class="attr-label">Company</span>
+						<span class="attr-label">企業</span>
 						<span class="attr-value">{company?.name ?? '—'}</span>
 					</div>
 					<div class="attr-row">
-						<span class="attr-label">Added</span>
+						<span class="attr-label">追加日</span>
 						<span class="attr-value">{formatDate(person.createdAt)}</span>
 					</div>
 					<div class="attr-row">
-						<span class="attr-label">Owner</span>
+						<span class="attr-label">担当営業</span>
 						<span class="attr-value">{owner?.name ?? '—'}</span>
 					</div>
 				</div>
@@ -138,13 +139,13 @@
 
 		<section class="card">
 			<div class="card-header">
-				<h3>Deals</h3>
+				<h3>案件</h3>
 				<span class="text-tertiary" style="font-size:12px">{dls.length}</span>
 			</div>
 			<div style="padding:0">
 				{#if dls.length === 0}
 					<div class="card-body">
-						<p class="text-tertiary" style="margin:0">No deals linked.</p>
+						<p class="text-tertiary" style="margin:0">関連する案件はありません。</p>
 					</div>
 				{:else}
 					{#each dls as deal (deal.id)}
@@ -153,7 +154,7 @@
 							<div class="record-info">
 								<div class="record-name">{deal.name}</div>
 								<div class="record-sub">
-									{deal.stage} · {formatCurrency(deal.value)}
+									{stageLabel[deal.stage]} · {formatCurrency(deal.value)}
 								</div>
 							</div>
 						</a>

@@ -8,7 +8,8 @@
 		formatDate,
 		getDashboardMetrics,
 		relativeDate,
-		stageColor
+		stageColor,
+		stageLabel
 	} from '$lib/data/utils';
 
 	const m = getDashboardMetrics();
@@ -35,40 +36,40 @@
 <div class="page-header">
 	<div class="page-header-row">
 		<div>
-			<h1>Home</h1>
-			<p>{formatDate(TODAY)} — Sales pipeline overview</p>
+			<h1>ホーム</h1>
+			<p>{formatDate(TODAY)} — 営業パイプライン概要</p>
 		</div>
 	</div>
 </div>
 
 <div class="metrics-grid">
 	<div class="metric-card">
-		<div class="metric-label">Total Revenue</div>
+		<div class="metric-label">合計売上</div>
 		<div class="metric-value">{formatCurrency(m.totalRevenue)}</div>
-		<div class="metric-sub">{m.dealsWon} deals closed</div>
+		<div class="metric-sub">{m.dealsWon}件 受注</div>
 	</div>
 	<div class="metric-card">
-		<div class="metric-label">Open Pipeline</div>
+		<div class="metric-label">進行中パイプライン</div>
 		<div class="metric-value">{formatCurrency(m.openPipeline)}</div>
-		<div class="metric-sub">4 active deals</div>
+		<div class="metric-sub">4件の進行中案件</div>
 	</div>
 	<div class="metric-card">
-		<div class="metric-label">Win Rate</div>
+		<div class="metric-label">受注率</div>
 		<div class="metric-value">{m.winRate}%</div>
-		<div class="metric-sub">{m.dealsWon}W / {m.dealsLost}L</div>
+		<div class="metric-sub">{m.dealsWon}勝 / {m.dealsLost}敗</div>
 	</div>
 	<div class="metric-card">
-		<div class="metric-label">Avg Deal Size</div>
+		<div class="metric-label">平均案件規模</div>
 		<div class="metric-value">{formatCurrency(m.avgDealSize)}</div>
-		<div class="metric-sub">across won deals</div>
+		<div class="metric-sub">受注案件の平均</div>
 	</div>
 </div>
 
 <div class="home-grid">
 	<section class="card">
 		<div class="card-header">
-			<h3>Recent Activity</h3>
-			<span class="text-tertiary" style="font-size:12px">All workspaces</span>
+			<h3>最近のアクティビティ</h3>
+			<span class="text-tertiary" style="font-size:12px">全ワークスペース</span>
 		</div>
 		<div class="activity-feed" style="padding:0 20px">
 			{#each recentActivity as act (act.id)}
@@ -105,24 +106,24 @@
 	<div class="home-side">
 		<div class="card">
 			<div class="card-header">
-				<h3>Quick Stats</h3>
+				<h3>クイック統計</h3>
 			</div>
 			<div class="card-body">
 				<div class="quick-stats">
 					<div class="qs-row">
-						<span class="qs-label">Active Companies</span>
+						<span class="qs-label">企業数</span>
 						<span class="qs-value">{m.activeCompanies}</span>
 					</div>
 					<div class="qs-row">
-						<span class="qs-label">Total Contacts</span>
+						<span class="qs-label">担当者数</span>
 						<span class="qs-value">{m.totalContacts}</span>
 					</div>
 					<div class="qs-row">
-						<span class="qs-label">Deals Won</span>
+						<span class="qs-label">受注数</span>
 						<span class="qs-value">{m.dealsWon}</span>
 					</div>
 					<div class="qs-row">
-						<span class="qs-label">Deals Lost</span>
+						<span class="qs-label">失注数</span>
 						<span class="qs-value">{m.dealsLost}</span>
 					</div>
 				</div>
@@ -131,14 +132,14 @@
 
 		<div class="card">
 			<div class="card-header">
-				<h3>Pipeline by Stage</h3>
+				<h3>ステージ別パイプライン</h3>
 			</div>
 			<div class="card-body" style="padding:16px 20px">
 				{#each pipelineStages as ps}
 					<div class="pipeline-row">
 						<div class="pipeline-label">
 							<span class="stage-dot" style="background:{stageColor[ps.stage]}"></span>
-							<span>{ps.stage}</span>
+							<span>{stageLabel[ps.stage]}</span>
 						</div>
 						<span class="pipeline-count">{ps.count}</span>
 					</div>
