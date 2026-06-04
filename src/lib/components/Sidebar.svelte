@@ -11,27 +11,27 @@
 	const nav = [
 		{
 			href: home,
-			label: 'Home',
+			label: 'ホーム',
 			icon: 'home',
 			match: (p: string) => p === home
 		},
 		{
 			href: companiesPath,
-			label: 'Companies',
+			label: '企業',
 			icon: 'building',
 			count: companies.length,
 			match: (p: string) => p.startsWith(companiesPath)
 		},
 		{
 			href: peoplePath,
-			label: 'People',
+			label: '担当者',
 			icon: 'users',
 			count: people.length,
 			match: (p: string) => p.startsWith(peoplePath)
 		},
 		{
 			href: dealsPath,
-			label: 'Deals',
+			label: '案件',
 			icon: 'zap',
 			count: deals.length,
 			match: (p: string) => p.startsWith(dealsPath)
@@ -46,7 +46,7 @@
 	</div>
 
 	<nav class="sidebar-section">
-		<div class="sidebar-section-label">Workspace</div>
+		<div class="sidebar-section-label">ワークスペース</div>
 		{#each nav as item (item.href)}
 			<a
 				href={item.href}
@@ -76,7 +76,7 @@
 		<div class="avatar" style="background:#6C5CE7">佐</div>
 		<div class="sidebar-user-info">
 			<div class="sidebar-user-name">佐藤 健太</div>
-			<div class="sidebar-user-role">Sales Manager</div>
+			<div class="sidebar-user-role">営業マネージャー</div>
 		</div>
 	</div>
 </aside>

@@ -8,7 +8,8 @@
 		formatCurrency,
 		formatDate,
 		relativeDate,
-		stageColor
+		stageColor,
+		stageLabel
 	} from '$lib/data/utils';
 
 	let { data } = $props();
@@ -34,9 +35,9 @@
 </script>
 
 <div class="breadcrumb">
-	<a href={resolve('/')}>Home</a>
+	<a href={resolve('/')}>ホーム</a>
 	<span class="breadcrumb-sep">/</span>
-	<a href={resolve('/deals')}>Deals</a>
+	<a href={resolve('/deals')}>案件</a>
 	<span class="breadcrumb-sep">/</span>
 	<span>{deal.name}</span>
 </div>
@@ -53,7 +54,7 @@
 					style="font-size:13px;padding:4px 12px"
 				>
 					<span class="stage-dot" style="background:{stageColor[deal.stage]};width:8px;height:8px"></span>
-					{deal.stage}
+					{stageLabel[deal.stage]}
 				</span>
 			</div>
 			<h1 style="font-size:24px;font-weight:700;letter-spacing:-0.02em">{deal.name}</h1>
@@ -65,9 +66,9 @@
 		</div>
 	</div>
 	<div class="deal-value-block">
-		<div class="dv-label">Deal Value</div>
+		<div class="dv-label">案件金額</div>
 		<div class="dv-amount">{formatCurrency(deal.value)}</div>
-		<div class="dv-sub">{deal.probability}% probability</div>
+		<div class="dv-sub">確度 {deal.probability}%</div>
 	</div>
 </div>
 
@@ -87,7 +88,7 @@
 						{#if i < PIPELINE_STAGES.length - 1}
 							<div class="stage-step-line" class:filled={i < stageIdx}></div>
 						{/if}
-						<div class="stage-step-label">{stage}</div>
+						<div class="stage-step-label">{stageLabel[stage]}</div>
 					</div>
 				{/each}
 			</div>
@@ -99,12 +100,12 @@
 	<div class="detail-main">
 		<section class="card">
 			<div class="card-header">
-				<h3>Activity</h3>
-				<span class="text-tertiary" style="font-size:12px">{acts.length} events</span>
+				<h3>アクティビティ</h3>
+				<span class="text-tertiary" style="font-size:12px">{acts.length}件</span>
 			</div>
 			{#if acts.length === 0}
 				<div class="card-body">
-					<p class="text-tertiary" style="margin:0">No activity recorded yet.</p>
+					<p class="text-tertiary" style="margin:0">アクティビティはまだありません。</p>
 				</div>
 			{:else}
 				<div class="activity-feed" style="padding:0 20px">
@@ -136,27 +137,27 @@
 
 	<aside class="detail-aside">
 		<section class="card">
-			<div class="card-header"><h3>Deal Details</h3></div>
+			<div class="card-header"><h3>案件詳細</h3></div>
 			<div class="card-body">
 				<div class="attr-list">
 					<div class="attr-row">
-						<span class="attr-label">Value</span>
+						<span class="attr-label">金額</span>
 						<span class="attr-value" style="font-weight:700">{formatCurrency(deal.value)}</span>
 					</div>
 					<div class="attr-row">
-						<span class="attr-label">Probability</span>
+						<span class="attr-label">確度</span>
 						<span class="attr-value">{deal.probability}%</span>
 					</div>
 					<div class="attr-row">
-						<span class="attr-label">Expected Close</span>
+						<span class="attr-label">クローズ予定</span>
 						<span class="attr-value">{formatDate(deal.expectedCloseDate)}</span>
 					</div>
 					<div class="attr-row">
-						<span class="attr-label">Created</span>
+						<span class="attr-label">作成日</span>
 						<span class="attr-value">{formatDate(deal.createdAt)}</span>
 					</div>
 					<div class="attr-row">
-						<span class="attr-label">Owner</span>
+						<span class="attr-label">担当営業</span>
 						<span class="attr-value">{owner?.name ?? '—'}</span>
 					</div>
 				</div>
@@ -165,13 +166,13 @@
 
 		{#if company}
 			<section class="card">
-				<div class="card-header"><h3>Company</h3></div>
+				<div class="card-header"><h3>企業</h3></div>
 				<div style="padding:0">
 					<a href={resolve('/companies/[id]', { id: company.id })} class="record-row">
 						<div class="company-mini-icon">{company.name[0]}</div>
 						<div class="record-info">
 							<div class="record-name">{company.name}</div>
-							<div class="record-sub">{company.industry} · {company.employees.toLocaleString()} employees</div>
+							<div class="record-sub">{company.industry} · {company.employees.toLocaleString()}名</div>
 						</div>
 					</a>
 				</div>
@@ -180,7 +181,7 @@
 
 		{#if contact}
 			<section class="card">
-				<div class="card-header"><h3>Contact</h3></div>
+				<div class="card-header"><h3>担当者</h3></div>
 				<div style="padding:0">
 					<a href={resolve('/people/[id]', { id: contact.id })} class="record-row">
 						<div class="avatar sm" style="background:#6C5CE7">{contact.lastName[0]}</div>
@@ -195,7 +196,7 @@
 
 		{#if deal.description}
 			<section class="card">
-				<div class="card-header"><h3>Notes</h3></div>
+				<div class="card-header"><h3>メモ</h3></div>
 				<div class="card-body">
 					<p style="margin:0;font-size:13px;color:var(--text-secondary);line-height:1.6">
 						{deal.description}

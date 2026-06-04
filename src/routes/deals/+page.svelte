@@ -4,7 +4,7 @@
 	import { deals, getCompany } from '$lib/data/mock';
 	import type { DealStage } from '$lib/data/types';
 	import { PIPELINE_STAGES } from '$lib/data/types';
-	import { formatCurrency, relativeDate, stageColor } from '$lib/data/utils';
+	import { formatCurrency, relativeDate, stageColor, stageLabel } from '$lib/data/utils';
 
 	let view = $state<'board' | 'list'>('board');
 
@@ -32,8 +32,8 @@
 <div class="page-header">
 	<div class="page-header-row">
 		<div>
-			<h1>Deals</h1>
-			<p>{deals.length} deals across all stages</p>
+			<h1>案件</h1>
+			<p>全ステージの{deals.length}件</p>
 		</div>
 		<div class="view-toggle">
 			<button
@@ -42,7 +42,7 @@
 				onclick={() => (view = 'board')}
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-				Board
+				ボード
 			</button>
 			<button
 				class="btn sm"
@@ -50,7 +50,7 @@
 				onclick={() => (view = 'list')}
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-				List
+				リスト
 			</button>
 		</div>
 	</div>
@@ -63,7 +63,7 @@
 				<div class="kanban-column-header">
 					<div style="display:flex;align-items:center">
 						<span class="column-dot" style="background:{stageColor[col.stage]}"></span>
-						{col.stage}
+						{stageLabel[col.stage]}
 					</div>
 					<span class="column-count">{col.deals.length} · {formatCurrency(col.total)}</span>
 				</div>
@@ -80,7 +80,7 @@
 						</a>
 					{/each}
 					{#if col.deals.length === 0}
-						<div class="kanban-empty">No deals</div>
+						<div class="kanban-empty">案件なし</div>
 					{/if}
 				</div>
 			</div>
@@ -91,12 +91,12 @@
 		<table class="data-table">
 			<thead>
 				<tr>
-					<th>Deal</th>
-					<th>Company</th>
-					<th>Stage</th>
-					<th class="num">Value</th>
-					<th class="num">Probability</th>
-					<th>Close Date</th>
+					<th>案件名</th>
+					<th>企業</th>
+					<th>ステージ</th>
+					<th class="num">金額</th>
+					<th class="num">確度</th>
+					<th>クローズ予定日</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -109,7 +109,7 @@
 						<td>
 							<span class="badge {stageBadgeClass(r.deal.stage)}">
 								<span class="stage-dot" style="background:{stageColor[r.deal.stage]};width:6px;height:6px"></span>
-								{r.deal.stage}
+								{stageLabel[r.deal.stage]}
 							</span>
 						</td>
 						<td class="num" style="font-weight:600">{formatCurrency(r.deal.value)}</td>

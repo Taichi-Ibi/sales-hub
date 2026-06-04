@@ -16,8 +16,8 @@
 <div class="page-header">
 	<div class="page-header-row">
 		<div>
-			<h1>People</h1>
-			<p>{people.length} contacts in workspace</p>
+			<h1>担当者</h1>
+			<p>ワークスペース内の{people.length}名</p>
 		</div>
 	</div>
 </div>
@@ -26,12 +26,12 @@
 	<table class="data-table">
 		<thead>
 			<tr>
-				<th>Name</th>
-				<th>Title</th>
-				<th>Company</th>
-				<th>Email</th>
-				<th class="num">Deals</th>
-				<th>Added</th>
+				<th>氏名</th>
+				<th>役職</th>
+				<th>企業</th>
+				<th>メール</th>
+				<th class="num">案件</th>
+				<th>追加日</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -53,7 +53,7 @@
 									{r.person.lastName} {r.person.firstName}
 								</a>
 								{#if r.person.isPrimary}
-									<span class="badge accent" style="font-size:10px;margin-left:4px">Primary</span>
+									<span class="badge accent" style="font-size:10px;margin-left:4px">主担当</span>
 								{/if}
 							</div>
 						</div>
