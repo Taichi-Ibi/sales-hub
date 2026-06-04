@@ -8,12 +8,12 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Sales Hub — 顧客中心CRM</title>
+	<title>Sales Hub</title>
 </svelte:head>
 
-<div class="app">
+<div class="app-layout">
 	<Sidebar />
-	<main class="main">
+	<main class="main-content">
 		{@render children()}
 	</main>
 </div>
