@@ -216,8 +216,3 @@ export interface RetrospectiveResult {
 	activityPattern: Record<DataSource, number>;
 	suggestions: string[]; // 1〜3件
 }
-
-export interface Reminder {
-	taskId: string;
-	isDismissed: boolean;
-}

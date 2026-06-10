@@ -48,11 +48,11 @@ function isStorageAvailable(): boolean {
 	}
 }
 
-let eventLogs = $state<EventLog[]>([]);
-let deals = $state<Deal[]>([]);
-let tasks = $state<Task[]>([]);
-let settings = $state<AppSettings>(getInitialSettings());
-let operationLogs = $state<OperationLog[]>([]);
+const eventLogs = $state<EventLog[]>([]);
+const deals = $state<Deal[]>([]);
+const tasks = $state<Task[]>([]);
+const settings = $state<AppSettings>(getInitialSettings());
+const operationLogs = $state<OperationLog[]>([]);
 
 /**
  * ストレージ関連の警告状態。

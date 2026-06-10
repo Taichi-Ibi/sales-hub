@@ -2,6 +2,7 @@
 	import { settings, operationLogs, saveSettings } from '$lib/intelligence/store.svelte.js';
 	import { VALIDATION } from '$lib/intelligence/constants.js';
 	import { isBlank } from '$lib/intelligence/validation.js';
+	import { formatDateTimeWithYear as formatDateTime } from '$lib/intelligence/format.js';
 	import type {
 		AppSettings,
 		AssignmentRule,
@@ -192,16 +193,6 @@
 		void logFilterEnd;
 		logVisibleCount = VALIDATION.PAGE_SIZE;
 	});
-
-	function formatDateTime(date: Date): string {
-		return date.toLocaleString('ja-JP', {
-			year: 'numeric',
-			month: 'numeric',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	}
 
 	const operationTypeOptions = Object.keys(operationLabels) as OperationType[];
 </script>

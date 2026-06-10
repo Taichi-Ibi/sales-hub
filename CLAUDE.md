@@ -104,12 +104,12 @@ const unreadCount = $derived(computeUnreadCount(eventLogs)); // component 内で
 
 ## ESLint / Prettier のルール
 
-| ルール | 対処 |
-|---|---|
-| `svelte/no-navigation-without-resolve` | `href={resolve('/path')}` を使う |
-| `svelte/require-each-key` | `{#each items as item (item.id)}` |
-| `svelte/prefer-svelte-reactivity` | `new SvelteSet()` / `new SvelteMap()` |
-| a11y: label without control | ラジオグループの見出しは `<label>` でなく `<span>` |
+| ルール                                 | 対処                                               |
+| -------------------------------------- | -------------------------------------------------- |
+| `svelte/no-navigation-without-resolve` | `href={resolve('/path')}` を使う                   |
+| `svelte/require-each-key`              | `{#each items as item (item.id)}`                  |
+| `svelte/prefer-svelte-reactivity`      | `new SvelteSet()` / `new SvelteMap()`              |
+| a11y: label without control            | ラジオグループの見出しは `<label>` でなく `<span>` |
 
 `.kiro/specs/` の Markdown は prettier 警告が出るが無視してよい (コード品質に無関係)。
 

@@ -332,13 +332,6 @@ export function applyUpdateTaskStatus(
 	};
 }
 
-export function applyAddOperationLog(
-	state: IntelligenceState,
-	opLog: OperationLog
-): IntelligenceState {
-	return { ...state, operationLogs: [opLog, ...state.operationLogs] };
-}
-
 // ─── Selectors ────────────────────────────────────────────────────────────────
 
 export function computeUnreadCount(eventLogs: EventLog[]): number {

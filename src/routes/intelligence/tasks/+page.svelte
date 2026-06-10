@@ -10,6 +10,8 @@
 	} from '$lib/intelligence/store.svelte.js';
 	import { canTransitionTaskStatus } from '$lib/intelligence/validation.js';
 	import { VALIDATION } from '$lib/intelligence/constants.js';
+	import { formatDate } from '$lib/intelligence/format.js';
+	import { taskStatusLabel as statusLabel, priorityLabel } from '$lib/intelligence/ui-labels.js';
 	import type { Task, TaskPriority, TaskStatus } from '$lib/intelligence/types.js';
 
 	let now = $state(new Date());
@@ -25,26 +27,9 @@
 		return () => clearInterval(interval);
 	});
 
-	const priorityLabel: Record<TaskPriority, string> = {
-		high: '高',
-		medium: '中',
-		low: '低'
-	};
-
-	const statusLabel: Record<TaskStatus, string> = {
-		not_started: '未着手',
-		in_progress: '進行中',
-		completed: '完了'
-	};
-
 	function getDealName(dealId?: string): string {
 		if (!dealId) return '';
 		return deals.find((d) => d.id === dealId)?.name ?? '';
-	}
-
-	function formatDate(date: Date | undefined): string {
-		if (!date) return '—';
-		return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
 	}
 
 	function isOverdue(task: Task): boolean {

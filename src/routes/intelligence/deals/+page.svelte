@@ -9,7 +9,7 @@
 		addTask
 	} from '$lib/intelligence/store.svelte.js';
 	import { selectVisibleEventLogs } from '$lib/intelligence/store-logic.js';
-	import { groupByThread, getThreadMessages } from '$lib/intelligence/thread-grouper.js';
+	import { groupByThread, getThreadMessagesSorted } from '$lib/intelligence/thread-grouper.js';
 
 	const threadGroups = $derived(groupByThread(eventLogs));
 	import {
@@ -20,10 +20,17 @@
 	} from '$lib/intelligence/ai-engine.js';
 	import { isBlank } from '$lib/intelligence/validation.js';
 	import { VALIDATION, PHASE_LABELS, DEAL_PHASES } from '$lib/intelligence/constants.js';
+	import { formatDate, formatDateTime } from '$lib/intelligence/format.js';
+	import {
+		sourceIcons,
+		eventLogStatusLabel as logStatusLabel,
+		eventLogStatusClass as logStatusClass,
+		taskStatusLabel,
+		priorityLabel
+	} from '$lib/intelligence/ui-labels.js';
 	import type {
 		Deal,
 		DealPhase,
-		DataSource,
 		EventLog,
 		DataUpdateProposal,
 		ThreadGroup
@@ -119,55 +126,10 @@
 
 	// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-	const sourceIcons: Record<DataSource, string> = {
-		slack: '💬',
-		email: '✉️',
-		calendar: '📅',
-		minutes: '📝',
-		memo: '🗒️'
-	};
-
-	const logStatusLabel: Record<string, string> = {
-		pending: '未承認',
-		approved: '承認済',
-		rejected: '却下'
-	};
-
-	const logStatusClass: Record<string, string> = {
-		pending: 'status-pending',
-		approved: 'status-approved',
-		rejected: 'status-rejected'
-	};
-
-	const taskStatusLabel: Record<string, string> = {
-		not_started: '未着手',
-		in_progress: '進行中',
-		completed: '完了'
-	};
-
-	const priorityLabel: Record<string, string> = { high: '高', medium: '中', low: '低' };
-
-	function formatDate(date: Date): string {
-		return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
-	}
-
-	function formatDateTime(date: Date): string {
-		return date.toLocaleString('ja-JP', {
-			month: 'numeric',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	}
-
 	function getDealsInPhase(phase: DealPhase): Deal[] {
 		return deals
 			.filter((d) => d.phase === phase)
 			.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-	}
-
-	function getThreadMsgs(tg: ThreadGroup): EventLog[] {
-		return getThreadMessages(tg).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 	}
 
 	// ─── Actions ─────────────────────────────────────────────────────────────────
@@ -621,7 +583,7 @@
 											</div>
 										</div>
 										<div class="thread-messages">
-											{#each getThreadMsgs(tg) as msg, i (msg.id)}
+											{#each getThreadMessagesSorted(tg) as msg, i (msg.id)}
 												{#if i > 0}<hr class="thread-divider" />{/if}
 												<div class="thread-msg">
 													<p class="thread-msg-meta">

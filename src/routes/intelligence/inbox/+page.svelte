@@ -12,12 +12,18 @@
 		addEventLog,
 		addTask
 	} from '$lib/intelligence/store.svelte.js';
-	import { groupByThread, getThreadMessages } from '$lib/intelligence/thread-grouper.js';
+	import { groupByThread, getThreadMessagesSorted } from '$lib/intelligence/thread-grouper.js';
 	import { selectVisibleEventLogs } from '$lib/intelligence/store-logic.js';
 	import { filterEventLogs, type EventLogFilter } from '$lib/intelligence/filters.js';
 	import { search, generateTasks } from '$lib/intelligence/ai-engine.js';
 	import { isBlank } from '$lib/intelligence/validation.js';
 	import { VALIDATION, CURRENT_USER } from '$lib/intelligence/constants.js';
+	import { formatDateTime } from '$lib/intelligence/format.js';
+	import {
+		sourceIcons,
+		eventLogStatusLabel as statusLabel,
+		eventLogStatusClass as statusClass
+	} from '$lib/intelligence/ui-labels.js';
 	import type { DataSource, EventLog, SearchResult, ThreadGroup } from '$lib/intelligence/types.js';
 
 	type SelectedItem = { type: 'event'; item: EventLog } | { type: 'thread'; item: ThreadGroup };
@@ -68,14 +74,6 @@
 		{ value: 'memo', label: 'メモ' }
 	];
 
-	const sourceIcons: Record<DataSource, string> = {
-		slack: '💬',
-		email: '✉️',
-		calendar: '📅',
-		minutes: '📝',
-		memo: '🗒️'
-	};
-
 	const searchTypeIcon: Record<SearchResult['type'], string> = {
 		event_log: '📥',
 		deal: '💼',
@@ -86,18 +84,6 @@
 		event_log: 'Event Log',
 		deal: '案件',
 		task: 'タスク'
-	};
-
-	const statusLabel: Record<string, string> = {
-		pending: '未承認',
-		approved: '承認済',
-		rejected: '却下'
-	};
-
-	const statusClass: Record<string, string> = {
-		pending: 'status-pending',
-		approved: 'status-approved',
-		rejected: 'status-rejected'
 	};
 
 	function toggleSource(source: DataSource) {
@@ -318,19 +304,6 @@
 		newLogError = '';
 		showNewLog = false;
 		saveNotice = `保存しました（AIタスク${newTasks.length}件を生成）`;
-	}
-
-	function formatDateTime(date: Date): string {
-		return date.toLocaleString('ja-JP', {
-			month: 'numeric',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	}
-
-	function getThreadMessagesSorted(tg: ThreadGroup): EventLog[] {
-		return getThreadMessages(tg).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 	}
 </script>
 
