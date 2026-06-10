@@ -17,6 +17,49 @@ export interface MaskedEntity {
   occurrences: number;
 }
 
+// ───────── Inbox（IS向け受信箱） ─────────
+// Slack/メール/議事録の原文が入り、分かち書き(CPU)→人手マスキング→AIタスク化 と進む。
+// マスキングは Inbox 内の原文に対して行い、台帳側では復元のみを行う。
+
+export type InboxSource = 'slack' | 'mail' | 'minutes';
+
+// 分かち書き・AI解析の実行中はページ側の一時状態で表現し、status には持たない。
+export type InboxStatus = '未処理' | 'マスキング中' | 'タスク化済み';
+
+export interface InboxMask {
+  text: string; // 分かち書きトークンの文字列。同一文字列は一括で同じトークンに置換
+  type: MaskType;
+  token: string; // 例 "〔氏名①〕"
+}
+
+// AIが「経緯を読み取ってタスク化」した結果のシミュレート用シード。
+// draft 等は原文（マスク前）で持ち、タスク化時に Inbox のマスクを適用する。
+export interface DistilledSeed {
+  category: Category;
+  risk: Risk;
+  title: string;
+  counterparty: string;
+  dueDate: string;
+  summary: string;
+  context: string[];
+  draft: string;
+  knownSensitive: string[]; // 本来マスクすべき語。未マスクのままなら「未マスクの疑い」へ
+}
+
+export interface InboxItem {
+  id: string;
+  source: InboxSource;
+  title: string; // 件名 / チャンネル / 会議名
+  sender: string; // 送信者・起票者
+  receivedAt: string; // "2026-06-10T08:40:00"
+  body: string; // 原文
+  status: InboxStatus;
+  tokens?: string[]; // 分かち書き結果（CPU実行のシミュレート完了後にセット）
+  masks: InboxMask[];
+  resultActionId?: string; // タスク化で生成された Action
+  distilled: DistilledSeed;
+}
+
 export interface Action {
   id: string;
   category: Category;

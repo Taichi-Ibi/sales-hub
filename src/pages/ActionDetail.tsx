@@ -11,6 +11,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const BACK_LABEL: Record<string, string> = {
   '/': '❮ 台帳へ戻る',
+  '/inbox': '❮ Inboxへ戻る',
   '/approvals': '❮ FS承認待ちへ戻る',
   '/archive': '❮ 完了済みへ戻る',
 };
@@ -176,7 +177,7 @@ export function ActionDetail() {
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">◆ 下書き（編集可）</h2>
               <Button variant="link" onClick={() => setMaskOpen(true)}>
-                マスクを管理
+                伏せ字を確認・復元
               </Button>
             </div>
             <DraftEditor
@@ -219,7 +220,7 @@ export function ActionDetail() {
                   onClick={() => setMaskOpen(true)}
                   className="ml-auto font-medium text-accent hover:underline"
                 >
-                  マスクを管理
+                  確認する
                 </button>
               </div>
             ) : null}
@@ -236,10 +237,6 @@ export function ActionDetail() {
         <MaskingPanel
           action={action}
           onClose={() => setMaskOpen(false)}
-          onMask={(text, type) => {
-            store.maskText(action.id, text, type);
-            setMaskVersion((v) => v + 1);
-          }}
           onUnmask={(token) => {
             store.unmask(action.id, token);
             setMaskVersion((v) => v + 1);
