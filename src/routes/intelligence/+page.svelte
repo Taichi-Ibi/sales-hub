@@ -1,8 +1,56 @@
 <script lang="ts">
 	import { deals, tasks, eventLogs } from '$lib/intelligence/store.svelte.js';
 	import { PHASE_LABELS, DEAL_PHASES, VALIDATION } from '$lib/intelligence/constants.js';
+	import { generateRetrospective } from '$lib/intelligence/ai-engine.js';
+	import type { DataSource, RetrospectiveResult } from '$lib/intelligence/types.js';
 
 	const now = $derived(new Date());
+
+	// ─── Retrospective (Task 19.1) ─────────────────────────────────────────────
+	function toInputDate(d: Date): string {
+		return d.toLocaleDateString('en-CA'); // YYYY-MM-DD (local)
+	}
+
+	const today = new Date();
+	const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+	let retroStart = $state(toInputDate(thirtyDaysAgo));
+	let retroEnd = $state(toInputDate(today));
+	let retroError = $state('');
+	let retroResult = $state<RetrospectiveResult | null>(null);
+
+	const sourceLabels: Record<DataSource, string> = {
+		slack: 'Slack',
+		email: 'メール',
+		calendar: 'カレンダー',
+		minutes: '議事録',
+		memo: 'メモ'
+	};
+
+	function runRetrospective() {
+		retroError = '';
+		if (!retroStart || !retroEnd) {
+			retroError = '開始日と終了日を入力してください';
+			retroResult = null;
+			return;
+		}
+		const start = new Date(retroStart + 'T00:00:00');
+		const end = new Date(retroEnd + 'T23:59:59');
+		if (start.getTime() > end.getTime()) {
+			retroError = '開始日は終了日より前を指定してください';
+			retroResult = null;
+			return;
+		}
+		retroResult = generateRetrospective(eventLogs, tasks, start, end, deals);
+	}
+
+	const retroHasActivity = $derived(
+		retroResult !== null &&
+			(retroResult.eventLogCount > 0 ||
+				retroResult.taskCompletedCount > 0 ||
+				retroResult.taskPendingCount > 0 ||
+				retroResult.phaseChanges.length > 0)
+	);
 
 	const phaseCounts = $derived(
 		DEAL_PHASES.map((phase) => ({
@@ -127,6 +175,83 @@
 					</li>
 				{/each}
 			</ul>
+		{/if}
+	</section>
+
+	<!-- Retrospective (Task 19.1) -->
+	<section class="card">
+		<h2 class="section-title">振り返り</h2>
+		<div class="retro-controls">
+			<label class="retro-field">
+				<span class="retro-label">開始日</span>
+				<input type="date" class="retro-input" bind:value={retroStart} />
+			</label>
+			<label class="retro-field">
+				<span class="retro-label">終了日</span>
+				<input type="date" class="retro-input" bind:value={retroEnd} />
+			</label>
+			<button class="retro-btn" onclick={runRetrospective}>集計する</button>
+		</div>
+		{#if retroError}
+			<p class="retro-error">{retroError}</p>
+		{/if}
+
+		{#if retroResult !== null}
+			{#if !retroHasActivity}
+				<p class="empty-message">この期間の活動データがありません</p>
+			{:else}
+				<div class="retro-stats">
+					<div class="retro-stat">
+						<span class="retro-stat-value">{retroResult.eventLogCount}</span>
+						<span class="retro-stat-label">活動記録</span>
+					</div>
+					<div class="retro-stat">
+						<span class="retro-stat-value">{retroResult.taskCompletedCount}</span>
+						<span class="retro-stat-label">完了タスク</span>
+					</div>
+					<div class="retro-stat">
+						<span class="retro-stat-value">{retroResult.taskPendingCount}</span>
+						<span class="retro-stat-label">未完了タスク</span>
+					</div>
+					<div class="retro-stat">
+						<span class="retro-stat-value">{retroResult.phaseChanges.length}</span>
+						<span class="retro-stat-label">フェーズ変更</span>
+					</div>
+				</div>
+
+				<h3 class="retro-subtitle">活動内訳</h3>
+				<div class="retro-activity">
+					{#each Object.entries(retroResult.activityPattern) as [source, count] (source)}
+						<div class="retro-activity-item">
+							<span class="retro-activity-label">{sourceLabels[source as DataSource]}</span>
+							<span class="retro-activity-count">{count}</span>
+						</div>
+					{/each}
+				</div>
+
+				{#if retroResult.phaseChanges.length > 0}
+					<h3 class="retro-subtitle">フェーズ変更履歴</h3>
+					<ul class="retro-phase-list">
+						{#each retroResult.phaseChanges as h, i (i)}
+							<li class="retro-phase-item">
+								<span class="retro-phase-text">
+									{PHASE_LABELS[h.fromPhase]} → <strong>{PHASE_LABELS[h.toPhase]}</strong>
+								</span>
+								<span class="retro-phase-meta">
+									{formatDate(h.transitionAt)} · {h.operator}
+								</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				<h3 class="retro-subtitle">AIによる改善提案</h3>
+				<ul class="retro-suggestions">
+					{#each retroResult.suggestions as suggestion, i (i)}
+						<li class="retro-suggestion">{suggestion}</li>
+					{/each}
+				</ul>
+			{/if}
 		{/if}
 	</section>
 </div>
@@ -288,5 +413,149 @@
 		font-size: var(--font-size-sm);
 		color: var(--color-text-muted);
 		flex-shrink: 0;
+	}
+
+	/* ─── Retrospective ──────────────────────────────────────────────────────── */
+	.retro-controls {
+		display: flex;
+		align-items: flex-end;
+		gap: var(--space-md);
+		margin-bottom: var(--space-md);
+		flex-wrap: wrap;
+	}
+
+	.retro-field {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.retro-label {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		font-weight: 600;
+	}
+
+	.retro-input {
+		font-size: var(--font-size-sm);
+		padding: var(--space-xs) var(--space-sm);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		background: white;
+	}
+
+	.retro-btn {
+		font-size: var(--font-size-sm);
+		padding: var(--space-xs) var(--space-md);
+		background: var(--color-brand);
+		color: white;
+		border: none;
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+	}
+
+	.retro-error {
+		font-size: var(--font-size-sm);
+		color: var(--color-error);
+		margin: 0 0 var(--space-sm);
+	}
+
+	.retro-stats {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: var(--space-sm);
+		margin-bottom: var(--space-md);
+	}
+
+	.retro-stat {
+		background: var(--color-brand-light);
+		border-radius: var(--radius-sm);
+		padding: var(--space-sm);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2px;
+	}
+
+	.retro-stat-value {
+		font-size: var(--font-size-xl);
+		font-weight: 700;
+		color: var(--color-brand);
+	}
+
+	.retro-stat-label {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+	}
+
+	.retro-subtitle {
+		font-size: var(--font-size-md);
+		color: var(--color-text-heading);
+		margin: var(--space-md) 0 var(--space-sm);
+	}
+
+	.retro-activity {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-sm);
+	}
+
+	.retro-activity-item {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+		background: var(--color-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-xs) var(--space-sm);
+		font-size: var(--font-size-sm);
+	}
+
+	.retro-activity-label {
+		color: var(--color-text-muted);
+	}
+
+	.retro-activity-count {
+		font-weight: 700;
+		color: var(--color-text);
+	}
+
+	.retro-phase-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xs);
+	}
+
+	.retro-phase-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: var(--space-sm);
+		padding: var(--space-xs) var(--space-sm);
+		background: var(--color-bg);
+		border-radius: var(--radius-sm);
+		font-size: var(--font-size-sm);
+	}
+
+	.retro-phase-meta {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		flex-shrink: 0;
+	}
+
+	.retro-suggestions {
+		margin: 0;
+		padding-left: var(--space-lg);
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.retro-suggestion {
+		font-size: var(--font-size-sm);
+		color: var(--color-text);
+		line-height: 1.5;
 	}
 </style>

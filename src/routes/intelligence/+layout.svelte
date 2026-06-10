@@ -6,16 +6,35 @@
 		eventLogs,
 		tasks,
 		settings,
-		initializeFromStorage
+		storageStatus,
+		initializeFromStorage,
+		clearAllData,
+		purgeDeletedEventLogs
 	} from '$lib/intelligence/store.svelte.js';
 	import { computeUnreadCount, computePendingTaskCount } from '$lib/intelligence/store-logic.js';
 
 	const unreadCount = $derived(computeUnreadCount(eventLogs));
 	const pendingTaskCount = $derived(computePendingTaskCount(tasks));
+	const deletedLogCount = $derived(eventLogs.filter((l) => l.isDeleted).length);
 
 	let { children } = $props();
 
 	onMount(() => initializeFromStorage());
+
+	function handleClearAll() {
+		if (confirm('全てのデータを削除して初期状態に戻します。よろしいですか？')) {
+			clearAllData();
+		}
+	}
+
+	function handlePurgeDeleted() {
+		const n = purgeDeletedEventLogs();
+		if (n > 0) {
+			alert(`${n}件の削除済みデータを完全に消去しました。`);
+		} else {
+			alert('削除候補のデータはありません。');
+		}
+	}
 </script>
 
 <div class="app-layout">
@@ -83,8 +102,29 @@
 				</li>
 			{/if}
 		</ul>
+		<div class="sidebar-footer">
+			<button class="data-action" onclick={handleClearAll}>全データをクリア</button>
+		</div>
 	</nav>
 	<main class="main-content">
+		{#if storageStatus.warning === 'unavailable'}
+			<div class="storage-banner warning" role="alert">
+				⚠️ localStorage
+				が利用できないため、データはこのセッション中のみメモリ上で保持されます（再読み込みで失われます）。
+			</div>
+		{:else if storageStatus.warning === 'quota'}
+			<div class="storage-banner warning" role="alert">
+				<span>
+					⚠️ 保存容量が上限に達しました。一部の変更が保存されていません。
+					{#if deletedLogCount > 0}
+						削除済みデータ（{deletedLogCount}件）を消去すると容量を確保できます。
+					{/if}
+				</span>
+				{#if deletedLogCount > 0}
+					<button class="banner-action" onclick={handlePurgeDeleted}>削除済みデータを消去</button>
+				{/if}
+			</div>
+		{/if}
 		{@render children()}
 	</main>
 </div>
@@ -167,9 +207,62 @@
 		flex-shrink: 0;
 	}
 
+	.sidebar-footer {
+		margin-top: auto;
+		padding: var(--space-md);
+		border-top: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.data-action {
+		width: 100%;
+		font-size: var(--font-size-xs);
+		padding: var(--space-xs) var(--space-sm);
+		background: transparent;
+		color: rgba(255, 255, 255, 0.7);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		transition:
+			background 0.15s,
+			color 0.15s;
+	}
+
+	.data-action:hover {
+		background: rgba(255, 255, 255, 0.1);
+		color: white;
+	}
+
 	.main-content {
 		flex: 1;
 		overflow: auto;
 		padding: var(--space-lg);
+	}
+
+	.storage-banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-md);
+		padding: var(--space-sm) var(--space-md);
+		border-radius: var(--radius-sm);
+		font-size: var(--font-size-sm);
+		margin-bottom: var(--space-md);
+	}
+
+	.storage-banner.warning {
+		background: #fff4e5;
+		color: #8a5a00;
+		border: 1px solid #ffd591;
+	}
+
+	.banner-action {
+		flex-shrink: 0;
+		font-size: var(--font-size-xs);
+		padding: var(--space-xs) var(--space-sm);
+		background: #8a5a00;
+		color: white;
+		border: none;
+		border-radius: var(--radius-sm);
+		cursor: pointer;
 	}
 </style>

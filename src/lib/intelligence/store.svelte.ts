@@ -35,11 +35,34 @@ function getRawItem(key: string): string | null {
 	return localStorage.getItem(key);
 }
 
+/** localStorage が実際に読み書き可能かを検査する（Safari プライベートモード等で例外になる）。 */
+function isStorageAvailable(): boolean {
+	try {
+		if (typeof localStorage === 'undefined') return false;
+		const probe = '__si_probe__';
+		localStorage.setItem(probe, '1');
+		localStorage.removeItem(probe);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 let eventLogs = $state<EventLog[]>([]);
 let deals = $state<Deal[]>([]);
 let tasks = $state<Task[]>([]);
 let settings = $state<AppSettings>(getInitialSettings());
 let operationLogs = $state<OperationLog[]>([]);
+
+/**
+ * ストレージ関連の警告状態。
+ * - `unavailable`: localStorage が利用不可（メモリのみで動作）
+ * - `quota`: 保存容量超過（一部データが永続化されていない）
+ * - `null`: 正常
+ *
+ * エクスポートする $state は再代入不可のため、オブジェクトのプロパティを in-place 更新する。
+ */
+const storageStatus = $state<{ warning: 'unavailable' | 'quota' | null }>({ warning: null });
 
 function getState(): IntelligenceState {
 	return { eventLogs, deals, tasks, settings, operationLogs };
@@ -62,11 +85,17 @@ let _saveTimer: ReturnType<typeof setTimeout> | undefined;
 function scheduleSave(): void {
 	if (_saveTimer !== undefined) clearTimeout(_saveTimer);
 	_saveTimer = setTimeout(() => {
-		safeSave(STORAGE_KEYS.EVENT_LOGS, eventLogs);
-		safeSave(STORAGE_KEYS.DEALS, deals);
-		safeSave(STORAGE_KEYS.TASKS, tasks);
-		safeSave(STORAGE_KEYS.SETTINGS, settings);
-		safeSave(STORAGE_KEYS.OPERATION_LOGS, operationLogs);
+		const ok = [
+			safeSave(STORAGE_KEYS.EVENT_LOGS, eventLogs),
+			safeSave(STORAGE_KEYS.DEALS, deals),
+			safeSave(STORAGE_KEYS.TASKS, tasks),
+			safeSave(STORAGE_KEYS.SETTINGS, settings),
+			safeSave(STORAGE_KEYS.OPERATION_LOGS, operationLogs)
+		].every(Boolean);
+		// localStorage 自体が使えない場合は unavailable を優先表示する
+		if (storageStatus.warning !== 'unavailable') {
+			storageStatus.warning = ok ? null : 'quota';
+		}
 		_saveTimer = undefined;
 	}, VALIDATION.SAVE_DEBOUNCE_MS);
 }
@@ -74,6 +103,9 @@ function scheduleSave(): void {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function initializeFromStorage(): void {
+	if (!isStorageAvailable()) {
+		storageStatus.warning = 'unavailable';
+	}
 	const rawEventLogs = getRawItem(STORAGE_KEYS.EVENT_LOGS);
 	const rawDeals = getRawItem(STORAGE_KEYS.DEALS);
 	const rawTasks = getRawItem(STORAGE_KEYS.TASKS);
@@ -207,4 +239,18 @@ export function saveSettings(newSettings: AppSettings): void {
 	scheduleSave();
 }
 
-export { eventLogs, deals, tasks, settings, operationLogs };
+/**
+ * 論理削除済みの Event_Log を物理削除する。容量超過時の削除候補として提示する。
+ * @returns 削除した件数
+ */
+export function purgeDeletedEventLogs(): number {
+	const removed = eventLogs.filter((l) => l.isDeleted).length;
+	if (removed === 0) return 0;
+	eventLogs.splice(0, Infinity, ...eventLogs.filter((l) => !l.isDeleted));
+	// 即時保存を試み、成功すれば quota 警告を解除する
+	const ok = safeSave(STORAGE_KEYS.EVENT_LOGS, eventLogs);
+	if (ok && storageStatus.warning === 'quota') storageStatus.warning = null;
+	return removed;
+}
+
+export { eventLogs, deals, tasks, settings, operationLogs, storageStatus };
