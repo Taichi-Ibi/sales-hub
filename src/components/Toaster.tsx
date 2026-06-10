@@ -4,7 +4,11 @@ import { useStore } from '../store/StoreContext';
 export function Toaster() {
   const { toasts } = useStore();
   return (
-    <div className="pointer-events-none fixed bottom-6 right-6 z-50 flex flex-col gap-2" role="status" aria-live="polite">
+    <div
+      className="pointer-events-none fixed inset-x-4 bottom-20 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-6 sm:items-end md:bottom-6"
+      role="status"
+      aria-live="polite"
+    >
       {toasts.map((t) => (
         <div
           key={t.id}

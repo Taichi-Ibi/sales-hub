@@ -42,8 +42,8 @@ export function MaskingPanel({ action, onClose, onMask, onIgnore }: Props) {
             {action.maskedEntities.length === 0 ? (
               <p className="text-sm text-ink-sub">伏せ字はまだありません。</p>
             ) : (
-              <div className="overflow-hidden rounded-lg border border-line">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-lg border border-line">
+                <table className="w-full min-w-[22rem] text-sm">
                   <thead className="bg-surface text-left text-xs text-ink-sub">
                     <tr>
                       <th className="px-3 py-2 font-medium">トークン</th>
@@ -75,7 +75,7 @@ export function MaskingPanel({ action, onClose, onMask, onIgnore }: Props) {
               </h3>
               <ul className="flex flex-col gap-2">
                 {action.suspectedUnmasked.map((s) => (
-                  <li key={s} className="flex items-center gap-2 text-sm">
+                  <li key={s} className="flex flex-wrap items-center gap-2 text-sm">
                     <span className="font-medium text-ink">「{s}」</span>
                     <div className="ml-auto flex gap-1.5">
                       <Button variant="secondary" onClick={() => onMask(s, '人物')}>
@@ -95,13 +95,13 @@ export function MaskingPanel({ action, onClose, onMask, onIgnore }: Props) {
           <section className="mt-6">
             <h3 className="mb-2 text-sm font-medium text-ink">＋ 新しい伏せ字を追加</h3>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="flex flex-col gap-1 text-xs text-ink-sub">
+              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-sub">
                 対象テキスト
                 <input
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="下書き内の文字列"
-                  className="w-48 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                  className="w-full min-w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-accent sm:w-48"
                 />
               </label>
               <label className="flex flex-col gap-1 text-xs text-ink-sub">

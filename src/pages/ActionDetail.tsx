@@ -82,7 +82,7 @@ export function ActionDetail() {
     // 未確認 / 対応中（台帳の案件）
     if (action.risk === '低') {
       return (
-        <div className="flex w-full justify-end gap-2">
+        <div className="flex w-full flex-wrap justify-end gap-2">
           <Button variant="danger" onClick={() => setConfirmOpen(true)}>
             棄却する
           </Button>
@@ -103,7 +103,7 @@ export function ActionDetail() {
         <div className="flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
           <span aria-hidden>🔴</span>高リスク案件のため、FS承認が必要です
         </div>
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button variant="danger" onClick={() => setConfirmOpen(true)}>
             棄却する
           </Button>
@@ -132,7 +132,7 @@ export function ActionDetail() {
 
       <div className="overflow-hidden rounded-xl border border-line bg-white">
         {/* ヘッダー */}
-        <div className="border-b border-line p-5">
+        <div className="border-b border-line p-4 sm:p-5">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-ink-sub">
             <CategoryTag category={action.category} />
             <RiskBadge risk={action.risk} />
@@ -148,7 +148,7 @@ export function ActionDetail() {
           </h1>
         </div>
 
-        <div className="flex flex-col gap-6 p-5">
+        <div className="flex flex-col gap-6 p-4 sm:p-5">
           {/* 要約 */}
           <section>
             <h2 className="mb-2 text-sm font-semibold text-ink">◆ 要約</h2>
@@ -220,7 +220,7 @@ export function ActionDetail() {
         </div>
 
         {/* フッターアクション */}
-        <div className="flex items-center border-t border-line bg-surface p-5">
+        <div className="flex items-center border-t border-line bg-surface p-4 sm:p-5">
           <Footer />
         </div>
       </div>
