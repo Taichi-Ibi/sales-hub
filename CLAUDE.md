@@ -33,8 +33,10 @@ npm run preview    # ビルド結果の確認
 ```
 src/
   data/actions.ts        # サンプルデータ（架空）。status で表示先一覧が一意に決まる
-  types.ts               # ドメイン型（Action / Category / Risk / Status / MaskedEntity）
+  data/inbox.ts          # Inbox のサンプルデータ（Slack/メール/議事録の原文）
+  types.ts               # ドメイン型（Action / InboxItem / Category / Risk / Status / MaskedEntity）
   lib/time.ts            # 経過時間の算出・色分け（NOW は固定値 2026-06-10T10:00:00）
+  lib/tokenize.ts        # 簡易分かち書き（文字種境界で分割。形態素解析のシミュレート）
   store/StoreContext.tsx # 全状態と状態遷移を集約した Context
   components/
     Shell.tsx            # 左ナビ＋上部バー＋トースト層（共通シェル）
@@ -42,10 +44,12 @@ src/
     Badge.tsx            # 経過/カテゴリ/高リスク/状態の各バッジ
     Button.tsx           # 主/副/危険/リンク のボタン
     DraftEditor.tsx      # 下書き（伏せ字チップ埋め込みの編集領域）
-    MaskingPanel.tsx     # S3 マスキング＆ID辞書（右スライドインパネル）
+    MaskingPanel.tsx     # S3 伏せ字の確認・復元パネル（右スライドイン。マスク作成は不可）
     ConfirmDialog.tsx    # 棄却の確認ダイアログ
     Toaster.tsx          # トースト（右下・2.5秒）
   pages/
+    Inbox.tsx            # S0 Inbox（IS向け受信箱。Slack/メール/議事録）
+    InboxDetail.tsx      # S0' 原文詳細（分かち書き→タップでマスキング→AIタスク化）
     Ledger.tsx           # S1 アクション台帳
     ActionDetail.tsx     # S2 詳細／実行キット
     Approvals.tsx        # S4 FS承認待ち
@@ -60,11 +64,23 @@ src/
   - FS承認待ち(S4): `FS承認待ち` / `承認済み`
   - 完了済み(S5): `送信済み` / `棄却`
 - 一覧間の「移動」は status の更新で表現（複製しない）。左ナビのバッジも status から算出。
-- トースト文言は3種のみ: `送信しました` / `FS承認へ回しました` / `棄却しました`。
+- トースト文言は4種のみ: `送信しました` / `FS承認へ回しました` / `棄却しました` / `タスク化しました`。
+
+### Inbox とマスキングのパイプライン
+
+- Inbox には Slack / メール / 議事録 の原文（架空）が入る。`InboxItem.status` は
+  `未処理` → `マスキング中` → `タスク化済み` の一方向。
+- 流れ: 原文を開くと**分かち書き**（CPU実行のシミュレート。`lib/tokenize.ts` の
+  文字種境界分割を約1秒の擬似処理後に適用）→ トークンを**タップしてマスキング**
+  （同一文字列は一括で同じ伏せ字トークンになる）→ **AIタスク化**（シミュレート。
+  `distilled` シードにマスクを適用して Action を生成し台帳へ追加）。
+- マスキング（伏せる操作）は Inbox でのみ行う。台帳側は復元のみ
+  （`MaskingPanel` は確認・復元・「未マスクの疑い」の無視だけ）。
+- タスク化時、`knownSensitive` のうち未マスクの語は Action の「未マスクの疑い」に引き継ぐ。
 
 ## 実装上の約束
 
-- **金額は伏せ字にしない**（背景・下書き内の数字はそのまま表示）。マスク対象は `人物` / `NDA` の2種のみ。
+- **金額は伏せ字にしない**（背景・下書き内の数字はそのまま表示）。マスク種別は `氏名` / `会社` / `連絡先` / `契約番号` の4種。
 - 経過バッジの色: 24h未満=緑(good) / 24h以上72h未満=黄(warn) / 72h以上=赤(danger)。境界は上位区分に含める。
 - 高リスクのみ高リスクバッジを表示。低リスクは何も出さない。
 - アニメーションは仕様書 §10 の指定のみ（トースト150ms / S3パネル150-200ms）。`prefers-reduced-motion` で無効化。

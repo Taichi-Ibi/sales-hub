@@ -28,12 +28,14 @@ interface NavItem {
 }
 
 export function Shell() {
-  const { actions } = useStore();
+  const { actions, inboxItems } = useStore();
   const location = useLocation();
+  const inboxCount = inboxItems.filter((i) => i.status !== 'タスク化済み').length;
   const ledgerCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
   const approvalCount = actions.filter((a) => APPROVAL_STATUSES.includes(a.status)).length;
 
   const items: NavItem[] = [
+    { to: '/inbox', icon: '📨', label: 'Inbox', count: inboxCount },
     { to: '/', end: true, icon: '📥', label: '台帳', count: ledgerCount },
     { to: '/approvals', icon: '✋', label: 'FS承認', count: approvalCount },
     { to: '/archive', icon: '✔', label: '完了済み' },
