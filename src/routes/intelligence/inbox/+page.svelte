@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		eventLogs,
@@ -18,18 +19,28 @@
 	import { search, generateTasks } from '$lib/intelligence/ai-engine.js';
 	import { isBlank } from '$lib/intelligence/validation.js';
 	import { VALIDATION, CURRENT_USER } from '$lib/intelligence/constants.js';
-	import { formatDateTime } from '$lib/intelligence/format.js';
+	import { formatRelative, formatDateTime } from '$lib/intelligence/format.js';
 	import {
 		sourceIcons,
+		sourceLabel,
+		messageSender,
 		eventLogStatusLabel as statusLabel,
 		eventLogStatusClass as statusClass
 	} from '$lib/intelligence/ui-labels.js';
+	import { getInitials, avatarColor } from '$lib/intelligence/avatar.js';
 	import type { DataSource, EventLog, SearchResult, ThreadGroup } from '$lib/intelligence/types.js';
 
 	type SelectedItem = { type: 'event'; item: EventLog } | { type: 'thread'; item: ThreadGroup };
 
 	const threadGroups = $derived(groupByThread(eventLogs));
 	const visibleLogs = $derived(selectVisibleEventLogs(eventLogs));
+
+	// ─── Live clock（相対時刻表示を1分ごとに更新） ──────────────────────────────────
+	let now = $state(new Date());
+	onMount(() => {
+		const interval = setInterval(() => (now = new Date()), 60_000);
+		return () => clearInterval(interval);
+	});
 
 	// ─── View state ────────────────────────────────────────────────────────────
 	let isFlat = $state(false);
@@ -66,13 +77,10 @@
 	let editError = $state('');
 	let showDeleteConfirm = $state(false);
 
-	const sourceOptions: { value: DataSource; label: string }[] = [
-		{ value: 'slack', label: 'Slack' },
-		{ value: 'email', label: 'メール' },
-		{ value: 'calendar', label: 'カレンダー' },
-		{ value: 'minutes', label: '議事録' },
-		{ value: 'memo', label: 'メモ' }
-	];
+	const sourceOptions = (Object.keys(sourceLabel) as DataSource[]).map((value) => ({
+		value,
+		label: sourceLabel[value]
+	}));
 
 	const searchTypeIcon: Record<SearchResult['type'], string> = {
 		event_log: '📥',
@@ -81,10 +89,16 @@
 	};
 
 	const searchTypeLabel: Record<SearchResult['type'], string> = {
-		event_log: 'Event Log',
+		event_log: 'メッセージ',
 		deal: '案件',
 		task: 'タスク'
 	};
+
+	/** 本文を1行プレビュー用に整形する（マスキング済みなら伏字版を使う）。 */
+	function preview(log: EventLog): string {
+		const text = (log.isMasked ? (log.maskedBody ?? log.body) : log.body) ?? '';
+		return text.replace(/\s+/g, ' ').trim();
+	}
 
 	function toggleSource(source: DataSource) {
 		if (selectedSources.has(source)) {
@@ -93,6 +107,13 @@
 			selectedSources.add(source);
 		}
 		currentPage = 0;
+	}
+
+	function setView(flat: boolean) {
+		if (isFlat === flat) return;
+		isFlat = flat;
+		currentPage = 0;
+		selected = null;
 	}
 
 	// ─── Compound filter (18.2) ─────────────────────────────────────────────────────
@@ -303,7 +324,7 @@
 		newLogBody = '';
 		newLogError = '';
 		showNewLog = false;
-		saveNotice = `保存しました（AIタスク${newTasks.length}件を生成）`;
+		saveNotice = `保存しました（AIがタスクを${newTasks.length}件提案）`;
 	}
 </script>
 
@@ -311,26 +332,32 @@
 	<title>インボックス — Sales Intelligence</title>
 </svelte:head>
 
+<!-- 色付きイニシャルのアバター。送信者名やチャンネル名を seed に使う。 -->
+{#snippet avatar(seed: string, large: boolean)}
+	<span
+		class="avatar"
+		class:avatar-lg={large}
+		style="background-color: {avatarColor(seed)}"
+		aria-hidden="true"
+	>
+		{getInitials(seed)}
+	</span>
+{/snippet}
+
 <div class="inbox-layout" class:has-selection={selected !== null}>
 	<div class="inbox-left">
 		<div class="inbox-header">
-			<h1 class="page-title">インボックス</h1>
-			<div class="header-actions">
-				<button class="toggle-btn" onclick={() => (showNewLog = !showNewLog)}>
-					{showNewLog ? 'キャンセル' : '+ 新規記録'}
-				</button>
-				<button
-					class="toggle-btn"
-					class:active={isFlat}
-					onclick={() => {
-						isFlat = !isFlat;
-						currentPage = 0;
-						selected = null;
-					}}
-				>
-					{isFlat ? 'スレッド表示' : 'フラット表示'}
-				</button>
+			<div class="inbox-heading">
+				<h1 class="page-title">インボックス</h1>
+				<p class="page-lead">Slack・メール・議事録・メモを、ひとつの場所で。</p>
 			</div>
+			<button
+				class="compose-btn"
+				class:active={showNewLog}
+				onclick={() => (showNewLog = !showNewLog)}
+			>
+				{showNewLog ? 'キャンセル' : '✏️ 新規作成'}
+			</button>
 		</div>
 
 		<!-- AI Search (18.1) -->
@@ -338,7 +365,7 @@
 			<input
 				class="search-input"
 				type="search"
-				placeholder="AI検索（議事録・メール・案件・タスクを横断）"
+				placeholder="🔍 メッセージ・案件・タスクをまとめて検索"
 				bind:value={searchQuery}
 				onkeydown={(e) => {
 					if (e.key === 'Enter') runSearch();
@@ -357,10 +384,10 @@
 					<span class="form-label">種別</span>
 					<div class="radio-group">
 						<label class="radio-label">
-							<input type="radio" bind:group={newLogSource} value="minutes" /> 議事録
+							<input type="radio" bind:group={newLogSource} value="memo" /> 🗒️ メモ
 						</label>
 						<label class="radio-label">
-							<input type="radio" bind:group={newLogSource} value="memo" /> メモ
+							<input type="radio" bind:group={newLogSource} value="minutes" /> 📝 議事録
 						</label>
 					</div>
 				</div>
@@ -370,7 +397,7 @@
 						id="new-log-title"
 						class="form-input"
 						type="text"
-						placeholder="タイトルを入力"
+						placeholder="例: A社 定例MTGメモ"
 						bind:value={newLogTitle}
 					/>
 				</div>
@@ -381,7 +408,7 @@
 					<textarea
 						id="new-log-body"
 						class="form-textarea"
-						placeholder="内容を入力してください"
+						placeholder="内容を入力してください。保存するとAIが関連タスクを提案します。"
 						maxlength={newLogMaxLen}
 						bind:value={newLogBody}
 					></textarea>
@@ -389,12 +416,12 @@
 				{#if newLogError}
 					<p class="error-text">{newLogError}</p>
 				{/if}
-				<button class="btn-primary" onclick={saveNewLog}>保存</button>
+				<button class="btn-primary" onclick={saveNewLog}>保存する</button>
 			</div>
 		{/if}
 
 		{#if saveNotice}
-			<p class="save-notice">{saveNotice}</p>
+			<p class="save-notice">✓ {saveNotice}</p>
 		{/if}
 
 		{#if searchSubmitted}
@@ -403,19 +430,19 @@
 				{#if searchResults.length === 0}
 					<p class="empty-message">該当する結果がありません</p>
 				{:else}
-					<ul class="item-list">
+					<ul class="conv-list">
 						{#each searchResults as result (result.type + result.id)}
 							<li>
 								<button
-									class="item-row"
+									class="conv-row"
 									class:clickable={result.type === 'event_log'}
 									onclick={() => openSearchResult(result)}
 								>
-									<span class="source-icon">{searchTypeIcon[result.type]}</span>
-									<div class="item-body">
-										<span class="item-title">{result.title.slice(0, 50)}</span>
-										<span class="item-excerpt">{result.excerpt}</span>
-										<span class="item-meta">
+									<span class="source-emoji">{searchTypeIcon[result.type]}</span>
+									<div class="conv-body">
+										<span class="conv-title">{result.title.slice(0, 50)}</span>
+										<span class="conv-preview">{result.excerpt}</span>
+										<span class="conv-tags">
 											<span class="type-tag">{searchTypeLabel[result.type]}</span>
 											<span class="score-tag">関連度 {result.relevanceScore}</span>
 										</span>
@@ -431,6 +458,25 @@
 				<p class="empty-message">{searchPrompt}</p>
 			{/if}
 
+			<!-- 表示切り替え（会話 / 時系列）と絞り込み -->
+			<div class="view-toolbar">
+				<div class="segmented" role="group" aria-label="表示の切り替え">
+					<button class="seg-btn" class:active={!isFlat} onclick={() => setView(false)}>
+						💬 会話ごと
+					</button>
+					<button class="seg-btn" class:active={isFlat} onclick={() => setView(true)}>
+						🕒 時系列
+					</button>
+				</div>
+				<button
+					class="filter-toggle"
+					class:active={showAdvancedFilter}
+					onclick={() => (showAdvancedFilter = !showAdvancedFilter)}
+				>
+					絞り込み{anyFilterActive ? ' ●' : ''}
+				</button>
+			</div>
+
 			<!-- FilterBar -->
 			<div class="filter-bar">
 				{#each sourceOptions as opt (opt.value)}
@@ -443,13 +489,6 @@
 						{opt.label}
 					</button>
 				{/each}
-				<button
-					class="filter-chip filter-toggle"
-					class:selected={showAdvancedFilter}
-					onclick={() => (showAdvancedFilter = !showAdvancedFilter)}
-				>
-					絞り込み
-				</button>
 			</div>
 
 			<!-- Advanced compound filter (18.2) -->
@@ -500,7 +539,7 @@
 						/>
 					</div>
 					{#if anyFilterActive}
-						<button class="search-clear" onclick={clearFilters}>フィルタをクリア</button>
+						<button class="search-clear" onclick={clearFilters}>絞り込みをクリア</button>
 					{/if}
 				</div>
 			{/if}
@@ -508,50 +547,70 @@
 			<!-- List -->
 			{#if totalItems === 0}
 				<p class="empty-message">
-					{anyFilterActive ? '該当するデータがありません' : '表示するEvent_Logがありません'}
+					{anyFilterActive ? '条件に合うメッセージはありません' : 'まだメッセージがありません'}
 				</p>
 			{:else if isFlat}
-				<ul class="item-list">
+				<ul class="conv-list">
 					{#each flatPageItems as log (log.id)}
 						<li>
 							<button
-								class="item-row"
+								class="conv-row"
 								class:unread={!log.isRead}
 								class:active={selected?.type === 'event' && selected.item.id === log.id}
 								onclick={() => selectEvent(log)}
 							>
-								<span class="source-icon">{sourceIcons[log.source]}</span>
-								<div class="item-body">
-									<span class="item-title">{log.title.slice(0, 50)}</span>
-									<span class="item-meta">
-										{formatDateTime(log.timestamp)}
-										<span class="status-badge {statusClass[log.status]}"
-											>{statusLabel[log.status]}</span
+								{@render avatar(messageSender(log), false)}
+								<div class="conv-body">
+									<div class="conv-top">
+										<span class="conv-name">{messageSender(log)}</span>
+										<span class="conv-time">{formatRelative(log.timestamp, now)}</span>
+									</div>
+									<span class="conv-title">{log.title}</span>
+									{#if preview(log)}<span class="conv-preview">{preview(log)}</span>{/if}
+									<span class="conv-tags">
+										<span class="source-tag"
+											>{sourceIcons[log.source]} {sourceLabel[log.source]}</span
 										>
+										{#if log.status !== 'pending'}
+											<span class="status-badge {statusClass[log.status]}"
+												>{statusLabel[log.status]}</span
+											>
+										{/if}
 									</span>
 								</div>
+								{#if !log.isRead}<span class="unread-dot" aria-label="未読"></span>{/if}
 							</button>
 						</li>
 					{/each}
 				</ul>
 			{:else}
-				<ul class="item-list">
+				<ul class="conv-list">
 					{#each threadPageItems as tg (tg.id)}
 						<li>
 							<button
-								class="item-row"
+								class="conv-row"
 								class:unread={!tg.parentMessage.isRead}
 								class:active={selected?.type === 'thread' && selected.item.id === tg.id}
 								onclick={() => selectThread(tg)}
 							>
-								<span class="source-icon">{sourceIcons[tg.source]}</span>
-								<div class="item-body">
-									<span class="item-title">{tg.parentMessage.title.slice(0, 50)}</span>
-									<span class="item-meta">
-										{formatDateTime(tg.latestMessageAt)}
-										<span class="thread-count">{tg.messageCount}件</span>
+								{@render avatar(messageSender(tg.parentMessage), false)}
+								<div class="conv-body">
+									<div class="conv-top">
+										<span class="conv-name">{messageSender(tg.parentMessage)}</span>
+										<span class="conv-time">{formatRelative(tg.latestMessageAt, now)}</span>
+									</div>
+									<span class="conv-title">{tg.parentMessage.title}</span>
+									{#if preview(tg.parentMessage)}
+										<span class="conv-preview">{preview(tg.parentMessage)}</span>
+									{/if}
+									<span class="conv-tags">
+										<span class="source-tag">{sourceIcons[tg.source]} {sourceLabel[tg.source]}</span
+										>
+										<span class="thread-count">💬 {tg.messageCount}件の会話</span>
 									</span>
 								</div>
+								{#if !tg.parentMessage.isRead}<span class="unread-dot" aria-label="未読"
+									></span>{/if}
 							</button>
 						</li>
 					{/each}
@@ -560,21 +619,31 @@
 						{#if !threadPageItems.some((tg) => tg.parentMessage.id === log.id || tg.replies.some((r) => r.id === log.id))}
 							<li>
 								<button
-									class="item-row"
+									class="conv-row"
 									class:unread={!log.isRead}
 									class:active={selected?.type === 'event' && selected.item.id === log.id}
 									onclick={() => selectEvent(log)}
 								>
-									<span class="source-icon">{sourceIcons[log.source]}</span>
-									<div class="item-body">
-										<span class="item-title">{log.title.slice(0, 50)}</span>
-										<span class="item-meta">
-											{formatDateTime(log.timestamp)}
-											<span class="status-badge {statusClass[log.status]}"
-												>{statusLabel[log.status]}</span
+									{@render avatar(messageSender(log), false)}
+									<div class="conv-body">
+										<div class="conv-top">
+											<span class="conv-name">{messageSender(log)}</span>
+											<span class="conv-time">{formatRelative(log.timestamp, now)}</span>
+										</div>
+										<span class="conv-title">{log.title}</span>
+										{#if preview(log)}<span class="conv-preview">{preview(log)}</span>{/if}
+										<span class="conv-tags">
+											<span class="source-tag"
+												>{sourceIcons[log.source]} {sourceLabel[log.source]}</span
 											>
+											{#if log.status !== 'pending'}
+												<span class="status-badge {statusClass[log.status]}"
+													>{statusLabel[log.status]}</span
+												>
+											{/if}
 										</span>
 									</div>
+									{#if !log.isRead}<span class="unread-dot" aria-label="未読"></span>{/if}
 								</button>
 							</li>
 						{/if}
@@ -605,22 +674,25 @@
 	<div class="inbox-detail">
 		{#if selected === null}
 			<div class="detail-empty">
-				<p>左のリストから項目を選択してください</p>
+				<span class="detail-empty-icon">💬</span>
+				<p>左の一覧からメッセージを選ぶと、ここに会話が表示されます。</p>
 			</div>
 		{:else if selectedEventLog}
 			{@const log = selectedEventLog}
 			<div class="detail-panel">
 				<button class="mobile-back" onclick={() => (selected = null)}>← 一覧へ戻る</button>
 				<div class="detail-header">
-					<span class="source-icon lg">{sourceIcons[log.source]}</span>
+					{@render avatar(messageSender(log), true)}
 					<div>
 						<h2 class="detail-title">{log.title}</h2>
 						<div class="detail-meta">
-							{formatDateTime(log.timestamp)}
+							<span class="detail-sender">{messageSender(log)}</span>
+							<span>{formatDateTime(log.timestamp)}</span>
+							<span class="source-tag">{sourceIcons[log.source]} {sourceLabel[log.source]}</span>
 							<span class="status-badge {statusClass[log.status]}">{statusLabel[log.status]}</span>
 							{#if log.dealId}
 								{@const deal = deals.find((d) => d.id === log.dealId)}
-								{#if deal}<span class="deal-tag">{deal.name}</span>{/if}
+								{#if deal}<span class="deal-tag">💼 {deal.name}</span>{/if}
 							{/if}
 						</div>
 					</div>
@@ -628,27 +700,40 @@
 
 				<!-- Action toolbar (16.2) -->
 				<div class="detail-actions">
-					<button class="action-btn" onclick={() => openEdit('annotation')}>追記</button>
-					<button class="action-btn" onclick={() => openEdit('comment')}>コメント</button>
+					<button
+						class="action-btn"
+						title="この記録に補足情報を追記します"
+						onclick={() => openEdit('annotation')}>📌 追記</button
+					>
+					<button
+						class="action-btn"
+						title="この記録にコメントします"
+						onclick={() => openEdit('comment')}>💬 コメント</button
+					>
 					{#if log.status !== 'rejected'}
-						<button class="action-btn action-warn" onclick={() => openEdit('reject')}>却下</button>
+						<button
+							class="action-btn action-warn"
+							title="この記録を却下します"
+							onclick={() => openEdit('reject')}>🚫 却下</button
+						>
 					{:else}
 						<span class="rejected-label">却下済み</span>
 					{/if}
 					<button
 						class="action-btn action-danger"
+						title="この記録を削除します"
 						onclick={() => {
 							showDeleteConfirm = true;
 							editMode = 'none';
 						}}
 					>
-						削除
+						🗑 削除
 					</button>
 				</div>
 
 				{#if showDeleteConfirm}
 					<div class="confirm-box">
-						<p>このEvent_Logを削除しますか？（論理削除されます）</p>
+						<p>この記録を削除しますか？（あとから復元できます）</p>
 						<div class="confirm-actions">
 							<button class="btn-danger" onclick={confirmDelete}>削除する</button>
 							<button class="btn-secondary" onclick={() => (showDeleteConfirm = false)}
@@ -708,22 +793,32 @@
 
 				{#if log.annotations.length > 0}
 					<section class="detail-section">
-						<h3>追記</h3>
+						<h3>📌 追記</h3>
 						{#each log.annotations as ann (ann.id)}
-							<div class="annotation">
-								<p class="entry-content">{ann.content}</p>
-								<p class="entry-meta">{ann.author} · {formatDateTime(ann.createdAt)}</p>
+							<div class="entry">
+								{@render avatar(ann.author, false)}
+								<div class="entry-main">
+									<p class="entry-meta">
+										<strong>{ann.author}</strong> · {formatDateTime(ann.createdAt)}
+									</p>
+									<p class="entry-content">{ann.content}</p>
+								</div>
 							</div>
 						{/each}
 					</section>
 				{/if}
 				{#if log.comments.length > 0}
 					<section class="detail-section">
-						<h3>コメント</h3>
+						<h3>💬 コメント</h3>
 						{#each log.comments as comment (comment.id)}
-							<div class="comment">
-								<p class="entry-content">{comment.content}</p>
-								<p class="entry-meta">{comment.author} · {formatDateTime(comment.createdAt)}</p>
+							<div class="entry">
+								{@render avatar(comment.author, false)}
+								<div class="entry-main">
+									<p class="entry-meta">
+										<strong>{comment.author}</strong> · {formatDateTime(comment.createdAt)}
+									</p>
+									<p class="entry-content">{comment.content}</p>
+								</div>
 							</div>
 						{/each}
 					</section>
@@ -735,27 +830,28 @@
 			<div class="detail-panel">
 				<button class="mobile-back" onclick={() => (selected = null)}>← 一覧へ戻る</button>
 				<div class="detail-header">
-					<span class="source-icon lg">{sourceIcons[tg.source]}</span>
+					{@render avatar(messageSender(tg.parentMessage), true)}
 					<div>
 						<h2 class="detail-title">{tg.parentMessage.title}</h2>
 						<div class="detail-meta">
-							{tg.messageCount}件のメッセージ · 最終更新: {formatDateTime(tg.latestMessageAt)}
+							<span class="source-tag">{sourceIcons[tg.source]} {sourceLabel[tg.source]}</span>
+							<span>{tg.messageCount}件のメッセージ</span>
+							<span>最終更新 {formatRelative(tg.latestMessageAt, now)}</span>
 						</div>
 					</div>
 				</div>
-				<div class="thread-messages">
-					{#each messages as msg, i (msg.id)}
-						{#if i > 0}
-							<hr class="thread-divider" />
-						{/if}
-						<div class="thread-message">
-							<div class="message-meta">
-								{#if msg.slackSender}{msg.slackSender} ·{/if}
-								{#if msg.emailFrom}{msg.emailFrom} ·{/if}
-								{formatDateTime(msg.timestamp)}
-							</div>
-							<div class="message-body">
-								{msg.isMasked ? (msg.maskedBody ?? msg.body) : msg.body}
+				<div class="chat-messages">
+					{#each messages as msg (msg.id)}
+						<div class="chat-msg">
+							{@render avatar(messageSender(msg), false)}
+							<div class="chat-content">
+								<div class="chat-head">
+									<span class="chat-sender">{messageSender(msg)}</span>
+									<span class="chat-time">{formatDateTime(msg.timestamp)}</span>
+								</div>
+								<div class="chat-bubble">
+									{msg.isMasked ? (msg.maskedBody ?? msg.body) : msg.body}
+								</div>
 							</div>
 						</div>
 					{/each}
@@ -773,7 +869,7 @@
 	}
 
 	.inbox-left {
-		width: 380px;
+		width: 400px;
 		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;
@@ -825,13 +921,13 @@
 
 	.inbox-header {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		justify-content: space-between;
+		gap: var(--space-sm);
 	}
 
-	.header-actions {
-		display: flex;
-		gap: var(--space-xs);
+	.inbox-heading {
+		min-width: 0;
 	}
 
 	.page-title {
@@ -840,19 +936,52 @@
 		margin: 0;
 	}
 
-	.toggle-btn {
+	.page-lead {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		margin: 2px 0 0;
+	}
+
+	.compose-btn {
+		flex-shrink: 0;
 		font-size: var(--font-size-sm);
-		padding: var(--space-xs) var(--space-sm);
-		border: 1px solid var(--color-brand);
-		background: white;
-		color: var(--color-brand);
+		font-weight: 600;
+		padding: var(--space-xs) var(--space-md);
+		border: none;
+		background: var(--color-brand);
+		color: white;
 		border-radius: var(--radius-sm);
 		cursor: pointer;
 	}
 
-	.toggle-btn.active {
-		background: var(--color-brand);
+	.compose-btn:hover {
+		background: var(--color-brand-hover);
+	}
+
+	.compose-btn.active {
+		background: var(--color-text-muted);
+	}
+
+	/* ─── Avatar ─────────────────────────────────────────────────────────────── */
+	.avatar {
+		flex-shrink: 0;
+		width: 36px;
+		height: 36px;
+		border-radius: var(--radius-md);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		color: white;
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+		line-height: 1;
+		user-select: none;
+	}
+
+	.avatar-lg {
+		width: 44px;
+		height: 44px;
+		font-size: var(--font-size-lg);
 	}
 
 	/* Search */
@@ -895,14 +1024,6 @@
 		overflow-y: auto;
 	}
 
-	.item-excerpt {
-		font-size: var(--font-size-xs);
-		color: var(--color-text-muted);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
 	.type-tag {
 		background: var(--color-brand-light);
 		color: var(--color-brand);
@@ -919,8 +1040,56 @@
 		font-weight: 600;
 	}
 
-	.item-row.clickable:hover {
+	.conv-row.clickable:hover {
 		background: var(--color-brand-light);
+	}
+
+	/* View toolbar: segmented control + filter toggle */
+	.view-toolbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-sm);
+	}
+
+	.segmented {
+		display: inline-flex;
+		background: var(--color-bg);
+		border-radius: var(--radius-sm);
+		padding: 2px;
+	}
+
+	.seg-btn {
+		font-size: var(--font-size-xs);
+		padding: 4px var(--space-sm);
+		border: none;
+		background: none;
+		color: var(--color-text-muted);
+		border-radius: calc(var(--radius-sm) - 1px);
+		cursor: pointer;
+	}
+
+	.seg-btn.active {
+		background: white;
+		color: var(--color-brand);
+		font-weight: 600;
+		box-shadow: var(--shadow-card);
+	}
+
+	.filter-toggle {
+		font-size: var(--font-size-xs);
+		padding: 4px var(--space-sm);
+		border: 1px solid var(--color-border);
+		background: white;
+		color: var(--color-text);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+	}
+
+	.filter-toggle.active {
+		background: var(--color-brand);
+		color: white;
+		border-color: var(--color-brand);
 	}
 
 	/* Filter */
@@ -944,10 +1113,6 @@
 		background: var(--color-brand);
 		color: white;
 		border-color: var(--color-brand);
-	}
-
-	.filter-toggle {
-		margin-left: auto;
 	}
 
 	.advanced-filter {
@@ -1084,7 +1249,8 @@
 		font-size: var(--font-size-sm);
 	}
 
-	.item-list {
+	/* ─── Conversation list (Slack channel-list style) ─────────────────────────── */
+	.conv-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
@@ -1095,7 +1261,7 @@
 		box-shadow: var(--shadow-card);
 	}
 
-	.item-row {
+	.conv-row {
 		display: flex;
 		align-items: flex-start;
 		gap: var(--space-sm);
@@ -1109,37 +1275,46 @@
 		transition: background 0.1s;
 	}
 
-	.item-row:hover {
+	.conv-row:hover {
 		background: var(--color-brand-light);
 	}
 
-	.item-row.active {
+	.conv-row.active {
 		background: var(--color-brand-light);
-		border-left: 3px solid var(--color-brand);
+		box-shadow: inset 3px 0 0 var(--color-brand);
 	}
 
-	.item-row.unread .item-title {
-		font-weight: 700;
-	}
-
-	.source-icon {
-		font-size: 16px;
-		flex-shrink: 0;
-		margin-top: 2px;
-	}
-
-	.source-icon.lg {
-		font-size: 24px;
-	}
-
-	.item-body {
+	.conv-body {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
 		min-width: 0;
+		flex: 1;
 	}
 
-	.item-title {
+	.conv-top {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--space-sm);
+	}
+
+	.conv-name {
+		font-size: var(--font-size-sm);
+		font-weight: 600;
+		color: var(--color-text-heading);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.conv-time {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		flex-shrink: 0;
+	}
+
+	.conv-title {
 		font-size: var(--font-size-md);
 		color: var(--color-text);
 		white-space: nowrap;
@@ -1147,12 +1322,51 @@
 		text-overflow: ellipsis;
 	}
 
-	.item-meta {
-		display: flex;
-		align-items: center;
-		gap: var(--space-xs);
+	.conv-row.unread .conv-name,
+	.conv-row.unread .conv-title {
+		font-weight: 700;
+		color: var(--color-text-heading);
+	}
+
+	.conv-preview {
 		font-size: var(--font-size-xs);
 		color: var(--color-text-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.conv-tags {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-xs);
+		margin-top: 2px;
+	}
+
+	.source-emoji {
+		font-size: 18px;
+		flex-shrink: 0;
+		margin-top: 2px;
+		width: 36px;
+		text-align: center;
+	}
+
+	.source-tag {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		background: var(--color-bg);
+		padding: 1px 6px;
+		border-radius: 8px;
+	}
+
+	.unread-dot {
+		flex-shrink: 0;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--color-brand);
+		margin-top: 6px;
 	}
 
 	.status-badge {
@@ -1180,9 +1394,10 @@
 	.thread-count {
 		background: var(--color-brand-light);
 		color: var(--color-brand);
-		padding: 1px 5px;
+		padding: 1px 6px;
 		border-radius: 8px;
 		font-weight: 600;
+		font-size: var(--font-size-xs);
 	}
 
 	.pagination {
@@ -1224,11 +1439,20 @@
 
 	.detail-empty {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		height: 100%;
+		gap: var(--space-sm);
 		color: var(--color-text-muted);
 		font-size: var(--font-size-sm);
+		padding: var(--space-lg);
+		text-align: center;
+	}
+
+	.detail-empty-icon {
+		font-size: 40px;
+		opacity: 0.6;
 	}
 
 	.detail-panel {
@@ -1252,10 +1476,16 @@
 
 	.detail-meta {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--space-sm);
 		font-size: var(--font-size-sm);
 		color: var(--color-text-muted);
+	}
+
+	.detail-sender {
+		font-weight: 600;
+		color: var(--color-text-heading);
 	}
 
 	.deal-tag {
@@ -1270,6 +1500,7 @@
 	/* Detail actions */
 	.detail-actions {
 		display: flex;
+		flex-wrap: wrap;
 		gap: var(--space-xs);
 		align-items: center;
 		margin-bottom: var(--space-md);
@@ -1360,18 +1591,24 @@
 		margin: 0 0 var(--space-sm);
 	}
 
-	.annotation,
-	.comment {
-		background: var(--color-bg);
-		border-radius: var(--radius-sm);
-		padding: var(--space-sm) var(--space-md);
-		font-size: var(--font-size-sm);
-		margin-bottom: var(--space-xs);
+	/* Annotation / comment entries — chat-row style with avatar */
+	.entry {
+		display: flex;
+		gap: var(--space-sm);
+		margin-bottom: var(--space-sm);
+	}
+
+	.entry-main {
+		flex: 1;
+		min-width: 0;
 	}
 
 	.entry-content {
-		margin: 0 0 2px;
+		margin: 2px 0 0;
 		white-space: pre-wrap;
+		font-size: var(--font-size-sm);
+		color: var(--color-text);
+		line-height: 1.5;
 	}
 
 	.entry-meta {
@@ -1380,32 +1617,46 @@
 		color: var(--color-text-muted);
 	}
 
-	.thread-messages {
+	/* ─── Thread chat view ─────────────────────────────────────────────────────── */
+	.chat-messages {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-md);
 	}
 
-	.thread-divider {
-		border: none;
-		border-top: 1px solid var(--color-border);
-		margin: 0;
-	}
-
-	.thread-message {
+	.chat-msg {
 		display: flex;
-		flex-direction: column;
-		gap: var(--space-xs);
+		gap: var(--space-sm);
+		align-items: flex-start;
 	}
 
-	.message-meta {
+	.chat-content {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.chat-head {
+		display: flex;
+		align-items: baseline;
+		gap: var(--space-sm);
+		margin-bottom: 2px;
+	}
+
+	.chat-sender {
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+		color: var(--color-text-heading);
+	}
+
+	.chat-time {
 		font-size: var(--font-size-xs);
 		color: var(--color-text-muted);
 	}
 
-	.message-body {
+	.chat-bubble {
 		font-size: var(--font-size-md);
 		line-height: 1.6;
 		white-space: pre-wrap;
+		color: var(--color-text);
 	}
 </style>

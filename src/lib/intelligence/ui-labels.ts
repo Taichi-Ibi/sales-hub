@@ -1,4 +1,4 @@
-import type { DataSource, EventLogStatus, TaskStatus, TaskPriority } from './types.js';
+import type { DataSource, EventLog, EventLogStatus, TaskStatus, TaskPriority } from './types.js';
 
 /**
  * 画面表示用のラベル・アイコン・CSS クラスのマッピング。
@@ -13,6 +13,25 @@ export const sourceIcons: Record<DataSource, string> = {
 	minutes: '📝',
 	memo: '🗒️'
 };
+
+/** データソースの日本語ラベル（フィルタや差出人表示で使う）。 */
+export const sourceLabel: Record<DataSource, string> = {
+	slack: 'Slack',
+	email: 'メール',
+	calendar: 'カレンダー',
+	minutes: '議事録',
+	memo: 'メモ'
+};
+
+/**
+ * メッセージの差出人として表示する名前を返す。
+ * Slack は送信者名、メールは差出人のローカル部、それ以外はソース名。
+ */
+export function messageSender(log: EventLog): string {
+	if (log.slackSender) return log.slackSender;
+	if (log.emailFrom) return log.emailFrom.split('@')[0];
+	return sourceLabel[log.source];
+}
 
 /** Event_Log の承認ステータスの日本語ラベル。 */
 export const eventLogStatusLabel: Record<EventLogStatus, string> = {

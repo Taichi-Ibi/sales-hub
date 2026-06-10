@@ -82,8 +82,18 @@
 		class="bg-brand-dark hidden w-[200px] flex-shrink-0 flex-col text-white md:flex"
 		aria-label="メインナビゲーション"
 	>
-		<div class="px-md py-lg border-b border-white/10">
-			<span class="text-lg font-bold text-white">Sales Brain</span>
+		<div class="px-md py-md flex items-center gap-2 border-b border-white/10">
+			<span
+				class="bg-accent text-brand-dark flex h-7 w-7 items-center justify-center rounded-md text-sm font-bold"
+				>S</span
+			>
+			<div class="flex flex-col leading-tight">
+				<span class="text-md font-bold text-white">Sales Brain</span>
+				<span class="text-[10px] text-white/50">営業インテリジェンス</span>
+			</div>
+		</div>
+		<div class="px-md pt-md pb-1 text-[10px] font-semibold tracking-wider text-white/40 uppercase">
+			メニュー
 		</div>
 		<Nav items={navItems} variant="sidebar" />
 		<div class="p-md mt-auto border-t border-white/10">
