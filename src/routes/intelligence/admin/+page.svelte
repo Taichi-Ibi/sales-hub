@@ -365,26 +365,28 @@
 		{#if filteredLogs.length === 0}
 			<p class="empty-message">該当する操作ログはありません</p>
 		{:else}
-			<table class="log-table">
-				<thead>
-					<tr>
-						<th>日時</th>
-						<th>操作種別</th>
-						<th>対象</th>
-						<th>ユーザー</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each visibleLogs as log (log.id)}
+			<div class="log-table-scroll">
+				<table class="log-table">
+					<thead>
 						<tr>
-							<td>{formatDateTime(log.operatedAt)}</td>
-							<td>{operationLabels[log.operationType]}</td>
-							<td>{targetLabels[log.targetType] ?? log.targetType}</td>
-							<td>{log.operator}</td>
+							<th>日時</th>
+							<th>操作種別</th>
+							<th>対象</th>
+							<th>ユーザー</th>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each visibleLogs as log (log.id)}
+							<tr>
+								<td>{formatDateTime(log.operatedAt)}</td>
+								<td>{operationLabels[log.operationType]}</td>
+								<td>{targetLabels[log.targetType] ?? log.targetType}</td>
+								<td>{log.operator}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 			<div class="log-footer">
 				<span class="log-count">
 					{Math.min(logVisibleCount, filteredLogs.length)} / {filteredLogs.length} 件
@@ -648,10 +650,28 @@
 		font-weight: 600;
 	}
 
+	.log-table-scroll {
+		overflow-x: auto;
+		margin: 0 calc(-1 * var(--space-lg));
+		padding: 0 var(--space-lg);
+	}
+
 	.log-table {
 		width: 100%;
 		border-collapse: collapse;
 		font-size: var(--font-size-sm);
+	}
+
+	@media (max-width: 767px) {
+		.log-table {
+			min-width: 560px;
+		}
+
+		.log-filters .filter-field,
+		.log-filters .form-select,
+		.log-filters .form-input {
+			width: 100%;
+		}
 	}
 
 	.log-table th {

@@ -292,7 +292,7 @@
 	<title>案件 — Sales Intelligence</title>
 </svelte:head>
 
-<div class="deals-layout">
+<div class="deals-layout" class:has-selection={syncedDeal !== null}>
 	<!-- Left: Deal list -->
 	<div class="deals-left">
 		<h1 class="page-title">案件</h1>
@@ -330,6 +330,7 @@
 			</div>
 		{:else}
 			<div class="detail-panel">
+				<button class="mobile-back" onclick={() => (selectedDeal = null)}>← 一覧へ戻る</button>
 				<!-- Header -->
 				<div class="detail-header">
 					<div class="detail-title-row">
@@ -715,6 +716,48 @@
 		flex-direction: column;
 		gap: var(--space-sm);
 		overflow-y: auto;
+	}
+
+	/* Mobile: collapse master-detail into a single column. The deal list and the
+	   detail swap based on whether a deal is selected (driven by .has-selection). */
+	.mobile-back {
+		display: none;
+	}
+
+	@media (max-width: 767px) {
+		.deals-layout {
+			height: auto;
+			gap: 0;
+		}
+
+		.deals-left {
+			width: 100%;
+		}
+
+		.deals-detail {
+			display: none;
+		}
+
+		.deals-layout.has-selection .deals-left {
+			display: none;
+		}
+
+		.deals-layout.has-selection .deals-detail {
+			display: block;
+		}
+
+		.mobile-back {
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+			margin-bottom: var(--space-sm);
+			padding: 0;
+			background: none;
+			border: none;
+			color: var(--color-brand);
+			font-size: var(--font-size-sm);
+			cursor: pointer;
+		}
 	}
 
 	.page-title {
@@ -1125,6 +1168,17 @@
 		overflow-y: auto;
 		background: var(--color-bg);
 		border-radius: var(--radius-sm);
+	}
+
+	@media (max-width: 767px) {
+		.log-list-wrapper {
+			flex-direction: column;
+		}
+
+		.log-list {
+			width: 100%;
+			max-height: 220px;
+		}
 	}
 
 	.log-row {

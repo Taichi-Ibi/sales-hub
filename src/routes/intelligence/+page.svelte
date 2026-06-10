@@ -295,8 +295,14 @@
 
 	.phase-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(2, 1fr);
 		gap: var(--space-sm);
+	}
+
+	@media (min-width: 768px) {
+		.phase-grid {
+			grid-template-columns: repeat(4, 1fr);
+		}
 	}
 
 	.phase-item {
@@ -339,11 +345,17 @@
 
 	.event-item {
 		display: grid;
-		grid-template-columns: 120px 1fr;
+		grid-template-columns: 88px 1fr;
 		gap: var(--space-sm);
 		padding: var(--space-sm) 0;
 		border-bottom: 1px solid var(--color-border);
 		align-items: baseline;
+	}
+
+	@media (min-width: 768px) {
+		.event-item {
+			grid-template-columns: 120px 1fr;
+		}
 	}
 
 	.event-item:last-child {
@@ -430,6 +442,14 @@
 		gap: 4px;
 	}
 
+	@media (max-width: 767px) {
+		.retro-field,
+		.retro-input,
+		.retro-btn {
+			width: 100%;
+		}
+	}
+
 	.retro-label {
 		font-size: var(--font-size-xs);
 		color: var(--color-text-muted);
@@ -462,9 +482,15 @@
 
 	.retro-stats {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(2, 1fr);
 		gap: var(--space-sm);
 		margin-bottom: var(--space-md);
+	}
+
+	@media (min-width: 768px) {
+		.retro-stats {
+			grid-template-columns: repeat(4, 1fr);
+		}
 	}
 
 	.retro-stat {
