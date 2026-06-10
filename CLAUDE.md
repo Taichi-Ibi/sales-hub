@@ -34,9 +34,10 @@ src/
   lib/intelligence/
     types.ts          # ドメイン型定義
     constants.ts      # VALIDATION, STORAGE_KEYS, PHASE_LABELS, DEAL_PHASES
+    handoff.ts        # 申し送りチェックリスト/勝ち筋メーター/移行ゲート (純粋関数, テスト対象)
     store-logic.ts    # 純粋関数リデューサー (テスト対象はここ)
     store.svelte.ts   # Svelte 5 runes ストア (薄いラッパー)
-    ai-engine.ts      # AI シミュレーション (モック、外部通信なし)
+    ai-engine.ts      # AI シミュレーション (中核=申し送り漏れ指摘, モック, 外部通信なし)
     __tests__/        # fast-check プロパティテスト
   routes/intelligence/
     +layout.svelte    # Navy サイドバー + initializeFromStorage()
