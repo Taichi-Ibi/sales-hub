@@ -1,5 +1,7 @@
 import type {
+	Annotation,
 	AppSettings,
+	Comment,
 	Deal,
 	EventLog,
 	MaskingRule,
@@ -8,6 +10,7 @@ import type {
 	Task,
 	TaskStatus
 } from './types.js';
+import { VALIDATION } from './constants.js';
 import { applyMaskingAndApprove } from './masking-engine.js';
 import { canTransitionTaskStatus, canRejectEventLog, isBlank } from './validation.js';
 
@@ -136,6 +139,58 @@ export function applyRejectEventLog(
 		rejectionReason: reason
 	};
 	const opLog = makeOpLog('event_log_reject', 'event_log', id, now, rejectedBy, deps);
+	return {
+		...state,
+		eventLogs: state.eventLogs.map((l) => (l.id === id ? updated : l)),
+		operationLogs: [opLog, ...state.operationLogs]
+	};
+}
+
+export function applyAddAnnotation(
+	state: IntelligenceState,
+	id: string,
+	content: string,
+	deps?: ApplyDeps
+): IntelligenceState {
+	if (isBlank(content)) return state;
+	const log = state.eventLogs.find((l) => l.id === id);
+	if (!log) return state;
+	const now = resolveNow(deps);
+	const operator = deps?.operator ?? 'system';
+	const annotation: Annotation = {
+		id: makeUuid(deps),
+		content: content.slice(0, VALIDATION.ANNOTATION_MAX),
+		author: operator,
+		createdAt: now
+	};
+	const updated = { ...log, annotations: [...log.annotations, annotation] };
+	const opLog = makeOpLog('event_log_edit', 'event_log', id, now, operator, deps);
+	return {
+		...state,
+		eventLogs: state.eventLogs.map((l) => (l.id === id ? updated : l)),
+		operationLogs: [opLog, ...state.operationLogs]
+	};
+}
+
+export function applyAddComment(
+	state: IntelligenceState,
+	id: string,
+	content: string,
+	deps?: ApplyDeps
+): IntelligenceState {
+	if (isBlank(content)) return state;
+	const log = state.eventLogs.find((l) => l.id === id);
+	if (!log) return state;
+	const now = resolveNow(deps);
+	const operator = deps?.operator ?? 'system';
+	const comment: Comment = {
+		id: makeUuid(deps),
+		content: content.slice(0, VALIDATION.COMMENT_MAX),
+		author: operator,
+		createdAt: now
+	};
+	const updated = { ...log, comments: [...log.comments, comment] };
+	const opLog = makeOpLog('event_log_edit', 'event_log', id, now, operator, deps);
 	return {
 		...state,
 		eventLogs: state.eventLogs.map((l) => (l.id === id ? updated : l)),

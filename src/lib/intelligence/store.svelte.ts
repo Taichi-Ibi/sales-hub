@@ -13,6 +13,8 @@ import {
 	type IntelligenceState,
 	type ApplyDeps,
 	type UpdateDealOpts,
+	applyAddAnnotation,
+	applyAddComment,
 	applyAddDeal,
 	applyAddEventLog,
 	applyAddEventLogSafe,
@@ -25,7 +27,7 @@ import {
 	applyUpdateDeal,
 	applyUpdateEventLog,
 	applyUpdateTaskStatus,
-	applyUpdateSettings,
+	applyUpdateSettings
 } from './store-logic.js';
 
 function getRawItem(key: string): string | null {
@@ -38,7 +40,6 @@ let deals = $state<Deal[]>([]);
 let tasks = $state<Task[]>([]);
 let settings = $state<AppSettings>(getInitialSettings());
 let operationLogs = $state<OperationLog[]>([]);
-
 
 function getState(): IntelligenceState {
 	return { eventLogs, deals, tasks, settings, operationLogs };
@@ -143,6 +144,16 @@ export function updateEventLog(id: string, updates: Partial<EventLog>, deps?: Ap
 
 export function deleteEventLog(id: string, deps?: ApplyDeps): void {
 	applyState(applyDeleteEventLog(getState(), id, deps));
+	scheduleSave();
+}
+
+export function addAnnotation(id: string, content: string, deps?: ApplyDeps): void {
+	applyState(applyAddAnnotation(getState(), id, content, deps));
+	scheduleSave();
+}
+
+export function addComment(id: string, content: string, deps?: ApplyDeps): void {
+	applyState(applyAddComment(getState(), id, content, deps));
 	scheduleSave();
 }
 
