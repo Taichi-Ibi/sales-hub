@@ -1,191 +1,65 @@
-/* 業務ツール風・落ち着いた配色 */
 :root {
-	--bg: #f5f6f8;
-	--surface: #ffffff;
-	--border: #e2e5ea;
-	--border-strong: #cdd2da;
-	--text: #1f2430;
-	--text-muted: #6b7280;
-	--text-faint: #9aa1ac;
-	--accent: #2f6df0;
-	--accent-weak: #eaf1fe;
-	--green: #1f9d57;
-	--green-weak: #e6f6ed;
-	--amber: #c77700;
-	--amber-weak: #fdf3e2;
-	--red: #d23b3b;
-	--red-weak: #fbeaea;
-	--purple: #6b46c1;
-	--purple-weak: #f0eafb;
-	--gray-weak: #eef0f3;
-	--radius: 8px;
-	--shadow: 0 1px 2px rgba(20, 25, 40, 0.06), 0 1px 8px rgba(20, 25, 40, 0.04);
-	--font: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+	/* Primary */
+	--color-brand: #0176d3;
+	--color-brand-dark: #032d60;
+	--color-brand-light: #eef4ff;
+	--color-brand-hover: #014486;
+
+	/* Accent */
+	--color-accent: #ffc72c;
+	--color-accent-hover: #e6a800;
+	--color-accent-light: #fff8e1;
+
+	/* Semantic */
+	--color-success: #2e844a;
+	--color-warning: #dd7a01;
+	--color-error: #ea001e;
+
+	/* Neutral */
+	--color-bg: #f3f3f3;
+	--color-surface: #ffffff;
+	--color-border: #dddddd;
+	--color-text: #3e3e3c;
+	--color-text-heading: #181818;
+	--color-text-muted: #706e6b;
+
+	/* Spacing */
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 16px;
+	--space-lg: 24px;
+	--space-xl: 32px;
+
+	/* Border Radius */
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+
+	/* Shadow */
+	--shadow-card: 0 2px 4px rgba(0, 0, 0, 0.1);
+	--shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+	/* Font */
+	--font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+	--font-size-xs: 11px;
+	--font-size-sm: 13px;
+	--font-size-md: 14px;
+	--font-size-lg: 16px;
+	--font-size-xl: 20px;
+	--font-size-2xl: 24px;
 }
 
-* {
+*,
+*::before,
+*::after {
 	box-sizing: border-box;
 }
 
-html,
 body {
 	margin: 0;
-	padding: 0;
-	background: var(--bg);
-	color: var(--text);
-	font-family: var(--font);
-	font-size: 14px;
-	line-height: 1.6;
-	-webkit-font-smoothing: antialiased;
-}
-
-h1,
-h2,
-h3,
-h4 {
-	margin: 0;
-	font-weight: 600;
-}
-
-button {
-	font-family: inherit;
-	font-size: 13px;
-	cursor: pointer;
-	border: 1px solid var(--border-strong);
-	background: var(--surface);
-	color: var(--text);
-	border-radius: 6px;
-	padding: 6px 12px;
-	transition:
-		background 0.12s,
-		border-color 0.12s,
-		opacity 0.12s;
-}
-button:hover:not(:disabled) {
-	background: var(--gray-weak);
-}
-button:disabled {
-	opacity: 0.45;
-	cursor: not-allowed;
-}
-button.primary {
-	background: var(--accent);
-	border-color: var(--accent);
-	color: #fff;
-}
-button.primary:hover:not(:disabled) {
-	background: #285fd6;
-}
-button.danger {
-	color: var(--red);
-	border-color: var(--red);
-	background: var(--surface);
-}
-button.danger:hover:not(:disabled) {
-	background: var(--red-weak);
-}
-button.subtle {
-	border-color: transparent;
-	background: transparent;
-	color: var(--text-muted);
-}
-button.subtle:hover:not(:disabled) {
-	background: var(--gray-weak);
-}
-
-input,
-textarea,
-select {
-	font-family: inherit;
-	font-size: 13px;
-	color: var(--text);
-	background: var(--surface);
-	border: 1px solid var(--border-strong);
-	border-radius: 6px;
-	padding: 7px 9px;
-	width: 100%;
-}
-input:focus,
-textarea:focus,
-select:focus {
-	outline: none;
-	border-color: var(--accent);
-	box-shadow: 0 0 0 3px var(--accent-weak);
-}
-label {
-	display: block;
-	font-size: 12px;
-	color: var(--text-muted);
-	margin-bottom: 4px;
-	font-weight: 500;
-}
-textarea {
-	resize: vertical;
-	min-height: 64px;
-}
-
-.card {
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	box-shadow: var(--shadow);
-}
-
-/* ステータス / バッジ */
-.badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	font-size: 11px;
-	font-weight: 600;
-	padding: 2px 8px;
-	border-radius: 999px;
-	white-space: nowrap;
-	line-height: 1.7;
-}
-.badge.gray {
-	background: var(--gray-weak);
-	color: var(--text-muted);
-}
-.badge.blue {
-	background: var(--accent-weak);
-	color: var(--accent);
-}
-.badge.green {
-	background: var(--green-weak);
-	color: var(--green);
-}
-.badge.amber {
-	background: var(--amber-weak);
-	color: var(--amber);
-}
-.badge.red {
-	background: var(--red-weak);
-	color: var(--red);
-}
-.badge.purple {
-	background: var(--purple-weak);
-	color: var(--purple);
-}
-
-.muted {
-	color: var(--text-muted);
-}
-.faint {
-	color: var(--text-faint);
-}
-.mono {
-	font-variant-numeric: tabular-nums;
-}
-
-.row {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-.spread {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
+	font-family: var(--font-family);
+	font-size: var(--font-size-md);
+	background: var(--color-bg);
+	color: var(--color-text);
 }

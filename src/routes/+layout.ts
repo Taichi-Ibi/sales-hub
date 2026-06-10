@@ -1,3 +1,2 @@
-// 全ページを静的プリレンダリング（adapter-static）
-export const prerender = true;
-export const trailingSlash = 'always';
+export const ssr = false;
+export const prerender = false;
