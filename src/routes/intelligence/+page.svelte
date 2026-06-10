@@ -1,12 +1,24 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { deals, tasks, eventLogs } from '$lib/intelligence/store.svelte.js';
 	import { PHASE_LABELS, DEAL_PHASES, VALIDATION } from '$lib/intelligence/constants.js';
 	import { generateRetrospective } from '$lib/intelligence/ai-engine.js';
+	import { computeHandoffOverview } from '$lib/intelligence/handoff.js';
 	import { formatDate, formatDateTime } from '$lib/intelligence/format.js';
 	import { priorityLabel } from '$lib/intelligence/ui-labels.js';
 	import type { DataSource, RetrospectiveResult } from '$lib/intelligence/types.js';
 
 	const now = $derived(new Date());
+
+	// ─── 勝ち筋メーター：申し送り漏れ ───────────────────────────────────────────
+	// このプロダクトの勝ち条件は「申し送りが構造的に漏れないこと」。
+	// 汎用KPIではなく、まず "今いくつ漏れているか" を最上段で突きつける。
+	const handoff = $derived(computeHandoffOverview(deals, eventLogs));
+	const atRiskDeals = $derived(
+		handoff.perDeal
+			.filter((d) => !d.handoff.isComplete && d.handoff.requiredCount > 0)
+			.sort((a, b) => b.handoff.missingItems.length - a.handoff.missingItems.length)
+	);
 
 	// ─── Retrospective (Task 19.1) ─────────────────────────────────────────────
 	function toInputDate(d: Date): string {
@@ -102,9 +114,68 @@
 <div class="dashboard">
 	<h1 class="page-title">ダッシュボード</h1>
 
+	<!-- 勝ち筋メーター：申し送り漏れ -->
+	<section class="card meter-card" class:meter-clean={handoff.leakCount === 0}>
+		<div class="meter-head">
+			<h2 class="meter-eyebrow">このチームの勝ち条件</h2>
+			<p class="meter-statement">申し送りを、構造的に漏らさない。</p>
+		</div>
+
+		{#if deals.length === 0}
+			<p class="empty-message">案件がありません</p>
+		{:else}
+			<div class="meter-grid">
+				<div class="meter-primary" class:is-leak={handoff.leakCount > 0}>
+					<span class="meter-value">{handoff.leakCount}</span>
+					<span class="meter-unit">件</span>
+					<span class="meter-caption">
+						{handoff.leakCount === 0 ? '申し送り漏れゼロを達成中' : '漏れている申し送り'}
+					</span>
+				</div>
+
+				<div class="meter-secondary">
+					<div class="meter-rate-row">
+						<span class="meter-rate-label">フェーズ移行の充足率</span>
+						<span class="meter-rate-value">{handoff.fulfillmentRate}%</span>
+					</div>
+					<div class="meter-bar" role="presentation">
+						<div class="meter-bar-fill" style="width: {handoff.fulfillmentRate}%"></div>
+					</div>
+					<div class="meter-counts">
+						<span class="meter-chip meter-chip-ok">揃っている案件 {handoff.cleanDealCount}</span>
+						<span class="meter-chip meter-chip-risk">漏れのある案件 {handoff.atRiskDealCount}</span>
+					</div>
+				</div>
+			</div>
+		{/if}
+	</section>
+
+	<!-- 漏れている申し送り（案件別） -->
+	{#if atRiskDeals.length > 0}
+		<section class="card">
+			<h2 class="section-title">漏れている申し送り</h2>
+			<p class="section-lead">フェーズを次へ渡す前に、これらを埋めると漏れがゼロになります。</p>
+			<ul class="risk-list">
+				{#each atRiskDeals as { deal, handoff: h } (deal.id)}
+					<li class="risk-item">
+						<a class="risk-deal" href={resolve('/intelligence/deals')}>
+							<span class="risk-deal-name">{deal.name}</span>
+							<span class="risk-phase">{PHASE_LABELS[deal.phase]}</span>
+						</a>
+						<div class="risk-missing">
+							{#each h.missingItems as item (item.id)}
+								<span class="risk-missing-chip" title={item.hint}>{item.label}</span>
+							{/each}
+						</div>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
+
 	<!-- Progress Summary -->
 	<section class="card">
-		<h2 class="section-title">案件フェーズ別進捗</h2>
+		<h2 class="section-title">案件フェーズ別進捗（参考）</h2>
 		<div class="phase-summary-meta">
 			<span class="meta-item">案件総数: <strong>{deals.length}</strong></span>
 			<span class="meta-item">タスク完了率: <strong>{completionRate}%</strong></span>
@@ -264,6 +335,213 @@
 		font-size: var(--font-size-lg);
 		color: var(--color-text-heading);
 		margin: 0 0 var(--space-md);
+	}
+
+	.section-lead {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-muted);
+		margin: -8px 0 var(--space-md);
+	}
+
+	/* ─── 勝ち筋メーター ───────────────────────────────────────────────────────── */
+	.meter-card {
+		background: linear-gradient(160deg, var(--color-brand-dark), var(--color-brand));
+		color: white;
+	}
+
+	.meter-head {
+		margin-bottom: var(--space-lg);
+	}
+
+	.meter-eyebrow {
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.7);
+		margin: 0 0 4px;
+	}
+
+	.meter-statement {
+		font-size: var(--font-size-xl);
+		font-weight: 700;
+		margin: 0;
+		color: white;
+	}
+
+	.meter-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: var(--space-lg);
+		align-items: center;
+	}
+
+	@media (min-width: 768px) {
+		.meter-grid {
+			grid-template-columns: minmax(160px, 240px) 1fr;
+		}
+	}
+
+	.meter-primary {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 6px;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: var(--radius-md);
+		padding: var(--space-md) var(--space-lg);
+	}
+
+	.meter-value {
+		font-size: 56px;
+		line-height: 1;
+		font-weight: 800;
+		color: var(--color-accent);
+	}
+
+	.meter-primary.is-leak .meter-value {
+		color: #ffd0d0;
+	}
+
+	.meter-unit {
+		font-size: var(--font-size-lg);
+		font-weight: 700;
+	}
+
+	.meter-caption {
+		flex-basis: 100%;
+		font-size: var(--font-size-sm);
+		color: rgba(255, 255, 255, 0.85);
+		margin-top: 4px;
+	}
+
+	.meter-secondary {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-sm);
+	}
+
+	.meter-rate-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+	}
+
+	.meter-rate-label {
+		font-size: var(--font-size-sm);
+		color: rgba(255, 255, 255, 0.85);
+	}
+
+	.meter-rate-value {
+		font-size: var(--font-size-xl);
+		font-weight: 700;
+	}
+
+	.meter-bar {
+		height: 10px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.2);
+		overflow: hidden;
+	}
+
+	.meter-bar-fill {
+		height: 100%;
+		border-radius: 999px;
+		background: var(--color-accent);
+		transition: width 0.4s ease;
+	}
+
+	.meter-counts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-sm);
+		margin-top: 4px;
+	}
+
+	.meter-chip {
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+		padding: 3px 10px;
+		border-radius: 999px;
+	}
+
+	.meter-chip-ok {
+		background: rgba(255, 255, 255, 0.18);
+		color: white;
+	}
+
+	.meter-chip-risk {
+		background: rgba(255, 255, 255, 0.92);
+		color: var(--color-brand-dark);
+	}
+
+	/* ─── 漏れている申し送り ───────────────────────────────────────────────────── */
+	.risk-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-sm);
+	}
+
+	.risk-item {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: var(--space-sm) var(--space-md);
+		border: 1px solid var(--color-border);
+		border-left: 3px solid var(--color-warning);
+		border-radius: var(--radius-sm);
+	}
+
+	@media (min-width: 768px) {
+		.risk-item {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+		}
+	}
+
+	.risk-deal {
+		display: flex;
+		align-items: baseline;
+		gap: var(--space-sm);
+		text-decoration: none;
+		color: inherit;
+		flex-shrink: 0;
+	}
+
+	.risk-deal:hover .risk-deal-name {
+		text-decoration: underline;
+	}
+
+	.risk-deal-name {
+		font-size: var(--font-size-md);
+		font-weight: 600;
+		color: var(--color-brand);
+	}
+
+	.risk-phase {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+	}
+
+	.risk-missing {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.risk-missing-chip {
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+		padding: 3px 8px;
+		border-radius: var(--radius-sm);
+		background: var(--color-accent-light);
+		color: var(--color-warning);
+		border: 1px solid var(--color-accent);
+		cursor: help;
 	}
 
 	.phase-summary-meta {

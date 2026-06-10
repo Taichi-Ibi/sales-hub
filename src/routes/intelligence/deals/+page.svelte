@@ -15,9 +15,15 @@
 	import {
 		generateSummary,
 		detectPhaseChange,
+		detectHandoffGaps,
 		detectDataUpdate,
 		generateTasks
 	} from '$lib/intelligence/ai-engine.js';
+	import {
+		computeDealHandoff,
+		computeHandoffOverview,
+		isForwardTransition
+	} from '$lib/intelligence/handoff.js';
 	import { isBlank } from '$lib/intelligence/validation.js';
 	import { VALIDATION, PHASE_LABELS, DEAL_PHASES } from '$lib/intelligence/constants.js';
 	import { formatDate, formatDateTime } from '$lib/intelligence/format.js';
@@ -110,6 +116,24 @@
 		syncedDeal && !phaseProposalDismissed ? detectPhaseChange(syncedDeal, eventLogs) : null
 	);
 
+	// 申し送りチェックリスト：現フェーズを次へ渡す前に揃うべき項目の充足状態。
+	const dealHandoff = $derived(syncedDeal ? computeDealHandoff(syncedDeal, eventLogs) : null);
+	const handoffGap = $derived(syncedDeal ? detectHandoffGaps(syncedDeal, eventLogs) : null);
+
+	// 全案件横断の漏れ件数（案件リストのバッジ用）。
+	const handoffOverview = $derived(computeHandoffOverview(deals, eventLogs));
+	const leakByDeal = $derived(
+		new Map(handoffOverview.perDeal.map((d) => [d.deal.id, d.handoff.missingItems.length]))
+	);
+
+	// 選択中の遷移先が「前進」かどうか。前進は申し送り完了がゲート条件になる。
+	const pendingIsForward = $derived(
+		syncedDeal && pendingPhase ? isForwardTransition(syncedDeal.phase, pendingPhase) : false
+	);
+	const phaseChangeBlocked = $derived(
+		pendingIsForward && dealHandoff !== null && !dealHandoff.isComplete
+	);
+
 	const summaryHasUpdates = $derived(
 		syncedDeal?.summary
 			? relatedLogs.some((l) => l.createdAt > syncedDeal!.summary!.generatedAt)
@@ -152,6 +176,8 @@
 
 	function handleManualPhaseChange() {
 		if (!syncedDeal || !pendingPhase || pendingPhase === syncedDeal.phase) return;
+		// ゲート：前進は現フェーズの申し送りが揃うまで進ませない。
+		if (isForwardTransition(syncedDeal.phase, pendingPhase) && !dealHandoff?.isComplete) return;
 		const newPhase = pendingPhase;
 		const phaseLog: EventLog = {
 			id: crypto.randomUUID(),
@@ -272,6 +298,11 @@
 							<span class="deal-name">{deal.name}</span>
 							<div class="deal-meta">
 								<span class="deal-assignee">{deal.assignee}</span>
+								{#if (leakByDeal.get(deal.id) ?? 0) > 0}
+									<span class="deal-leak" title="漏れている申し送り"
+										>⚠ {leakByDeal.get(deal.id)}</span
+									>
+								{/if}
 								<span class="deal-date">{formatDate(deal.updatedAt)}</span>
 							</div>
 						</button>
@@ -305,6 +336,69 @@
 					</div>
 				</div>
 
+				<!-- 申し送りチェックリスト + フェーズ移行ゲート -->
+				<section class="detail-section">
+					<div class="section-header">
+						<h3 class="section-title">申し送りチェックリスト</h3>
+						{#if dealHandoff && dealHandoff.requiredCount > 0}
+							<span
+								class="handoff-status"
+								class:is-complete={dealHandoff.isComplete}
+								class:is-leak={!dealHandoff.isComplete}
+							>
+								{dealHandoff.isComplete
+									? '✓ 揃いました'
+									: `${dealHandoff.missingItems.length}件 漏れています`}
+							</span>
+						{/if}
+					</div>
+
+					{#if dealHandoff && dealHandoff.requiredCount === 0}
+						<p class="empty-message">このフェーズに必須の申し送りはありません。</p>
+					{:else if dealHandoff}
+						<p class="handoff-lead">
+							「{PHASE_LABELS[syncedDeal.phase]}」を次へ渡す前に揃えるべき項目です。
+						</p>
+						<ul class="handoff-list">
+							{#each dealHandoff.items as item (item.id)}
+								<li class="handoff-item" class:satisfied={item.satisfied}>
+									<span class="handoff-check" aria-hidden="true">{item.satisfied ? '✓' : '○'}</span>
+									<span class="handoff-body">
+										<span class="handoff-item-label">{item.label}</span>
+										{#if !item.satisfied}
+											<span class="handoff-hint">{item.hint}</span>
+										{/if}
+									</span>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+
+					{#if handoffGap}
+						<div class="ai-gap-card">
+							<span class="ai-label ai-label-warn">AIからの指摘</span>
+							<p class="gap-reason">{handoffGap.reasoning}</p>
+							<p class="gap-note">申し送りが揃うと、フェーズ移行のゲートが開きます。</p>
+						</div>
+					{:else if phaseChangeProposal}
+						<div class="ai-proposal-card">
+							<span class="ai-label">AIからの提案</span>
+							<p class="proposal-body">
+								<strong>{PHASE_LABELS[phaseChangeProposal.currentPhase]}</strong>
+								→
+								<strong>{PHASE_LABELS[phaseChangeProposal.proposedPhase]}</strong>
+							</p>
+							<p class="proposal-reason">{phaseChangeProposal.reasoning}</p>
+							<div class="proposal-actions">
+								<button class="btn-approve" onclick={handleProposalApprove}>承認</button>
+								<button class="btn-reject" onclick={() => (phaseProposalDismissed = true)}
+									>却下</button
+								>
+							</div>
+						</div>
+					{/if}
+				</section>
+
 				<!-- Phase change section (15.2) -->
 				<section class="detail-section">
 					<div class="section-header">
@@ -326,28 +420,17 @@
 							</select>
 							<button
 								class="btn-primary"
-								disabled={!pendingPhase || pendingPhase === syncedDeal.phase}
+								disabled={!pendingPhase || pendingPhase === syncedDeal.phase || phaseChangeBlocked}
 								onclick={handleManualPhaseChange}>変更する</button
 							>
 						</div>
-					{/if}
-
-					{#if phaseChangeProposal}
-						<div class="ai-proposal-card">
-							<span class="ai-label">AIからの提案</span>
-							<p class="proposal-body">
-								<strong>{PHASE_LABELS[phaseChangeProposal.currentPhase]}</strong>
-								→
-								<strong>{PHASE_LABELS[phaseChangeProposal.proposedPhase]}</strong>
+						{#if phaseChangeBlocked}
+							<p class="gate-blocked">
+								🔒 申し送りが{dealHandoff?.missingItems
+									.length}件漏れているため、次フェーズへは進めません。
+								上のチェックリストを埋めてください。
 							</p>
-							<p class="proposal-reason">{phaseChangeProposal.reasoning}</p>
-							<div class="proposal-actions">
-								<button class="btn-approve" onclick={handleProposalApprove}>承認</button>
-								<button class="btn-reject" onclick={() => (phaseProposalDismissed = true)}
-									>却下</button
-								>
-							</div>
-						</div>
+						{/if}
 					{/if}
 				</section>
 
@@ -776,9 +859,26 @@
 
 	.deal-meta {
 		display: flex;
+		align-items: center;
 		justify-content: space-between;
+		gap: var(--space-xs);
 		font-size: var(--font-size-xs);
 		color: var(--color-text-muted);
+	}
+
+	.deal-leak {
+		font-weight: 700;
+		color: var(--color-warning);
+		background: var(--color-accent-light);
+		border-radius: 999px;
+		padding: 1px 7px;
+		flex-shrink: 0;
+	}
+
+	.deal-assignee {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.empty-message {
@@ -1023,6 +1123,125 @@
 		display: flex;
 		gap: var(--space-xs);
 		margin-top: var(--space-xs);
+	}
+
+	/* ─── 申し送りチェックリスト + ゲート ─────────────────────────────────────── */
+	.handoff-status {
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		padding: 2px 10px;
+		border-radius: 999px;
+		flex-shrink: 0;
+	}
+
+	.handoff-status.is-complete {
+		background: #e6f4ea;
+		color: var(--color-success);
+	}
+
+	.handoff-status.is-leak {
+		background: var(--color-accent-light);
+		color: var(--color-warning);
+	}
+
+	.handoff-lead {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		margin: 0 0 var(--space-sm);
+	}
+
+	.handoff-list {
+		list-style: none;
+		margin: 0 0 var(--space-md);
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xs);
+	}
+
+	.handoff-item {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-sm);
+		padding: var(--space-xs) var(--space-sm);
+		border-radius: var(--radius-sm);
+		background: var(--color-accent-light);
+		border: 1px solid var(--color-accent);
+	}
+
+	.handoff-item.satisfied {
+		background: #f1f9f3;
+		border-color: #cfe9d6;
+	}
+
+	.handoff-check {
+		font-weight: 700;
+		line-height: 1.5;
+		color: var(--color-warning);
+		flex-shrink: 0;
+	}
+
+	.handoff-item.satisfied .handoff-check {
+		color: var(--color-success);
+	}
+
+	.handoff-body {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+	}
+
+	.handoff-item-label {
+		font-size: var(--font-size-sm);
+		color: var(--color-text);
+		font-weight: 500;
+	}
+
+	.handoff-item.satisfied .handoff-item-label {
+		color: var(--color-text-muted);
+	}
+
+	.handoff-hint {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+	}
+
+	.ai-gap-card {
+		background: var(--color-accent-light);
+		border: 1px solid var(--color-accent);
+		border-radius: var(--radius-md);
+		padding: var(--space-sm) var(--space-md);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xs);
+	}
+
+	.ai-label-warn {
+		color: var(--color-warning);
+	}
+
+	.gap-reason {
+		font-size: var(--font-size-sm);
+		color: var(--color-text);
+		margin: 0;
+		line-height: 1.5;
+	}
+
+	.gap-note {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		margin: 0;
+	}
+
+	.gate-blocked {
+		font-size: var(--font-size-sm);
+		color: var(--color-warning);
+		background: var(--color-accent-light);
+		border: 1px solid var(--color-accent);
+		border-radius: var(--radius-sm);
+		padding: var(--space-sm);
+		margin: var(--space-sm) 0 0;
+		line-height: 1.5;
 	}
 
 	/* Summary */

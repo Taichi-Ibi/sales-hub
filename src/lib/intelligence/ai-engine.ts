@@ -11,7 +11,8 @@ import type {
 	Task,
 	TaskPriority
 } from './types.js';
-import { DEAL_PHASES, VALIDATION } from './constants.js';
+import { DEAL_PHASES, PHASE_LABELS, VALIDATION } from './constants.js';
+import { canAdvancePhase, computeDealHandoff } from './handoff.js';
 
 export interface AIEngineDeps {
 	rng?: () => number;
@@ -208,10 +209,8 @@ export function detectPhaseChange(deal: Deal, eventLogs: EventLog[]): PhaseChang
 	const currentIndex = DEAL_PHASES.indexOf(deal.phase);
 	if (currentIndex < 0 || currentIndex >= DEAL_PHASES.length - 1) return null;
 
-	const hasMinutes = relatedLogs.some((l) => l.source === 'minutes');
-	const hasEmail = relatedLogs.some((l) => l.source === 'email');
-
-	if (!hasMinutes && !hasEmail) return null;
+	// 申し送りが揃うまでは前進を勧めない（漏れたまま進ませない思想の徹底）。
+	if (!canAdvancePhase(deal, eventLogs)) return null;
 
 	const proposedPhase: DealPhase = DEAL_PHASES[currentIndex + 1];
 	const recentLog = relatedLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
@@ -220,7 +219,30 @@ export function detectPhaseChange(deal: Deal, eventLogs: EventLog[]): PhaseChang
 		dealId: deal.id,
 		currentPhase: deal.phase,
 		proposedPhase,
-		reasoning: `「${recentLog.title}」の内容からフェーズ移行が示唆されます。`
+		reasoning: `「${PHASE_LABELS[deal.phase]}」の申し送りが揃いました。「${recentLog.title}」を踏まえ、次フェーズへの移行を提案します。`
+	};
+}
+
+/**
+ * このプロダクトの中核AI機能：フェーズを渡す前に「漏れている申し送り」を指摘する。
+ * 申し送りが揃っていれば null（指摘なし＝前進してよい合図）。
+ */
+export interface HandoffGapInsight {
+	dealId: string;
+	phase: DealPhase;
+	missingItems: Array<{ id: string; label: string; hint: string }>;
+	reasoning: string;
+}
+
+export function detectHandoffGaps(deal: Deal, eventLogs: EventLog[]): HandoffGapInsight | null {
+	const handoff = computeDealHandoff(deal, eventLogs);
+	if (handoff.isComplete) return null;
+	const labels = handoff.missingItems.map((i) => i.label).join('、');
+	return {
+		dealId: deal.id,
+		phase: deal.phase,
+		missingItems: handoff.missingItems.map(({ id, label, hint }) => ({ id, label, hint })),
+		reasoning: `「${PHASE_LABELS[deal.phase]}」を次へ渡す前に、${handoff.missingItems.length}件の申し送りが漏れています：${labels}。`
 	};
 }
 
