@@ -1,8 +1,9 @@
-import { describe, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { arbEventLog, arbTask } from './arbitraries.js';
+import { arbEventLog, arbTask, arbDataSource, arbDate } from './arbitraries.js';
 import { VALIDATION } from '../constants.js';
 import { selectVisibleEventLogs } from '../store-logic.js';
+import { filterEventLogs, type EventLogFilter } from '../filters.js';
 
 /**
  * Property 16: ダッシュボード時間窓フィルタリング
@@ -128,6 +129,77 @@ describe('Property 18: Pagination page size limit', () => {
 					(lastPage + 1) * VALIDATION.PAGE_SIZE
 				);
 				return lastPageItems.length >= 1 && lastPageItems.length <= VALIDATION.PAGE_SIZE;
+			})
+		);
+	});
+});
+
+/**
+ * Property 17: 複合フィルタリングのAND結合
+ * 表示される全EventLogがすべてのアクティブなフィルタ条件を同時に満たすこと。
+ */
+const arbFilter: fc.Arbitrary<EventLogFilter> = fc.record({
+	startDate: fc.option(arbDate, { nil: null }),
+	endDate: fc.option(arbDate, { nil: null }),
+	sources: fc.array(arbDataSource, { maxLength: 3 }),
+	dealId: fc.option(fc.constantFrom('deal-a', 'deal-b', 'deal-c'), { nil: null }),
+	keyword: fc.option(fc.string({ maxLength: 5 }), { nil: undefined })
+});
+
+function failsAnyCondition(
+	log: { timestamp: Date; source: string; dealId?: string; title: string; body: string },
+	filter: EventLogFilter
+): boolean {
+	if (filter.startDate != null && log.timestamp.getTime() < filter.startDate.getTime()) return true;
+	if (filter.endDate != null && log.timestamp.getTime() > filter.endDate.getTime()) return true;
+	if (
+		filter.sources != null &&
+		filter.sources.length > 0 &&
+		!filter.sources.includes(log.source as never)
+	)
+		return true;
+	if (filter.dealId != null && log.dealId !== filter.dealId) return true;
+	if (filter.keyword !== undefined && filter.keyword.trim().length > 0) {
+		const hay = `${log.title} ${log.body}`.toLowerCase();
+		if (!hay.includes(filter.keyword.trim().toLowerCase())) return true;
+	}
+	return false;
+}
+
+describe('Property 17: Compound filtering AND-combination', () => {
+	const arbLogsWithDeals = fc.array(
+		arbEventLog.map((l) => ({
+			...l,
+			dealId: fc.sample(fc.constantFrom('deal-a', 'deal-b', 'deal-c', undefined), 1)[0]
+		})),
+		{ maxLength: 40 }
+	);
+
+	it('every returned log satisfies all active filter conditions', () => {
+		fc.assert(
+			fc.property(arbLogsWithDeals, arbFilter, (logs, filter) => {
+				const result = filterEventLogs(logs, filter);
+				return result.every((log) => !failsAnyCondition(log, filter));
+			})
+		);
+	});
+
+	it('no excluded log that violates a condition leaks into the result', () => {
+		fc.assert(
+			fc.property(arbLogsWithDeals, arbFilter, (logs, filter) => {
+				const resultIds = new Set(filterEventLogs(logs, filter).map((l) => l.id));
+				for (const log of logs) {
+					if (failsAnyCondition(log, filter) && resultIds.has(log.id)) return false;
+				}
+				return true;
+			})
+		);
+	});
+
+	it('empty filter returns all logs unchanged', () => {
+		fc.assert(
+			fc.property(fc.array(arbEventLog, { maxLength: 30 }), (logs) => {
+				expect(filterEventLogs(logs, {}).length).toBe(logs.length);
 			})
 		);
 	});

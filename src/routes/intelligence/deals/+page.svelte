@@ -49,6 +49,7 @@
 	let newLogTitle = $state('');
 	let newLogBody = $state('');
 	let newLogError = $state('');
+	let newLogNotice = $state('');
 
 	// Detail: summary
 	let summaryLoading = $state(false);
@@ -182,6 +183,7 @@
 		newLogTitle = '';
 		newLogBody = '';
 		newLogError = '';
+		newLogNotice = '';
 		summaryError = '';
 		dismissedProposalKeys.clear();
 	}
@@ -282,6 +284,7 @@
 		newLogTitle = '';
 		newLogError = '';
 		newLogOpen = false;
+		newLogNotice = `保存しました（AIタスク${newTasks.length}件を生成）`;
 	}
 </script>
 
@@ -452,7 +455,13 @@
 							>
 								{isFlat ? 'スレッド表示' : 'フラット表示'}
 							</button>
-							<button class="btn-secondary" onclick={() => (newLogOpen = !newLogOpen)}>
+							<button
+								class="btn-secondary"
+								onclick={() => {
+									newLogOpen = !newLogOpen;
+									newLogNotice = '';
+								}}
+							>
 								{newLogOpen ? 'キャンセル' : '+ 新規記録'}
 							</button>
 						</div>
@@ -501,6 +510,10 @@
 							{/if}
 							<button class="btn-primary" onclick={saveNewLog}>保存</button>
 						</div>
+					{/if}
+
+					{#if newLogNotice}
+						<p class="save-notice">{newLogNotice}</p>
 					{/if}
 
 					<!-- Log list -->
@@ -1030,6 +1043,15 @@
 	.error-text {
 		font-size: var(--font-size-sm);
 		color: var(--color-error);
+		margin: 0;
+	}
+
+	.save-notice {
+		font-size: var(--font-size-sm);
+		color: var(--color-success);
+		background: #e6f4ea;
+		padding: var(--space-xs) var(--space-sm);
+		border-radius: var(--radius-sm);
 		margin: 0;
 	}
 

@@ -27,6 +27,9 @@ export const VALIDATION = {
 	SAVE_DEBOUNCE_MS: 3000
 } as const;
 
+/** 現在の操作ユーザー（モック）。操作ログ・却下者・追記者の記録に使用する。 */
+export const CURRENT_USER = '田中太郎';
+
 export const STORAGE_KEYS = {
 	EVENT_LOGS: 'si_event_logs',
 	DEALS: 'si_deals',
