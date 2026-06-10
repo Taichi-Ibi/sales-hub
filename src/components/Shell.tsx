@@ -1,23 +1,22 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { APPROVAL_STATUSES, LEDGER_STATUSES, useStore } from '../store/StoreContext';
 import { Toaster } from './Toaster';
 
-function NavBadge({ count }: { count: number }) {
+/** ナビ件数バッジ。未読を示す赤バッジ（Slack 風）。選択中は反転。 */
+function NavBadge({ count, active }: { count: number; active: boolean }) {
   return (
-    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-line px-1.5 text-xs font-semibold text-ink-sub">
+    <span
+      className={`ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold tabular-nums ${
+        active ? 'bg-white/25 text-white' : 'bg-nav-badge text-white'
+      }`}
+    >
       {count}
     </span>
   );
 }
 
 const navBase =
-  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors';
-
-function navClass({ isActive }: { isActive: boolean }) {
-  return `${navBase} ${
-    isActive ? 'bg-accent/10 text-accent' : 'text-ink-sub hover:bg-surface hover:text-ink'
-  }`;
-}
+  'relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors';
 
 interface NavItem {
   to: string;
@@ -28,15 +27,9 @@ interface NavItem {
   count?: number;
 }
 
-/** モバイル下部タブの各項目。アクティブ時はアクセント色。 */
-function tabClass({ isActive }: { isActive: boolean }) {
-  return `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
-    isActive ? 'text-accent' : 'text-ink-sub'
-  }`;
-}
-
 export function Shell() {
   const { actions } = useStore();
+  const location = useLocation();
   const ledgerCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
   const approvalCount = actions.filter((a) => APPROVAL_STATUSES.includes(a.status)).length;
 
@@ -47,28 +40,41 @@ export function Shell() {
     { to: '/settings', icon: '⚙', label: '設定' },
   ];
 
+  // 上部バーに「今どこにいるか」を出す（詳細画面は台帳の下層として扱う）。
+  const currentLabel = location.pathname.startsWith('/action')
+    ? '詳細'
+    : (items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
+        ?.label ?? '台帳');
+
   return (
     <div className="flex h-full min-h-screen flex-col">
-      {/* 上部バー（高さ56px） */}
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-white px-4 sm:px-5">
-        <div className="flex items-center gap-2 font-semibold text-ink">
+      {/* 上部バー（高さ56px）。Slack 風の濃いオーバージン。 */}
+      <header className="flex h-14 shrink-0 items-center gap-3 bg-nav-bar px-4 text-white sm:gap-4 sm:px-5">
+        <div className="flex items-center gap-2 font-semibold">
           <span className="grid size-7 place-items-center rounded-md bg-accent text-sm text-white">
             蒸
           </span>
-          アクション台帳
+          <span className="hidden sm:inline">アクション台帳</span>
         </div>
+        {/* 現在地（パンくず）。どのタブにいるか常に明示。 */}
+        <span aria-hidden className="text-white/40">
+          /
+        </span>
+        <span className="text-sm font-semibold text-white" aria-current="page">
+          {currentLabel}
+        </span>
         <div className="ml-auto flex items-center gap-3">
           {/* 検索はスペースの限られるモバイルでは省略 */}
-          <label className="hidden items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-ink-sub focus-within:border-accent sm:flex">
+          <label className="hidden items-center gap-2 rounded-lg bg-white/15 px-3 py-1.5 text-sm text-white/80 focus-within:bg-white/25 sm:flex">
             <span aria-hidden>🔍</span>
             <input
               type="search"
               placeholder="検索"
               aria-label="検索"
-              className="w-40 bg-transparent outline-none placeholder:text-ink-sub"
+              className="w-40 bg-transparent text-white outline-none placeholder:text-white/60"
             />
           </label>
-          <div className="flex items-center gap-2 text-sm text-ink">
+          <div className="flex items-center gap-2 text-sm">
             <span aria-hidden>👤</span>
             <span className="hidden sm:inline">山田 内勤</span>
           </div>
@@ -78,14 +84,36 @@ export function Shell() {
       <div className="flex flex-1">
         {/* 左ナビ（幅220px）。モバイルでは下部タブに置き換えるため非表示。 */}
         <nav
-          className="hidden shrink-0 flex-col gap-1 border-r border-line bg-white p-3 md:flex"
+          className="hidden shrink-0 flex-col gap-1 bg-nav p-3 md:flex"
           style={{ width: 220 }}
         >
+          <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-nav-text/70">
+            メニュー
+          </p>
           {items.map((it) => (
-            <NavLink key={it.to} to={it.to} end={it.end} className={navClass}>
-              <span aria-hidden>{it.icon}</span>
-              {it.label}
-              {it.count !== undefined && <NavBadge count={it.count} />}
+            <NavLink
+              key={it.to}
+              to={it.to}
+              end={it.end}
+              className={({ isActive }) =>
+                `${navBase} ${
+                  isActive
+                    ? 'bg-nav-active font-semibold text-white shadow-sm'
+                    : 'text-nav-text hover:bg-nav-hover hover:text-white'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {/* 選択中は左端にインジケータ帯（Slack の「今ここ」表現）。 */}
+                  {isActive && (
+                    <span aria-hidden className="absolute inset-y-1 left-0 w-1 rounded-r bg-white" />
+                  )}
+                  <span aria-hidden>{it.icon}</span>
+                  {it.label}
+                  {it.count !== undefined && <NavBadge count={it.count} active={isActive} />}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -104,16 +132,33 @@ export function Shell() {
         aria-label="メインナビゲーション"
       >
         {items.map((it) => (
-          <NavLink key={it.to} to={it.to} end={it.end} className={tabClass}>
-            <span className="relative text-lg leading-none" aria-hidden>
-              {it.icon}
-              {it.count !== undefined && it.count > 0 && (
-                <span className="absolute -right-2.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-tight text-white">
-                  {it.count}
+          <NavLink
+            key={it.to}
+            to={it.to}
+            end={it.end}
+            className={({ isActive }) =>
+              `relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
+                isActive ? 'text-accent' : 'text-ink-sub'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {/* 選択中は上端にインジケータ帯。どのタブか一目で分かる。 */}
+                {isActive && (
+                  <span aria-hidden className="absolute inset-x-5 top-0 h-0.5 rounded-b bg-accent" />
+                )}
+                <span className="relative text-lg leading-none" aria-hidden>
+                  {it.icon}
+                  {it.count !== undefined && it.count > 0 && (
+                    <span className="absolute -right-2.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-nav-badge px-1 text-[10px] font-semibold leading-tight text-white">
+                      {it.count}
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-            {it.label}
+                {it.label}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

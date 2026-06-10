@@ -15,6 +15,18 @@
   --color-warn: #d97706; /* 経過24-72h/警告/FS承認待ち */
   --color-good: #059669; /* 経過24h未満/完了済み */
 
+  /*
+   * ナビ用パレット（Slack のデザイン思想を参照）。
+   * 濃いオーバージン色のクロム（左ナビ・上部バー）で本文の白を引き立て、
+   * 選択中はソリッドな青で「今ここ」を明確に示す。未読件数は赤バッジ。
+   */
+  --color-nav: #3f0e40; /* 左ナビ地（オーバージン） */
+  --color-nav-bar: #350d36; /* 上部バー地（やや濃い） */
+  --color-nav-hover: #4a154b; /* ホバー */
+  --color-nav-active: #1164a3; /* 選択中（Slack ブルー） */
+  --color-nav-text: #cbc2cc; /* ナビ通常文字 */
+  --color-nav-badge: #cd2553; /* 未読件数バッジ */
+
   --font-sans:
     'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 

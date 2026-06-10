@@ -9,23 +9,42 @@ interface Props {
   from: string;
   /** カード下部に差し込む操作（S4 のデモボタン等）。 */
   footer?: React.ReactNode;
+  /** 最優先（トップ3）として強調表示する。左にアクセントの帯＋「優先」バッジ。 */
+  priority?: number;
+  /** フォーカス外（それ以降）として控えめに表示する。 */
+  muted?: boolean;
 }
 
 /** アクションカード（§7 S1）。S1/S4 で共通利用。 */
-export function ActionCard({ action, from, footer }: Props) {
+export function ActionCard({ action, from, footer, priority, muted }: Props) {
   const navigate = useNavigate();
   const open = () => navigate(`/action/${action.id}`, { state: { from } });
 
+  const wrapClass = priority
+    ? 'border-accent/40 bg-white shadow-sm ring-1 ring-accent/20 hover:bg-surface'
+    : muted
+      ? 'border-line bg-white opacity-65 hover:opacity-100 hover:bg-surface'
+      : 'border-line bg-white hover:bg-surface';
+
   return (
-    <div className="rounded-lg border border-line bg-white transition-colors hover:bg-surface">
+    <div
+      className={`relative overflow-hidden rounded-lg border transition-all ${wrapClass}`}
+    >
+      {/* 最優先は左端にアクセントの帯（Slack の選択中インジケータに倣う）。 */}
+      {priority ? <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-accent" /> : null}
       <button
         onClick={open}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+        className={`flex w-full items-center gap-3 py-3 pr-4 text-left ${priority ? 'pl-5' : 'pl-4'}`}
         aria-label={`${action.counterparty} ${action.title} を開く`}
       >
         <ElapsedBadge createdAt={action.createdAt} />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-1.5">
+            {priority ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-white">
+                <span aria-hidden>★</span>優先 {priority}
+              </span>
+            ) : null}
             <CategoryTag category={action.category} />
             <RiskBadge risk={action.risk} />
           </div>

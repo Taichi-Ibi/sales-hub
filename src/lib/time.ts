@@ -40,3 +40,23 @@ export function shortDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
+
+/**
+ * 期限の緊急度区分。台帳を「今日すべきこと／明日まで／それ以降」に
+ * フォーカスさせるための分類。
+ * - today    : 期限が今日まで（超過分も含む）
+ * - tomorrow : 期限が明日
+ * - later    : それ以降
+ */
+export type DueBucket = 'today' | 'tomorrow' | 'later';
+
+export function dueBucket(dueDate: string, now: Date = NOW): DueBucket {
+  // 日付のみで比較するため、両者をその日の 0:00 に正規化する。
+  const due = new Date(`${dueDate}T00:00:00`);
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((due.getTime() - startOfToday.getTime()) / DAY);
+  if (diffDays <= 0) return 'today'; // 今日まで（超過含む）
+  if (diffDays === 1) return 'tomorrow';
+  return 'later';
+}
