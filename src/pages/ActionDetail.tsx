@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store/StoreContext';
 import { elapsedSince } from '../lib/time';
+import { MASK_TYPE_MAP } from '../lib/maskTypes';
 import { CategoryTag, RiskBadge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { DraftEditor } from '../components/DraftEditor';
@@ -191,15 +192,21 @@ export function ActionDetail() {
           {/* マスキング状況 */}
           <section>
             <h2 className="mb-2 text-sm font-semibold text-ink">◆ マスキング状況</h2>
-            <div className="flex flex-wrap gap-3 text-sm">
-              {action.maskedEntities.map((e) => (
-                <span key={e.token} className="text-ink">
-                  <span className="font-medium">{e.token}</span>{' '}
-                  <span className="text-ink-sub">
-                    {e.type} ・出現{e.occurrences}回
+            <div className="flex flex-wrap gap-2 text-sm">
+              {action.maskedEntities.length === 0 ? (
+                <span className="text-sm text-ink-sub">伏せ字はありません。</span>
+              ) : (
+                action.maskedEntities.map((e) => (
+                  <span
+                    key={e.token}
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${MASK_TYPE_MAP[e.type].chipClass}`}
+                  >
+                    <span aria-hidden>{MASK_TYPE_MAP[e.type].icon}</span>
+                    {e.token}
+                    <span className="opacity-70">・{e.occurrences}回</span>
                   </span>
-                </span>
-              ))}
+                ))
+              )}
             </div>
             {hasSuspect ? (
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-sm text-warn">
@@ -231,6 +238,10 @@ export function ActionDetail() {
           onClose={() => setMaskOpen(false)}
           onMask={(text, type) => {
             store.maskText(action.id, text, type);
+            setMaskVersion((v) => v + 1);
+          }}
+          onUnmask={(token) => {
+            store.unmask(action.id, token);
             setMaskVersion((v) => v + 1);
           }}
           onIgnore={(text) => {

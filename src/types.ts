@@ -6,7 +6,9 @@ export type Risk = '高' | '低';
 
 export type Status = '未確認' | '対応中' | 'FS承認待ち' | '承認済み' | '送信済み' | '棄却';
 
-export type MaskType = '人物' | 'NDA';
+// マスク種別。トークン名にそのまま使うため、AI/人間どちらが見ても
+// プレースホルダの役割が分かる短い語にする（例 〔氏名①〕〔会社①〕）。
+export type MaskType = '氏名' | '会社' | '連絡先' | '契約番号';
 
 export interface MaskedEntity {
   token: string; // 例 "〔人物①〕"

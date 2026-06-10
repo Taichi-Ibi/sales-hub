@@ -31,6 +31,7 @@ interface StoreValue {
   demoApproveByFS: (id: string) => void; // (デモ)FSが承認 → 承認済み
   send: (id: string) => void; // S4: 送信する → 送信済み
   maskText: (id: string, text: string, type: MaskType) => void;
+  unmask: (id: string, token: string) => void; // 復元: トークンを元の値に戻す
   ignoreSuspected: (id: string, text: string) => void;
   dismissToast: (id: number) => void;
 }
@@ -126,7 +127,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (id: string, text: string, type: MaskType) => {
       patch(id, (a) => {
         if (!text.trim()) return a;
-        const n = a.maskedEntities.length + 1;
+        // 種別ごとに連番を振る（例 〔氏名①〕〔氏名②〕〔会社①〕）。
+        const n = a.maskedEntities.filter((e) => e.type === type).length + 1;
         const token = `〔${type}${circled(n)}〕`;
         // 下書き内の該当文字列をトークンに置換し、出現回数を数える。
         const parts = a.draft.split(text);
@@ -140,6 +142,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             { token, type, decryptedValue: text, occurrences: Math.max(1, occurrences) },
           ],
           suspectedUnmasked: a.suspectedUnmasked.filter((s) => s !== text),
+        };
+      });
+    },
+    [patch],
+  );
+
+  const unmask = useCallback(
+    (id: string, token: string) => {
+      // 復元: 下書き内のトークンを元の値に戻し、辞書からも除く。
+      patch(id, (a) => {
+        const ent = a.maskedEntities.find((e) => e.token === token);
+        if (!ent) return a;
+        return {
+          ...a,
+          draft: a.draft.split(token).join(ent.decryptedValue),
+          maskedEntities: a.maskedEntities.filter((e) => e.token !== token),
         };
       });
     },
@@ -171,6 +189,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       demoApproveByFS,
       send,
       maskText,
+      unmask,
       ignoreSuspected,
       dismissToast,
     }),
@@ -187,6 +206,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       demoApproveByFS,
       send,
       maskText,
+      unmask,
       ignoreSuspected,
       dismissToast,
     ],

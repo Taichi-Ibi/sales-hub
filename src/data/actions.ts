@@ -25,10 +25,10 @@ export const SEED_ACTIONS: Action[] = [
       '過去の類似案件では同様の追記を承諾している',
     ],
     draft:
-      '〔人物①〕様\nお世話になっております。ご依頼の契約書3条につき、〔NDA②〕の範囲内で対応可能です。契約金額500万円は据え置きで進めさせていただきます。修正版を6/12までにお送りします。\nどうぞよろしくお願いいたします。',
+      '〔氏名①〕様\nお世話になっております。ご依頼の契約書3条につき、〔契約番号①〕の範囲内で対応可能です。契約金額500万円は据え置きで進めさせていただきます。修正版を6/12までにお送りします。\nどうぞよろしくお願いいたします。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '田中 一郎', occurrences: 2 },
-      { token: '〔NDA②〕', type: 'NDA', decryptedValue: 'NDA-2024-018', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '田中 一郎', occurrences: 2 },
+      { token: '〔契約番号①〕', type: '契約番号', decryptedValue: 'NDA-2024-018', occurrences: 1 },
     ],
     suspectedUnmasked: ['田中部長'],
   },
@@ -38,19 +38,19 @@ export const SEED_ACTIONS: Action[] = [
     risk: '高',
     title: '機密保持の範囲を法務へ確認',
     counterparty: 'D工業',
-    dueDate: '2026-06-13',
+    dueDate: '2026-06-11',
     createdAt: '2026-06-06T14:00:00',
     status: '未確認',
-    summary: 'D工業との共同開発で、機密保持の対象範囲を法務に確認のうえ回答が必要。6/13期限。',
+    summary: 'D工業との共同開発で、機密保持の対象範囲を法務に確認のうえ回答が必要。6/11期限。',
     context: [
       '先方は試作データの取り扱いを懸念',
       '既存の秘密保持契約の更新時期が近い',
       '法務の確認待ち事項が1点ある',
     ],
     draft:
-      '法務ご担当者様\nお疲れさまです。D工業との共同開発に関し、〔NDA①〕の対象範囲について確認をお願いします。試作データを含めてよいか、ご見解をいただけますでしょうか。',
+      '法務ご担当者様\nお疲れさまです。D工業との共同開発に関し、〔契約番号①〕の対象範囲について確認をお願いします。試作データを含めてよいか、ご見解をいただけますでしょうか。',
     maskedEntities: [
-      { token: '〔NDA①〕', type: 'NDA', decryptedValue: 'NDA-2024-031', occurrences: 1 },
+      { token: '〔契約番号①〕', type: '契約番号', decryptedValue: 'NDA-2024-031', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -66,9 +66,9 @@ export const SEED_ACTIONS: Action[] = [
     summary: 'A社から提示されたNDAひな形を、社内法務へ連携して確認を依頼する。',
     context: ['先方ひな形は標準的な内容', '特段の修正要望は今のところなし'],
     draft:
-      '法務ご担当者様\nお疲れさまです。〔人物①〕様より受領したNDAのひな形を共有します。問題がないかご確認ください。',
+      '法務ご担当者様\nお疲れさまです。〔氏名①〕様より受領したNDAのひな形を共有します。問題がないかご確認ください。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '佐藤 花子', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '佐藤 花子', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -84,9 +84,9 @@ export const SEED_ACTIONS: Action[] = [
     summary: 'C製作所から見積もり依頼。6/11までに概算金額を返信する。',
     context: ['数量は前回と同等', '納期は2週間を希望'],
     draft:
-      '〔人物①〕様\nお世話になっております。お見積もりの件、概算で1台あたり12万円にてご案内いたします。正式なお見積書は明日お送りします。',
+      '〔氏名①〕様\nお世話になっております。お見積もりの件、概算で1台あたり12万円にてご案内いたします。正式なお見積書は明日お送りします。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '鈴木 健太', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '鈴木 健太', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -96,15 +96,15 @@ export const SEED_ACTIONS: Action[] = [
     risk: '低',
     title: '先週の資料送付がまだ未対応',
     counterparty: 'G産業',
-    dueDate: '2026-06-11',
+    dueDate: '2026-06-10',
     createdAt: '2026-06-07T15:00:00',
     status: '未確認',
     summary: 'G産業へ約束していた製品資料の送付が未完了。早急に送る必要がある。',
     context: ['先週水曜に送付を約束', '先方の社内検討会が6/12に予定されている'],
     draft:
-      '〔人物①〕様\nお世話になっております。ご案内が遅くなり申し訳ございません。製品資料を添付いたします。ご検討のほどよろしくお願いいたします。',
+      '〔氏名①〕様\nお世話になっております。ご案内が遅くなり申し訳ございません。製品資料を添付いたします。ご検討のほどよろしくお願いいたします。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '高橋 誠', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '高橋 誠', occurrences: 1 },
     ],
     suspectedUnmasked: ['山本課長'],
   },
@@ -120,9 +120,9 @@ export const SEED_ACTIONS: Action[] = [
     summary: 'H社から訪問日程の再調整依頼。候補日を提示して返信する。',
     context: ['当初予定の6/11が先方都合で不可', '来週前半なら調整可能'],
     draft:
-      '〔人物①〕様\nお世話になっております。ご都合に合わせ、6/16(火)または6/17(水)はいかがでしょうか。ご希望をお聞かせください。',
+      '〔氏名①〕様\nお世話になっております。ご都合に合わせ、6/16(火)または6/17(水)はいかがでしょうか。ご希望をお聞かせください。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '伊藤 直樹', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '伊藤 直樹', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -138,9 +138,9 @@ export const SEED_ACTIONS: Action[] = [
     summary: 'I物産より支払サイトの延長（30日→60日）の打診。可否を回答する。6/14期限。',
     context: ['先方は資金繰りを理由に60日を希望', '取引額は月間 300万円', '与信状況は良好'],
     draft:
-      '〔人物①〕様\nお世話になっております。お支払条件の件、社内で検討いたしました。月間300万円のお取引につき、支払サイト60日への変更は前向きに調整いたします。',
+      '〔氏名①〕様\nお世話になっております。お支払条件の件、社内で検討いたしました。月間300万円のお取引につき、支払サイト60日への変更は前向きに調整いたします。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '渡辺 隆', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '渡辺 隆', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -156,9 +156,9 @@ export const SEED_ACTIONS: Action[] = [
     summary: 'J社からの問い合わせに一次返信がまだ。受付の旨だけでも返す必要がある。',
     context: ['問い合わせは新規導入の相談', '具体要件はこれからヒアリング'],
     draft:
-      '〔人物①〕様\nお問い合わせありがとうございます。担当より改めてご連絡いたします。まずは受領のご連絡まで。',
+      '〔氏名①〕様\nお問い合わせありがとうございます。担当より改めてご連絡いたします。まずは受領のご連絡まで。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '中村 彩', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '中村 彩', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -177,9 +177,9 @@ export const SEED_ACTIONS: Action[] = [
     summary: 'K商会から解約条項（通知期間）の短縮依頼。高リスクのためFS承認待ち。',
     context: ['先方は解約通知を90日→30日に短縮希望', '当社標準は90日'],
     draft:
-      '〔人物①〕様\nお世話になっております。解約条項につきましては、通知期間を60日とする折衷案をご提案いたします。',
+      '〔氏名①〕様\nお世話になっております。解約条項につきましては、通知期間を60日とする折衷案をご提案いたします。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '小林 大輔', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '小林 大輔', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -196,10 +196,10 @@ export const SEED_ACTIONS: Action[] = [
     summary: 'L工業との機密情報共有範囲についてFS承認済み。送信可能。',
     context: ['共有対象は設計仕様の一部に限定', '法務確認済み'],
     draft:
-      '〔人物①〕様\nお世話になっております。機密情報の共有範囲は設計仕様の該当部分に限定する形で進めます。〔NDA②〕に基づき対応いたします。',
+      '〔氏名①〕様\nお世話になっております。機密情報の共有範囲は設計仕様の該当部分に限定する形で進めます。〔契約番号①〕に基づき対応いたします。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '加藤 浩二', occurrences: 1 },
-      { token: '〔NDA②〕', type: 'NDA', decryptedValue: 'NDA-2024-042', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '加藤 浩二', occurrences: 1 },
+      { token: '〔契約番号①〕', type: '契約番号', decryptedValue: 'NDA-2024-042', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -218,9 +218,9 @@ export const SEED_ACTIONS: Action[] = [
     summary: 'E社との打ち合わせ日程を確定して返信済み。',
     context: ['6/18(木) 14:00 で確定'],
     draft:
-      '〔人物①〕様\nお世話になっております。それでは6/18(木)14:00にお伺いいたします。どうぞよろしくお願いいたします。',
+      '〔氏名①〕様\nお世話になっております。それでは6/18(木)14:00にお伺いいたします。どうぞよろしくお願いいたします。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '松本 由美', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '松本 由美', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
@@ -236,9 +236,9 @@ export const SEED_ACTIONS: Action[] = [
     completedDate: '6/8',
     summary: 'F社への資料送付の催促。別ルートで対応済みのため棄却。',
     context: ['担当者が電話で直接送付済みと判明'],
-    draft: '〔人物①〕様\nお世話になっております。先日の資料はお手元に届いておりますでしょうか。',
+    draft: '〔氏名①〕様\nお世話になっております。先日の資料はお手元に届いておりますでしょうか。',
     maskedEntities: [
-      { token: '〔人物①〕', type: '人物', decryptedValue: '木村 翔', occurrences: 1 },
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '木村 翔', occurrences: 1 },
     ],
     suspectedUnmasked: [],
   },
