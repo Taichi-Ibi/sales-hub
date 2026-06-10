@@ -1,137 +1,82 @@
-# Sales Hub — CLAUDE.md
+# アクション台帳モックアップ — CLAUDE.md
+
+## 概要
+
+社内営業組織向け「アクション蒸留」プロダクトの**クリッカブルUIモックアップ**。
+仕様書 `mockupspec v1.1` に準拠。**見た目と画面遷移のみ**を再現し、バックエンド・AI・
+メール連携・認証・本物の送信は一切実装しない（すべてモックデータと擬似挙動）。
 
 ## Quick Start
 
 ```bash
-bun run dev          # http://localhost:5173/intelligence
-bun run check        # 型チェック (0 errors が合格基準)
-bun run test:prop    # プロパティテスト 73件 (fast-check)
-bun run lint         # prettier + eslint (.kiro/ の警告は無視してよい)
-bunx prettier --write src/  # .svelte 書き換え後に必ず実行
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # tsc -b && vite build → dist/
+npm run typecheck  # 型チェックのみ
+npm run preview    # ビルド結果の確認
 ```
 
-> **dev server はサンドボックス外で起動が必要。**
-> `bun run dev` は `dangerouslyDisableSandbox: true` を指定して実行すること。
+> dev server はサンドボックス外で起動が必要。`npm run dev` は
+> `dangerouslyDisableSandbox: true` を指定して実行すること。
 
-パッケージマネージャーは **bun** のみ。`npm` / `pnpm` は使わない。
+パッケージマネージャーは **npm**。
 
----
+## 技術スタック（仕様書 §13）
 
-## タスク管理
-
-- タスク一覧: `.kiro/specs/ai-sales-brain/tasks.md`
-- 進行中 `[-]`、完了 `[x]` でマーク
-- 各チェックポイント到達時に `bun run test:prop && bun run check` で確認
-
----
+- Vite + React + TypeScript + Tailwind CSS v4
+- React Router の **HashRouter**（GitHub Pages のサブパス直リンク404対策）
+- 状態管理は React の `useState` / Context のみ。外部状態管理ライブラリは使わない
+- UIコンポーネントライブラリは不使用（デザイン指針 §9 に従い自作）
 
 ## アーキテクチャ
 
-### ディレクトリ構成
-
 ```
 src/
-  lib/intelligence/
-    types.ts          # ドメイン型定義
-    constants.ts      # VALIDATION, STORAGE_KEYS, PHASE_LABELS, DEAL_PHASES
-    handoff.ts        # 申し送りチェックリスト/勝ち筋メーター/移行ゲート (純粋関数, テスト対象)
-    store-logic.ts    # 純粋関数リデューサー (テスト対象はここ)
-    store.svelte.ts   # Svelte 5 runes ストア (薄いラッパー)
-    ai-engine.ts      # AI シミュレーション (中核=申し送り漏れ指摘, モック, 外部通信なし)
-    __tests__/        # fast-check プロパティテスト
-  routes/intelligence/
-    +layout.svelte    # Navy サイドバー + initializeFromStorage()
-    +page.svelte      # ダッシュボード
-    inbox/            # インボックス
-    tasks/            # タスク管理
-    deals/            # 案件管理
-    admin/            # 管理者設定 (プレースホルダー)
+  data/actions.ts        # サンプルデータ（架空）。status で表示先一覧が一意に決まる
+  types.ts               # ドメイン型（Action / Category / Risk / Status / MaskedEntity）
+  lib/time.ts            # 経過時間の算出・色分け（NOW は固定値 2026-06-10T10:00:00）
+  store/StoreContext.tsx # 全状態と状態遷移を集約した Context
+  components/
+    Shell.tsx            # 左ナビ＋上部バー＋トースト層（共通シェル）
+    ActionCard.tsx       # S1/S4 共通のアクションカード
+    Badge.tsx            # 経過/カテゴリ/高リスク/状態の各バッジ
+    Button.tsx           # 主/副/危険/リンク のボタン
+    DraftEditor.tsx      # 下書き（伏せ字チップ埋め込みの編集領域）
+    MaskingPanel.tsx     # S3 マスキング＆ID辞書（右スライドインパネル）
+    ConfirmDialog.tsx    # 棄却の確認ダイアログ
+    Toaster.tsx          # トースト（右下・2.5秒）
+  pages/
+    Ledger.tsx           # S1 アクション台帳
+    ActionDetail.tsx     # S2 詳細／実行キット
+    Approvals.tsx        # S4 FS承認待ち
+    Archive.tsx          # S5 完了済み
+    Settings.tsx         # 設定（プレースホルダー）
 ```
 
-### ストアパターン
+### 状態モデルの要点
 
-純粋関数は `store-logic.ts`、副作用（localStorage保存・スケジュール）は `store.svelte.ts`。
+- アクションは `status` 一本でどの一覧に出るかが決まる:
+  - 台帳(S1): `未確認` / `対応中`
+  - FS承認待ち(S4): `FS承認待ち` / `承認済み`
+  - 完了済み(S5): `送信済み` / `棄却`
+- 一覧間の「移動」は status の更新で表現（複製しない）。左ナビのバッジも status から算出。
+- トースト文言は3種のみ: `送信しました` / `FS承認へ回しました` / `棄却しました`。
 
-```ts
-// store-logic.ts: 純粋リデューサー → テスト可能
-applyAddEventLog(state, log) → IntelligenceState
+## 実装上の約束
 
-// store.svelte.ts: ストア関数 → リデューサーを呼んで applyState
-export function addEventLog(log) { applyState(applyAddEventLog(getState(), log)); }
-```
+- **金額は伏せ字にしない**（背景・下書き内の数字はそのまま表示）。マスク対象は `人物` / `NDA` の2種のみ。
+- 経過バッジの色: 24h未満=緑(good) / 24h以上72h未満=黄(warn) / 72h以上=赤(danger)。境界は上位区分に含める。
+- 高リスクのみ高リスクバッジを表示。低リスクは何も出さない。
+- アニメーションは仕様書 §10 の指定のみ（トースト150ms / S3パネル150-200ms）。`prefers-reduced-motion` で無効化。
+- デザイントークンは `src/index.css` の `@theme` に定義（§9.1 のカラー）。
+- 仕様書に書かれていない判断が必要なら、勝手に決めず確認する。
 
-### データ永続化
+## ホスティング
 
-- localStorage のみ。バックエンドなし。外部 API 呼び出しなし。
-- シードデータは初回起動時に自動投入 (`seedIfNeeded` は冪等)。
-- 保存は `VALIDATION.SAVE_DEBOUNCE_MS` (3秒) デバウンス。
+- GitHub Pages。`vite.config.ts` の `base` は build 時のみ `/sales-hub/`。
+- `.github/workflows/deploy.yml` が `main` への push で自動ビルド（`dist/`）・デプロイ。
 
----
+## 作らないもの（仕様書 §2.2 / §14）
 
-## Svelte 5.55.2 の制約 (ハマりポイント)
-
-### `$state` のエクスポートは再代入不可
-
-```ts
-// NG: export した $state に = で再代入
-let tasks = $state<Task[]>([]);
-export { tasks };
-// どこかで tasks = newArray; → runtime error
-
-// OK: in-place mutation
-tasks.splice(0, Infinity, ...newArray);
-```
-
-### `$derived` はエクスポート不可
-
-```ts
-// NG: $derived をそのままエクスポート
-const unreadCount = $derived(computeUnreadCount(eventLogs));
-export { unreadCount }; // → runtime error
-
-// OK: コンポーネント側でローカルに計算
-// store.svelte.ts からは eventLogs ($state) だけエクスポートして…
-const unreadCount = $derived(computeUnreadCount(eventLogs)); // component 内で
-```
-
-`threadGroups`, `unreadCount`, `pendingTaskCount` はストアから提供せず、
-各コンポーネントが `$derived` で計算する。
-
-### SvelteSet / SvelteMap
-
-`new Set()` の代わりに `new SvelteSet()` を使う (`svelte/prefer-svelte-reactivity` ルール)。
-
----
-
-## ESLint / Prettier のルール
-
-| ルール                                 | 対処                                               |
-| -------------------------------------- | -------------------------------------------------- |
-| `svelte/no-navigation-without-resolve` | `href={resolve('/path')}` を使う                   |
-| `svelte/require-each-key`              | `{#each items as item (item.id)}`                  |
-| `svelte/prefer-svelte-reactivity`      | `new SvelteSet()` / `new SvelteMap()`              |
-| a11y: label without control            | ラジオグループの見出しは `<label>` でなく `<span>` |
-
-`.kiro/specs/` の Markdown は prettier 警告が出るが無視してよい (コード品質に無関係)。
-
----
-
-## テスト
-
-```bash
-bun run test:prop   # プロパティテスト (fast-check)
-bun run test:unit   # ユニットテスト (未作成なら空振り)
-bun run test        # 全テスト
-```
-
-- テスト環境は `node` (jsdom ではない)
-- 共通 arbitrary は `arbitraries.ts` にまとめてある
-- `store-logic.ts` の純粋関数を直接テストする設計
-
----
-
-## SPA 設定
-
-- `adapter-static` + `fallback: 'index.html'`
-- `ssr = false`, `prerender = false` (`+layout.ts`)
-- ビルド成果物は `build/` ディレクトリ
+実バックエンド・API・DB／本物のAI抽出・下書き生成／メール・Slack・Docs連携／
+認証・権限・監査ログ／本物の送信処理／モバイル最適化／多言語。**PC幅1280px・日本語UIのみ。**

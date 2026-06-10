@@ -1,0 +1,245 @@
+import type { Action } from '../types';
+
+// サンプルデータ（仕様書 §8.2 / §8.3）。
+// 会社名・人名はすべて架空。実在の組織・個人は使わない。
+// status でどの一覧に出るかが一意に決まる:
+//   台帳(S1)        : 未確認 / 対応中
+//   FS承認待ち(S4)  : FS承認待ち / 承認済み
+//   完了済み(S5)    : 送信済み / 棄却
+
+export const SEED_ACTIONS: Action[] = [
+  // ───────── 台帳（S1）: a01〜a08 ─────────
+  {
+    id: 'a01',
+    category: '契約',
+    risk: '高',
+    title: '契約書3条の修正依頼に返信',
+    counterparty: 'B商事',
+    dueDate: '2026-06-12',
+    createdAt: '2026-06-05T09:00:00',
+    status: '未確認',
+    summary: 'B商事から契約書3条（損害賠償上限）の修正依頼。6/12までに返信が必要。',
+    context: [
+      '先方は損害賠償上限の追記を希望',
+      '金額条件は据え置き（契約金額 500万円）',
+      '過去の類似案件では同様の追記を承諾している',
+    ],
+    draft:
+      '〔人物①〕様\nお世話になっております。ご依頼の契約書3条につき、〔NDA②〕の範囲内で対応可能です。契約金額500万円は据え置きで進めさせていただきます。修正版を6/12までにお送りします。\nどうぞよろしくお願いいたします。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '田中 一郎', occurrences: 2 },
+      { token: '〔NDA②〕', type: 'NDA', decryptedValue: 'NDA-2024-018', occurrences: 1 },
+    ],
+    suspectedUnmasked: ['田中部長'],
+  },
+  {
+    id: 'a02',
+    category: '法務',
+    risk: '高',
+    title: '機密保持の範囲を法務へ確認',
+    counterparty: 'D工業',
+    dueDate: '2026-06-13',
+    createdAt: '2026-06-06T14:00:00',
+    status: '未確認',
+    summary: 'D工業との共同開発で、機密保持の対象範囲を法務に確認のうえ回答が必要。6/13期限。',
+    context: [
+      '先方は試作データの取り扱いを懸念',
+      '既存の秘密保持契約の更新時期が近い',
+      '法務の確認待ち事項が1点ある',
+    ],
+    draft:
+      '法務ご担当者様\nお疲れさまです。D工業との共同開発に関し、〔NDA①〕の対象範囲について確認をお願いします。試作データを含めてよいか、ご見解をいただけますでしょうか。',
+    maskedEntities: [
+      { token: '〔NDA①〕', type: 'NDA', decryptedValue: 'NDA-2024-031', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+  {
+    id: 'a03',
+    category: '法務',
+    risk: '低',
+    title: 'NDAの先方ひな形を法務へ連絡',
+    counterparty: 'A社',
+    dueDate: '2026-06-13',
+    createdAt: '2026-06-07T11:00:00',
+    status: '対応中',
+    summary: 'A社から提示されたNDAひな形を、社内法務へ連携して確認を依頼する。',
+    context: ['先方ひな形は標準的な内容', '特段の修正要望は今のところなし'],
+    draft:
+      '法務ご担当者様\nお疲れさまです。〔人物①〕様より受領したNDAのひな形を共有します。問題がないかご確認ください。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '佐藤 花子', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+  {
+    id: 'a04',
+    category: '期限付き返信',
+    risk: '低',
+    title: '見積もり依頼に返信',
+    counterparty: 'C製作所',
+    dueDate: '2026-06-11',
+    createdAt: '2026-06-10T06:00:00',
+    status: '未確認',
+    summary: 'C製作所から見積もり依頼。6/11までに概算金額を返信する。',
+    context: ['数量は前回と同等', '納期は2週間を希望'],
+    draft:
+      '〔人物①〕様\nお世話になっております。お見積もりの件、概算で1台あたり12万円にてご案内いたします。正式なお見積書は明日お送りします。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '鈴木 健太', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+  {
+    id: 'a05',
+    category: '対応漏れ',
+    risk: '低',
+    title: '先週の資料送付がまだ未対応',
+    counterparty: 'G産業',
+    dueDate: '2026-06-11',
+    createdAt: '2026-06-07T15:00:00',
+    status: '未確認',
+    summary: 'G産業へ約束していた製品資料の送付が未完了。早急に送る必要がある。',
+    context: ['先週水曜に送付を約束', '先方の社内検討会が6/12に予定されている'],
+    draft:
+      '〔人物①〕様\nお世話になっております。ご案内が遅くなり申し訳ございません。製品資料を添付いたします。ご検討のほどよろしくお願いいたします。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '高橋 誠', occurrences: 1 },
+    ],
+    suspectedUnmasked: ['山本課長'],
+  },
+  {
+    id: 'a06',
+    category: '期限付き返信',
+    risk: '低',
+    title: '訪問日程の再調整に返信',
+    counterparty: 'H社',
+    dueDate: '2026-06-12',
+    createdAt: '2026-06-09T10:00:00',
+    status: '未確認',
+    summary: 'H社から訪問日程の再調整依頼。候補日を提示して返信する。',
+    context: ['当初予定の6/11が先方都合で不可', '来週前半なら調整可能'],
+    draft:
+      '〔人物①〕様\nお世話になっております。ご都合に合わせ、6/16(火)または6/17(水)はいかがでしょうか。ご希望をお聞かせください。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '伊藤 直樹', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+  {
+    id: 'a07',
+    category: '契約',
+    risk: '高',
+    title: '支払条件の変更可否を回答',
+    counterparty: 'I物産',
+    dueDate: '2026-06-14',
+    createdAt: '2026-06-08T16:00:00',
+    status: '未確認',
+    summary: 'I物産より支払サイトの延長（30日→60日）の打診。可否を回答する。6/14期限。',
+    context: ['先方は資金繰りを理由に60日を希望', '取引額は月間 300万円', '与信状況は良好'],
+    draft:
+      '〔人物①〕様\nお世話になっております。お支払条件の件、社内で検討いたしました。月間300万円のお取引につき、支払サイト60日への変更は前向きに調整いたします。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '渡辺 隆', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+  {
+    id: 'a08',
+    category: '対応漏れ',
+    risk: '低',
+    title: '問い合わせへの一次返信が未送信',
+    counterparty: 'J社',
+    dueDate: '2026-06-11',
+    createdAt: '2026-06-09T18:00:00',
+    status: '対応中',
+    summary: 'J社からの問い合わせに一次返信がまだ。受付の旨だけでも返す必要がある。',
+    context: ['問い合わせは新規導入の相談', '具体要件はこれからヒアリング'],
+    draft:
+      '〔人物①〕様\nお問い合わせありがとうございます。担当より改めてご連絡いたします。まずは受領のご連絡まで。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '中村 彩', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+
+  // ───────── FS承認待ち（S4）: b01, b02 ─────────
+  {
+    id: 'b01',
+    category: '契約',
+    risk: '高',
+    title: '解約条項の修正可否を回答',
+    counterparty: 'K商会',
+    dueDate: '2026-06-14',
+    createdAt: '2026-06-05T08:00:00',
+    status: 'FS承認待ち',
+    handedOffLabel: 'FSへ回した: 1時間前',
+    summary: 'K商会から解約条項（通知期間）の短縮依頼。高リスクのためFS承認待ち。',
+    context: ['先方は解約通知を90日→30日に短縮希望', '当社標準は90日'],
+    draft:
+      '〔人物①〕様\nお世話になっております。解約条項につきましては、通知期間を60日とする折衷案をご提案いたします。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '小林 大輔', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+  {
+    id: 'b02',
+    category: '法務',
+    risk: '高',
+    title: '機密情報の共有範囲を法務確認',
+    counterparty: 'L工業',
+    dueDate: '2026-06-13',
+    createdAt: '2026-06-08T09:00:00',
+    status: '承認済み',
+    handedOffLabel: 'FSへ回した: 昨日',
+    summary: 'L工業との機密情報共有範囲についてFS承認済み。送信可能。',
+    context: ['共有対象は設計仕様の一部に限定', '法務確認済み'],
+    draft:
+      '〔人物①〕様\nお世話になっております。機密情報の共有範囲は設計仕様の該当部分に限定する形で進めます。〔NDA②〕に基づき対応いたします。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '加藤 浩二', occurrences: 1 },
+      { token: '〔NDA②〕', type: 'NDA', decryptedValue: 'NDA-2024-042', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+
+  // ───────── 完了済み（S5）: c01, c02 ─────────
+  {
+    id: 'c01',
+    category: '期限付き返信',
+    risk: '低',
+    title: '日程調整に返信',
+    counterparty: 'E社',
+    dueDate: '2026-06-09',
+    createdAt: '2026-06-04T10:00:00',
+    status: '送信済み',
+    completedDate: '6/9',
+    summary: 'E社との打ち合わせ日程を確定して返信済み。',
+    context: ['6/18(木) 14:00 で確定'],
+    draft:
+      '〔人物①〕様\nお世話になっております。それでは6/18(木)14:00にお伺いいたします。どうぞよろしくお願いいたします。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '松本 由美', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+  {
+    id: 'c02',
+    category: '対応漏れ',
+    risk: '低',
+    title: '資料送付の催促',
+    counterparty: 'F社',
+    dueDate: '2026-06-08',
+    createdAt: '2026-06-03T13:00:00',
+    status: '棄却',
+    completedDate: '6/8',
+    summary: 'F社への資料送付の催促。別ルートで対応済みのため棄却。',
+    context: ['担当者が電話で直接送付済みと判明'],
+    draft: '〔人物①〕様\nお世話になっております。先日の資料はお手元に届いておりますでしょうか。',
+    maskedEntities: [
+      { token: '〔人物①〕', type: '人物', decryptedValue: '木村 翔', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+  },
+];

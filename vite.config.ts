@@ -1,12 +1,10 @@
-import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vitest/config';
 
-export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
-	test: {
-		environment: 'node',
-		globals: false,
-		include: ['src/**/__tests__/**/*.test.ts']
-	}
-});
+// GitHub Pages はリポジトリ名のサブパス配下で配信されるため base を合わせる。
+// 開発時 (vite dev) は '/' でよい。
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/sales-hub/' : '/',
+  plugins: [react(), tailwindcss()],
+}));
