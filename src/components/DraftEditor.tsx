@@ -1,12 +1,8 @@
 import { useMemo } from 'react';
 import type { MaskedEntity, MaskType } from '../types';
+import { MASK_TYPE_MAP } from '../lib/maskTypes';
 
 const TOKEN_RE = /〔[^〕]+〕/g;
-
-const CHIP_CLASS: Record<MaskType, string> = {
-  人物: 'bg-accent/10 text-accent',
-  NDA: 'bg-[#ede9fe] text-[#6d28d9]',
-};
 
 interface Segment {
   kind: 'text' | 'chip';
@@ -21,7 +17,7 @@ function parse(draft: string, entities: MaskedEntity[]): Segment[] {
   for (const m of draft.matchAll(TOKEN_RE)) {
     const start = m.index!;
     if (start > last) segments.push({ kind: 'text', value: draft.slice(last, start) });
-    segments.push({ kind: 'chip', value: m[0], type: typeByToken.get(m[0]) ?? '人物' });
+    segments.push({ kind: 'chip', value: m[0], type: typeByToken.get(m[0]) ?? '氏名' });
     last = start + m[0].length;
   }
   if (last < draft.length) segments.push({ kind: 'text', value: draft.slice(last) });
@@ -71,8 +67,8 @@ export function DraftEditor({ draft, version, entities, readOnly, onCommit, onCh
             key={i}
             contentEditable={false}
             onClick={onChipClick}
-            className={`mx-0.5 cursor-pointer rounded px-1 py-0.5 text-xs font-medium ${CHIP_CLASS[seg.type ?? '人物']}`}
-            title="マスクを管理"
+            className={`mx-0.5 cursor-pointer rounded px-1 py-0.5 text-xs font-medium ${MASK_TYPE_MAP[seg.type ?? '氏名'].chipClass}`}
+            title="クリックで管理（復元・追加）"
           >
             {seg.value}
           </span>
