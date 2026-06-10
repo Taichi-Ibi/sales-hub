@@ -1,5 +1,7 @@
-:root {
-	/* Primary */
+@import 'tailwindcss';
+
+@theme {
+	/* Primary — generate bg-brand, text-brand-dark, etc. */
 	--color-brand: #0176d3;
 	--color-brand-dark: #032d60;
 	--color-brand-light: #eef4ff;
@@ -22,32 +24,55 @@
 	--color-text: #3e3e3c;
 	--color-text-heading: #181818;
 	--color-text-muted: #706e6b;
+	--color-muted: #706e6b;
 
-	/* Spacing */
-	--space-xs: 4px;
-	--space-sm: 8px;
-	--space-md: 16px;
-	--space-lg: 24px;
-	--space-xl: 32px;
+	/* Spacing — generate p-xs..p-xl, gap-md, etc. */
+	--spacing-xs: 4px;
+	--spacing-sm: 8px;
+	--spacing-md: 16px;
+	--spacing-lg: 24px;
+	--spacing-xl: 32px;
 
-	/* Border Radius */
+	/* Border Radius — rounded-sm/md/lg */
 	--radius-sm: 4px;
 	--radius-md: 8px;
 	--radius-lg: 12px;
 
-	/* Shadow */
+	/* Shadow — shadow-card / shadow-elevated */
 	--shadow-card: 0 2px 4px rgba(0, 0, 0, 0.1);
 	--shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.15);
 
-	/* Font */
-	--font-family:
+	/* Font size — text-xs..text-2xl */
+	--text-xs: 11px;
+	--text-sm: 13px;
+	--text-md: 14px;
+	--text-lg: 16px;
+	--text-xl: 20px;
+	--text-2xl: 24px;
+
+	/* Font family — font-sans */
+	--font-sans:
 		-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-	--font-size-xs: 11px;
-	--font-size-sm: 13px;
-	--font-size-md: 14px;
-	--font-size-lg: 16px;
-	--font-size-xl: 20px;
-	--font-size-2xl: 24px;
+}
+
+/*
+ * Back-compat aliases so existing scoped CSS that references the original token
+ * names keeps resolving during/after the Tailwind migration. Do NOT remove —
+ * dropping these would strip spacing/font tokens from every scoped style block.
+ */
+:root {
+	--space-xs: var(--spacing-xs);
+	--space-sm: var(--spacing-sm);
+	--space-md: var(--spacing-md);
+	--space-lg: var(--spacing-lg);
+	--space-xl: var(--spacing-xl);
+	--font-size-xs: var(--text-xs);
+	--font-size-sm: var(--text-sm);
+	--font-size-md: var(--text-md);
+	--font-size-lg: var(--text-lg);
+	--font-size-xl: var(--text-xl);
+	--font-size-2xl: var(--text-2xl);
+	--font-family: var(--font-sans);
 }
 
 *,
@@ -58,8 +83,8 @@
 
 body {
 	margin: 0;
-	font-family: var(--font-family);
-	font-size: var(--font-size-md);
+	font-family: var(--font-sans);
+	font-size: var(--text-md);
 	background: var(--color-bg);
 	color: var(--color-text);
 }
