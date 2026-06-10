@@ -26,14 +26,17 @@
 	} from '$lib/intelligence/handoff.js';
 	import { isBlank } from '$lib/intelligence/validation.js';
 	import { VALIDATION, PHASE_LABELS, DEAL_PHASES } from '$lib/intelligence/constants.js';
-	import { formatDate, formatDateTime } from '$lib/intelligence/format.js';
+	import { formatDate, formatDateTime, formatRelative } from '$lib/intelligence/format.js';
 	import {
 		sourceIcons,
+		sourceLabel,
+		messageSender,
 		eventLogStatusLabel as logStatusLabel,
 		eventLogStatusClass as logStatusClass,
 		taskStatusLabel,
 		priorityLabel
 	} from '$lib/intelligence/ui-labels.js';
+	import { getInitials, avatarColor } from '$lib/intelligence/avatar.js';
 	import type {
 		Deal,
 		DealPhase,
@@ -213,7 +216,7 @@
 	function handleGenerateSummary() {
 		if (!syncedDeal) return;
 		if (relatedLogs.length === 0) {
-			summaryError = '関連するEvent_Logがありません';
+			summaryError = '関連する記録がありません';
 			return;
 		}
 		summaryLoading = true;
@@ -280,6 +283,17 @@
 	<title>案件 — Sales Intelligence</title>
 </svelte:head>
 
+<!-- 色付きイニシャルのアバター。担当者名や送信者名を seed に使う。 -->
+{#snippet avatar(seed: string, size: 'sm' | 'md' | 'lg')}
+	<span
+		class="avatar avatar-{size}"
+		style="background-color: {avatarColor(seed)}"
+		aria-hidden="true"
+	>
+		{getInitials(seed)}
+	</span>
+{/snippet}
+
 <div class="deals-layout" class:has-selection={syncedDeal !== null}>
 	<!-- Left: Deal list -->
 	<div class="deals-left">
@@ -297,7 +311,10 @@
 						>
 							<span class="deal-name">{deal.name}</span>
 							<div class="deal-meta">
-								<span class="deal-assignee">{deal.assignee}</span>
+								<span class="deal-assignee">
+									{@render avatar(deal.assignee, 'sm')}
+									{deal.assignee}
+								</span>
 								{#if (leakByDeal.get(deal.id) ?? 0) > 0}
 									<span class="deal-leak" title="漏れている申し送り"
 										>⚠ {leakByDeal.get(deal.id)}</span
@@ -311,7 +328,7 @@
 			{/if}
 		{/each}
 		{#if deals.length === 0}
-			<p class="empty-message">案件がありません</p>
+			<p class="empty-message">まだ案件がありません</p>
 		{/if}
 	</div>
 
@@ -319,7 +336,8 @@
 	<div class="deals-detail">
 		{#if syncedDeal === null}
 			<div class="detail-empty">
-				<p>左のリストから案件を選択してください</p>
+				<span class="detail-empty-icon">💼</span>
+				<p>左の一覧から案件を選ぶと、ここに詳細が表示されます。</p>
 			</div>
 		{:else}
 			<div class="detail-panel">
@@ -331,7 +349,10 @@
 						<span class="phase-badge">{PHASE_LABELS[syncedDeal.phase]}</span>
 					</div>
 					<div class="detail-sub">
-						<span>担当者: <strong>{syncedDeal.assignee}</strong></span>
+						<span class="detail-assignee">
+							{@render avatar(syncedDeal.assignee, 'sm')}
+							担当 <strong>{syncedDeal.assignee}</strong>
+						</span>
 						<span class="detail-date">更新: {formatDateTime(syncedDeal.updatedAt)}</span>
 					</div>
 				</div>
@@ -491,16 +512,30 @@
 					<div class="section-header">
 						<h3 class="section-title">活動記録 ({relatedLogs.length}件)</h3>
 						<div class="section-actions">
-							<button
-								class="btn-toggle"
-								class:active={isFlat}
-								onclick={() => {
-									isFlat = !isFlat;
-									selectedLogItem = null;
-								}}
-							>
-								{isFlat ? 'スレッド表示' : 'フラット表示'}
-							</button>
+							<div class="segmented" role="group" aria-label="表示の切り替え">
+								<button
+									class="seg-btn"
+									class:active={!isFlat}
+									onclick={() => {
+										if (!isFlat) return;
+										isFlat = false;
+										selectedLogItem = null;
+									}}
+								>
+									💬 会話ごと
+								</button>
+								<button
+									class="seg-btn"
+									class:active={isFlat}
+									onclick={() => {
+										if (isFlat) return;
+										isFlat = true;
+										selectedLogItem = null;
+									}}
+								>
+									🕒 時系列
+								</button>
+							</div>
 							<button
 								class="btn-secondary"
 								onclick={() => {
@@ -508,7 +543,7 @@
 									newLogNotice = '';
 								}}
 							>
-								{newLogOpen ? 'キャンセル' : '+ 新規記録'}
+								{newLogOpen ? 'キャンセル' : '✏️ 新規作成'}
 							</button>
 						</div>
 					</div>
@@ -520,12 +555,12 @@
 								<span class="form-label">種別</span>
 								<div class="radio-group">
 									<label class="radio-label">
-										<input type="radio" bind:group={newLogSource} value="minutes" />
-										議事録
+										<input type="radio" bind:group={newLogSource} value="memo" />
+										🗒️ メモ
 									</label>
 									<label class="radio-label">
-										<input type="radio" bind:group={newLogSource} value="memo" />
-										メモ
+										<input type="radio" bind:group={newLogSource} value="minutes" />
+										📝 議事録
 									</label>
 								</div>
 							</div>
@@ -546,7 +581,7 @@
 								<textarea
 									id="new-log-body"
 									class="form-textarea"
-									placeholder="内容を入力してください"
+									placeholder="内容を入力してください。保存するとAIが関連タスクを提案します。"
 									maxlength={newLogMaxLen}
 									bind:value={newLogBody}
 								></textarea>
@@ -554,7 +589,7 @@
 							{#if newLogError}
 								<p class="error-text">{newLogError}</p>
 							{/if}
-							<button class="btn-primary" onclick={saveNewLog}>保存</button>
+							<button class="btn-primary" onclick={saveNewLog}>保存する</button>
 						</div>
 					{/if}
 
@@ -577,11 +612,12 @@
 													selectedLogItem.item.id === log.id}
 												onclick={() => (selectedLogItem = { type: 'event', item: log })}
 											>
-												<span class="source-icon">{sourceIcons[log.source]}</span>
+												{@render avatar(messageSender(log), 'sm')}
 												<div class="log-info">
 													<span class="log-title">{log.title.slice(0, 50)}</span>
 													<span class="log-meta">
-														{formatDateTime(log.timestamp)}
+														<span class="log-sender">{messageSender(log)}</span>
+														{formatRelative(log.timestamp)}
 														<span class="status-badge {logStatusClass[log.status]}">
 															{logStatusLabel[log.status]}
 														</span>
@@ -599,12 +635,12 @@
 													selectedLogItem.item.id === tg.id}
 												onclick={() => (selectedLogItem = { type: 'thread', item: tg })}
 											>
-												<span class="source-icon">{sourceIcons[tg.source]}</span>
+												{@render avatar(messageSender(tg.parentMessage), 'sm')}
 												<div class="log-info">
 													<span class="log-title">{tg.parentMessage.title.slice(0, 50)}</span>
 													<span class="log-meta">
-														{formatDateTime(tg.latestMessageAt)}
-														<span class="thread-count">{tg.messageCount}件</span>
+														{formatRelative(tg.latestMessageAt)}
+														<span class="thread-count">💬 {tg.messageCount}件</span>
 													</span>
 												</div>
 											</button>
@@ -618,11 +654,12 @@
 													selectedLogItem.item.id === log.id}
 												onclick={() => (selectedLogItem = { type: 'event', item: log })}
 											>
-												<span class="source-icon">{sourceIcons[log.source]}</span>
+												{@render avatar(messageSender(log), 'sm')}
 												<div class="log-info">
 													<span class="log-title">{log.title.slice(0, 50)}</span>
 													<span class="log-meta">
-														{formatDateTime(log.timestamp)}
+														<span class="log-sender">{messageSender(log)}</span>
+														{formatRelative(log.timestamp)}
 														<span class="status-badge {logStatusClass[log.status]}">
 															{logStatusLabel[log.status]}
 														</span>
@@ -640,11 +677,15 @@
 									{#if selectedLogItem.type === 'event'}
 										{@const log = selectedLogItem.item}
 										<div class="log-detail-header">
-											<span class="source-icon lg">{sourceIcons[log.source]}</span>
+											{@render avatar(messageSender(log), 'md')}
 											<div>
 												<p class="log-detail-title">{log.title}</p>
 												<p class="log-detail-meta">
+													<span class="log-sender">{messageSender(log)}</span>
 													{formatDateTime(log.timestamp)}
+													<span class="source-tag"
+														>{sourceIcons[log.source]} {sourceLabel[log.source]}</span
+													>
 													<span class="status-badge {logStatusClass[log.status]}">
 														{logStatusLabel[log.status]}
 													</span>
@@ -657,26 +698,30 @@
 									{:else}
 										{@const tg = selectedLogItem.item}
 										<div class="log-detail-header">
-											<span class="source-icon lg">{sourceIcons[tg.source]}</span>
+											{@render avatar(messageSender(tg.parentMessage), 'md')}
 											<div>
 												<p class="log-detail-title">{tg.parentMessage.title}</p>
 												<p class="log-detail-meta">
-													{tg.messageCount}件 · {formatDateTime(tg.latestMessageAt)}
+													<span class="source-tag"
+														>{sourceIcons[tg.source]} {sourceLabel[tg.source]}</span
+													>
+													{tg.messageCount}件 · {formatRelative(tg.latestMessageAt)}
 												</p>
 											</div>
 										</div>
-										<div class="thread-messages">
-											{#each getThreadMessagesSorted(tg) as msg, i (msg.id)}
-												{#if i > 0}<hr class="thread-divider" />{/if}
-												<div class="thread-msg">
-													<p class="thread-msg-meta">
-														{#if msg.slackSender}{msg.slackSender} ·{/if}
-														{#if msg.emailFrom}{msg.emailFrom} ·{/if}
-														{formatDateTime(msg.timestamp)}
-													</p>
-													<p class="thread-msg-body">
-														{msg.isMasked ? (msg.maskedBody ?? msg.body) : msg.body}
-													</p>
+										<div class="chat-messages">
+											{#each getThreadMessagesSorted(tg) as msg (msg.id)}
+												<div class="chat-msg">
+													{@render avatar(messageSender(msg), 'sm')}
+													<div class="chat-content">
+														<div class="chat-head">
+															<span class="chat-sender">{messageSender(msg)}</span>
+															<span class="chat-time">{formatDateTime(msg.timestamp)}</span>
+														</div>
+														<div class="chat-bubble">
+															{msg.isMasked ? (msg.maskedBody ?? msg.body) : msg.body}
+														</div>
+													</div>
 												</div>
 											{/each}
 										</div>
@@ -876,9 +921,18 @@
 	}
 
 	.deal-assignee {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.detail-assignee {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-xs);
 	}
 
 	.empty-message {
@@ -899,11 +953,53 @@
 
 	.detail-empty {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		gap: var(--space-sm);
 		height: 100%;
 		color: var(--color-text-muted);
 		font-size: var(--font-size-sm);
+		text-align: center;
+		padding: var(--space-lg);
+	}
+
+	.detail-empty-icon {
+		font-size: 40px;
+		opacity: 0.6;
+	}
+
+	/* ─── Avatar ─────────────────────────────────────────────────────────────── */
+	.avatar {
+		flex-shrink: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: var(--radius-sm);
+		color: white;
+		font-weight: 700;
+		line-height: 1;
+		user-select: none;
+		vertical-align: middle;
+	}
+
+	.avatar-sm {
+		width: 20px;
+		height: 20px;
+		font-size: 10px;
+		border-radius: 4px;
+	}
+
+	.avatar-md {
+		width: 32px;
+		height: 32px;
+		font-size: var(--font-size-sm);
+	}
+
+	.avatar-lg {
+		width: 44px;
+		height: 44px;
+		font-size: var(--font-size-lg);
 	}
 
 	.detail-panel {
@@ -1022,19 +1118,28 @@
 		cursor: not-allowed;
 	}
 
-	.btn-toggle {
-		font-size: var(--font-size-xs);
-		padding: 3px var(--space-sm);
-		border: 1px solid var(--color-brand);
-		background: white;
-		color: var(--color-brand);
+	.segmented {
+		display: inline-flex;
+		background: var(--color-bg);
 		border-radius: var(--radius-sm);
+		padding: 2px;
+	}
+
+	.seg-btn {
+		font-size: var(--font-size-xs);
+		padding: 4px var(--space-sm);
+		border: none;
+		background: none;
+		color: var(--color-text-muted);
+		border-radius: calc(var(--radius-sm) - 1px);
 		cursor: pointer;
 	}
 
-	.btn-toggle.active {
-		background: var(--color-brand);
-		color: white;
+	.seg-btn.active {
+		background: white;
+		color: var(--color-brand);
+		font-weight: 600;
+		box-shadow: var(--shadow-card);
 	}
 
 	.btn-approve {
@@ -1385,14 +1490,17 @@
 		border-left: 2px solid var(--color-brand);
 	}
 
-	.source-icon {
-		font-size: 14px;
-		flex-shrink: 0;
-		margin-top: 1px;
+	.log-sender {
+		font-weight: 600;
+		color: var(--color-text);
 	}
 
-	.source-icon.lg {
-		font-size: 20px;
+	.source-tag {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		background: var(--color-bg);
+		padding: 1px 6px;
+		border-radius: 8px;
 	}
 
 	.log-info {
@@ -1458,35 +1566,46 @@
 		margin: 0;
 	}
 
-	.thread-messages {
+	.chat-messages {
 		display: flex;
 		flex-direction: column;
+		gap: var(--space-md);
+	}
+
+	.chat-msg {
+		display: flex;
 		gap: var(--space-sm);
+		align-items: flex-start;
 	}
 
-	.thread-divider {
-		border: none;
-		border-top: 1px solid var(--color-border);
-		margin: 0;
+	.chat-content {
+		flex: 1;
+		min-width: 0;
 	}
 
-	.thread-msg {
+	.chat-head {
 		display: flex;
-		flex-direction: column;
-		gap: 2px;
+		align-items: baseline;
+		gap: var(--space-sm);
+		margin-bottom: 2px;
 	}
 
-	.thread-msg-meta {
+	.chat-sender {
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+		color: var(--color-text-heading);
+	}
+
+	.chat-time {
 		font-size: var(--font-size-xs);
 		color: var(--color-text-muted);
-		margin: 0;
 	}
 
-	.thread-msg-body {
+	.chat-bubble {
 		font-size: var(--font-size-sm);
 		line-height: 1.6;
 		white-space: pre-wrap;
-		margin: 0;
+		color: var(--color-text);
 	}
 
 	/* Status / priority badges */
