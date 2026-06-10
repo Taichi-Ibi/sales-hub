@@ -5,8 +5,6 @@ import { Ledger } from './pages/Ledger';
 import { ActionDetail } from './pages/ActionDetail';
 import { Inbox } from './pages/Inbox';
 import { InboxDetail } from './pages/InboxDetail';
-import { Approvals } from './pages/Approvals';
-import { Archive } from './pages/Archive';
 import { Settings } from './pages/Settings';
 
 export default function App() {
@@ -18,8 +16,9 @@ export default function App() {
           <Route path="/action/:id" element={<ActionDetail />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/inbox/:id" element={<InboxDetail />} />
-          <Route path="/approvals" element={<Approvals />} />
-          <Route path="/archive" element={<Archive />} />
+          {/* 旧URL互換: FS承認/完了済みは台帳のタブに統合した */}
+          <Route path="/approvals" element={<Navigate to="/?tab=waiting" replace />} />
+          <Route path="/archive" element={<Navigate to="/?tab=done" replace />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

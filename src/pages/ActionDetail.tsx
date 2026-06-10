@@ -4,17 +4,19 @@ import { useStore } from '../store/StoreContext';
 import { elapsedSince } from '../lib/time';
 import { MASK_TYPE_MAP } from '../lib/maskTypes';
 import { CategoryTag, RiskBadge } from '../components/Badge';
+import { ContextDrilldown } from '../components/Drilldown';
 import { Button } from '../components/Button';
 import { DraftEditor } from '../components/DraftEditor';
 import { MaskingPanel } from '../components/MaskingPanel';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
-const BACK_LABEL: Record<string, string> = {
-  '/': '❮ 台帳へ戻る',
-  '/inbox': '❮ Inboxへ戻る',
-  '/approvals': '❮ FS承認待ちへ戻る',
-  '/archive': '❮ 完了済みへ戻る',
-};
+/** 戻り先ラベル。台帳はタブ（?tab=…）ごと、Inbox はそのまま。 */
+function backLabel(from: string): string {
+  if (from.startsWith('/inbox')) return '❮ Inboxへ戻る';
+  if (from.includes('tab=waiting')) return '❮ 台帳（依頼中）へ戻る';
+  if (from.includes('tab=done')) return '❮ 台帳（完了）へ戻る';
+  return '❮ 台帳へ戻る';
+}
 
 export function ActionDetail() {
   const { id = '' } = useParams();
@@ -77,7 +79,7 @@ export function ActionDetail() {
     if (action.status === '承認済み') {
       return (
         <span className="text-sm font-medium text-good">
-          FS承認済み（送信可能）— FS承認待ち一覧から送信できます
+          FS承認済み（送信可能）— 台帳の「依頼中」タブから送信できます
         </span>
       );
     }
@@ -113,7 +115,7 @@ export function ActionDetail() {
             variant="primary"
             onClick={() => {
               store.handToFS(action.id);
-              navigate('/approvals');
+              navigate('/?tab=waiting');
             }}
           >
             FS承認へ回す ▶
@@ -129,7 +131,7 @@ export function ActionDetail() {
         onClick={() => navigate(from)}
         className="mb-4 inline-flex items-center text-sm font-medium text-accent hover:underline"
       >
-        {BACK_LABEL[from] ?? '❮ 戻る'}
+        {backLabel(from)}
       </button>
 
       <div className="overflow-hidden rounded-xl border border-line bg-white">
@@ -171,6 +173,10 @@ export function ActionDetail() {
               ))}
             </ul>
           </section>
+
+          {/* 経緯のドリルダウン: 原文と案件プロパティ。
+              詳細→詳細の遷移でも開閉状態を持ち越さないよう案件IDでリセット。 */}
+          <ContextDrilldown key={action.id} action={action} />
 
           {/* 下書き */}
           <section>

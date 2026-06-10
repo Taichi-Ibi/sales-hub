@@ -31,6 +31,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔契約番号①〕', type: '契約番号', decryptedValue: 'NDA-2024-018', occurrences: 1 },
     ],
     suspectedUnmasked: ['田中部長'],
+    origin: {
+      source: 'mail',
+      title: '契約書第3条の修正のお願い',
+      sender: 'B商事 田中 一郎',
+      receivedAt: '2026-06-05T09:00:00',
+      body: 'お世話になっております。B商事の田中 一郎です。\n契約書第3条（損害賠償）について、上限額の追記をお願いできないでしょうか。金額条件は現行の500万円のままで結構です。対象は NDA-2024-018 に基づくお取引です。\n6/12までにご回答をいただけますと幸いです。なお、弊社の田中部長からもよろしくとのことです。',
+    },
   },
   {
     id: 'a02',
@@ -53,6 +60,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔契約番号①〕', type: '契約番号', decryptedValue: 'NDA-2024-031', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'minutes',
+      title: 'D工業 共同開発 打合せメモ（6/6）',
+      sender: '議事録bot',
+      receivedAt: '2026-06-06T14:00:00',
+      body: '■D工業 共同開発定例（6/6）\n・試作データの取り扱いについて先方が懸念。秘密保持の対象範囲を法務に確認すること。\n・既存契約 NDA-2024-031 の更新時期が近い。\n・6/11までに当社見解を回答する。',
+    },
   },
   {
     id: 'a03',
@@ -71,6 +85,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '佐藤 花子', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'slack',
+      title: '#sales-a社',
+      sender: '三好 玲（FS）',
+      receivedAt: '2026-06-07T11:00:00',
+      body: 'A社の佐藤 花子さんからNDAのひな形を受領しました。標準的な内容に見えますが、法務に確認を回してもらえますか。特段の修正要望は今のところ無いとのことです。',
+    },
   },
   {
     id: 'a04',
@@ -89,6 +110,14 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '鈴木 健太', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'mail',
+      title: 'お見積もりのご依頼',
+      sender: 'C製作所 鈴木 健太',
+      receivedAt: '2026-06-10T05:40:00',
+      body: 'お世話になっております。C製作所の鈴木です。\n前回と同数量で、お見積もりをお願いできますでしょうか。納期は2週間を希望します。6/11までに概算をいただけると助かります。\nC製作所 購買部 鈴木 健太',
+      inboxItemId: 'in04',
+    },
   },
   {
     id: 'a05',
@@ -107,6 +136,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '高橋 誠', occurrences: 1 },
     ],
     suspectedUnmasked: ['山本課長'],
+    origin: {
+      source: 'slack',
+      title: '#sales-g産業',
+      sender: '駒田 健（FS）',
+      receivedAt: '2026-06-07T15:00:00',
+      body: 'G産業の高橋 誠さんに先週水曜の時点で製品資料の送付を約束していますが、まだ送れていません。先方の社内検討会が6/12にあるため至急お願いします。山本課長も気にされているとのこと。',
+    },
   },
   {
     id: 'a06',
@@ -125,6 +161,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '伊藤 直樹', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'mail',
+      title: 'ご訪問日程の再調整のお願い',
+      sender: 'H社 伊藤 直樹',
+      receivedAt: '2026-06-09T10:00:00',
+      body: 'お世話になっております。H社の伊藤 直樹です。\n恐れ入りますが、6/11に予定しておりました貴社ご訪問について、弊社都合で日程を再調整させていただけないでしょうか。来週前半ですと調整しやすい状況です。',
+    },
   },
   {
     id: 'a07',
@@ -143,6 +186,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '渡辺 隆', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'mail',
+      title: 'お支払条件変更のご相談',
+      sender: 'I物産 渡辺 隆',
+      receivedAt: '2026-06-08T16:00:00',
+      body: 'お世話になっております。I物産の渡辺 隆です。\n誠に恐縮ですが、お支払いサイトを現行の30日から60日へ変更させていただけないでしょうか。資金繰りの都合によるもので、月間300万円のお取引規模は維持いたします。\n6/14までにご回答をお願いできますと幸いです。',
+    },
   },
   {
     id: 'a08',
@@ -161,6 +211,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '中村 彩', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'mail',
+      title: '貴社製品の導入について',
+      sender: 'J社 中村 彩',
+      receivedAt: '2026-06-09T18:00:00',
+      body: 'はじめまして。J社の中村 彩と申します。\n貴社製品の新規導入を検討しており、まずはご相談をさせていただけないでしょうか。詳細の要件はお打ち合わせの場でご説明いたします。',
+    },
   },
 
   // ───────── FS承認待ち（S4）: b01, b02 ─────────
@@ -182,6 +239,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '小林 大輔', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'mail',
+      title: '解約条項の見直しのご相談',
+      sender: 'K商会 小林 大輔',
+      receivedAt: '2026-06-05T08:00:00',
+      body: 'お世話になっております。K商会の小林 大輔です。\n現行契約の解約条項について、通知期間を90日から30日に短縮いただけないか、ご検討をお願いいたします。社内の方針変更によるものです。',
+    },
   },
   {
     id: 'b02',
@@ -202,6 +266,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔契約番号①〕', type: '契約番号', decryptedValue: 'NDA-2024-042', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'minutes',
+      title: 'L工業 技術打合せ 議事録（6/8）',
+      sender: '議事録bot',
+      receivedAt: '2026-06-08T09:00:00',
+      body: '■L工業 技術打合せ（6/8）\n・機密情報の共有範囲は設計仕様の一部に限定する方向で調整。\n・加藤 浩二氏より、法務確認のうえ回答してほしいと依頼あり。\n・根拠契約は NDA-2024-042。',
+    },
   },
 
   // ───────── 完了済み（S5）: c01, c02 ─────────
@@ -223,6 +294,13 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '松本 由美', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'mail',
+      title: '打ち合わせ日程のご相談',
+      sender: 'E社 松本 由美',
+      receivedAt: '2026-06-04T10:00:00',
+      body: 'お世話になっております。E社の松本 由美です。\n次回打ち合わせの候補日として、6/18(木)14:00はいかがでしょうか。ご都合をお聞かせください。',
+    },
   },
   {
     id: 'c02',
@@ -241,5 +319,12 @@ export const SEED_ACTIONS: Action[] = [
       { token: '〔氏名①〕', type: '氏名', decryptedValue: '木村 翔', occurrences: 1 },
     ],
     suspectedUnmasked: [],
+    origin: {
+      source: 'slack',
+      title: '#sales-f社',
+      sender: '駒田 健（FS）',
+      receivedAt: '2026-06-03T13:00:00',
+      body: 'F社の木村 翔さんへ資料送付の催促をお願いします。\n→（追記）担当が電話で確認したところ直接送付済みと判明。本件の対応は不要です。',
+    },
   },
 ];

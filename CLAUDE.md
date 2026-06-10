@@ -34,6 +34,7 @@ npm run preview    # ビルド結果の確認
 src/
   data/actions.ts        # サンプルデータ（架空）。status で表示先一覧が一意に決まる
   data/inbox.ts          # Inbox のサンプルデータ（Slack/メール/議事録の原文）
+  data/deals.ts          # 案件プロパティ（構造化情報＋非構造化メモ。定期自動更新のイメージ）
   types.ts               # ドメイン型（Action / InboxItem / Category / Risk / Status / MaskedEntity）
   lib/time.ts            # 経過時間の算出・色分け（NOW は固定値 2026-06-10T10:00:00）
   lib/tokenize.ts        # 簡易分かち書き（文字種境界で分割。形態素解析のシミュレート）
@@ -44,26 +45,29 @@ src/
     Badge.tsx            # 経過/カテゴリ/高リスク/状態の各バッジ
     Button.tsx           # 主/副/危険/リンク のボタン
     DraftEditor.tsx      # 下書き（伏せ字チップ埋め込みの編集領域）
+    Drilldown.tsx        # S2 経緯のドリルダウン（原文＋案件プロパティ。折りたたみ）
     MaskingPanel.tsx     # S3 伏せ字の確認・復元パネル（右スライドイン。マスク作成は不可）
     ConfirmDialog.tsx    # 棄却の確認ダイアログ
     Toaster.tsx          # トースト（右下・2.5秒）
   pages/
     Inbox.tsx            # S0 Inbox（IS向け受信箱。Slack/メール/議事録）
     InboxDetail.tsx      # S0' 原文詳細（分かち書き→タップでマスキング→AIタスク化）
-    Ledger.tsx           # S1 アクション台帳
+    Ledger.tsx           # S1 アクション台帳（要対応/依頼中/完了 の3タブ。旧S4/S5を統合）
     ActionDetail.tsx     # S2 詳細／実行キット
-    Approvals.tsx        # S4 FS承認待ち
-    Archive.tsx          # S5 完了済み
     Settings.tsx         # 設定（プレースホルダー）
 ```
 
 ### 状態モデルの要点
 
-- アクションは `status` 一本でどの一覧に出るかが決まる:
-  - 台帳(S1): `未確認` / `対応中`
-  - FS承認待ち(S4): `FS承認待ち` / `承認済み`
-  - 完了済み(S5): `送信済み` / `棄却`
-- 一覧間の「移動」は status の更新で表現（複製しない）。左ナビのバッジも status から算出。
+- 画面は **Inbox（入口）と台帳（作業場）の2画面**＋設定。台帳はタブで切り替え、
+  タブは URL のクエリ（`/?tab=waiting` / `/?tab=done`）に保持する。
+  旧 `/approvals` `/archive` は該当タブへリダイレクト。
+- アクションは `status` 一本でどのタブに出るかが決まる:
+  - 台帳「要対応」タブ: `未確認` / `対応中`
+  - 台帳「依頼中」タブ: `FS承認待ち` / `承認済み`
+  - 台帳「完了」タブ: `送信済み` / `棄却`
+- タブ間の「移動」は status の更新で表現（複製しない）。左ナビのバッジも status から算出
+  （台帳バッジは「要対応」件数）。
 - トースト文言は4種のみ: `送信しました` / `FS承認へ回しました` / `棄却しました` / `タスク化しました`。
 
 ### Inbox とマスキングのパイプライン
@@ -77,6 +81,14 @@ src/
 - マスキング（伏せる操作）は Inbox でのみ行う。台帳側は復元のみ
   （`MaskingPanel` は確認・復元・「未マスクの疑い」の無視だけ）。
 - タスク化時、`knownSensitive` のうち未マスクの語は Action の「未マスクの疑い」に引き継ぐ。
+
+### 経緯のドリルダウン（S2）
+
+- 各 Action は `origin`（元になった原文の抜粋: Slack/メール/議事録）を持ち、詳細画面の
+  「経緯を深掘り」で折りたたみ表示する。原文は**伏せ字適用済み**で表示（台帳ではマスクを外さない）。
+  Inbox に実体があれば `origin.inboxItemId` で遷移できる。
+- 案件プロパティは `data/deals.ts`。`Action.counterparty` で紐付け、構造化フィールド＋
+  「最近の動き」（日付つき非構造化メモ）＋最終更新/更新サイクル表示で定期自動更新を表現する。
 
 ## 実装上の約束
 
