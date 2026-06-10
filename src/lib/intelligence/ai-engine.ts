@@ -250,7 +250,8 @@ export function generateRetrospective(
 	eventLogs: EventLog[],
 	tasks: Task[],
 	periodStart: Date,
-	periodEnd: Date
+	periodEnd: Date,
+	deals: Deal[] = []
 ): RetrospectiveResult {
 	const periodLogs = eventLogs.filter(
 		(l) => !l.isDeleted && l.timestamp >= periodStart && l.timestamp <= periodEnd
@@ -281,7 +282,14 @@ export function generateRetrospective(
 		suggestions.push('活動記録がありません。日常の営業活動を記録してみましょう。');
 	}
 
-	const phaseChanges = eventLogs.filter((l) => !l.isDeleted && l.dealId).flatMap(() => []);
+	const phaseChanges = deals
+		.flatMap((d) => d.phaseHistory)
+		.filter((h) => h.transitionAt >= periodStart && h.transitionAt <= periodEnd)
+		.sort((a, b) => b.transitionAt.getTime() - a.transitionAt.getTime());
+
+	if (phaseChanges.length === 0 && periodLogs.length > 0) {
+		suggestions.push('期間内のフェーズ変更がありません。商談の進捗を確認しましょう。');
+	}
 
 	return {
 		eventLogCount: periodLogs.length,
