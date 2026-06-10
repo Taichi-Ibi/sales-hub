@@ -407,6 +407,16 @@
 		flex-wrap: wrap;
 	}
 
+	@media (max-width: 767px) {
+		.filter-select {
+			width: 100%;
+		}
+
+		.priority-filters {
+			flex-wrap: wrap;
+		}
+	}
+
 	.filter-select {
 		font-size: var(--font-size-sm);
 		padding: var(--space-xs) var(--space-sm);

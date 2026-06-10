@@ -338,7 +338,7 @@
 	<title>インボックス — Sales Intelligence</title>
 </svelte:head>
 
-<div class="inbox-layout">
+<div class="inbox-layout" class:has-selection={selected !== null}>
 	<div class="inbox-left">
 		<div class="inbox-header">
 			<h1 class="page-title">インボックス</h1>
@@ -637,6 +637,7 @@
 		{:else if selectedEventLog}
 			{@const log = selectedEventLog}
 			<div class="detail-panel">
+				<button class="mobile-back" onclick={() => (selected = null)}>← 一覧へ戻る</button>
 				<div class="detail-header">
 					<span class="source-icon lg">{sourceIcons[log.source]}</span>
 					<div>
@@ -759,6 +760,7 @@
 			{@const tg = selectedThread}
 			{@const messages = getThreadMessagesSorted(tg)}
 			<div class="detail-panel">
+				<button class="mobile-back" onclick={() => (selected = null)}>← 一覧へ戻る</button>
 				<div class="detail-header">
 					<span class="source-icon lg">{sourceIcons[tg.source]}</span>
 					<div>
@@ -804,6 +806,48 @@
 		flex-direction: column;
 		gap: var(--space-sm);
 		overflow-y: auto;
+	}
+
+	/* Mobile: collapse master-detail into a single column. The list and the
+	   detail swap based on whether an item is selected (driven by .has-selection). */
+	.mobile-back {
+		display: none;
+	}
+
+	@media (max-width: 767px) {
+		.inbox-layout {
+			height: auto;
+			gap: 0;
+		}
+
+		.inbox-left {
+			width: 100%;
+		}
+
+		.inbox-detail {
+			display: none;
+		}
+
+		.inbox-layout.has-selection .inbox-left {
+			display: none;
+		}
+
+		.inbox-layout.has-selection .inbox-detail {
+			display: block;
+		}
+
+		.mobile-back {
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+			margin-bottom: var(--space-sm);
+			padding: 0;
+			background: none;
+			border: none;
+			color: var(--color-brand);
+			font-size: var(--font-size-sm);
+			cursor: pointer;
+		}
 	}
 
 	.inbox-header {
