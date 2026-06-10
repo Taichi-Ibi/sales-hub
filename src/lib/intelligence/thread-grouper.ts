@@ -54,3 +54,10 @@ export function groupByThread(eventLogs: EventLog[]): ThreadGroup[] {
 export function getThreadMessages(threadGroup: ThreadGroup): EventLog[] {
 	return [threadGroup.parentMessage, ...threadGroup.replies];
 }
+
+/** スレッド内メッセージを時系列昇順で返す（表示用）。 */
+export function getThreadMessagesSorted(threadGroup: ThreadGroup): EventLog[] {
+	return getThreadMessages(threadGroup).sort(
+		(a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+	);
+}

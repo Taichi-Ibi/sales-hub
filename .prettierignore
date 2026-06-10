@@ -7,3 +7,6 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Spec / handoff docs (prettier warnings are noise; see CLAUDE.md)
+.kiro/

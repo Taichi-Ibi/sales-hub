@@ -2,6 +2,8 @@
 	import { deals, tasks, eventLogs } from '$lib/intelligence/store.svelte.js';
 	import { PHASE_LABELS, DEAL_PHASES, VALIDATION } from '$lib/intelligence/constants.js';
 	import { generateRetrospective } from '$lib/intelligence/ai-engine.js';
+	import { formatDate, formatDateTime } from '$lib/intelligence/format.js';
+	import { priorityLabel } from '$lib/intelligence/ui-labels.js';
 	import type { DataSource, RetrospectiveResult } from '$lib/intelligence/types.js';
 
 	const now = $derived(new Date());
@@ -86,23 +88,6 @@
 		tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0
 	);
 
-	function formatDateTime(date: Date): string {
-		return date.toLocaleString('ja-JP', {
-			month: 'numeric',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	}
-
-	function formatDate(date: Date): string {
-		return date.toLocaleDateString('ja-JP', {
-			month: 'numeric',
-			day: 'numeric'
-		});
-	}
-
-	const priorityLabel: Record<string, string> = { high: '高', medium: '中', low: '低' };
 	const priorityClass: Record<string, string> = {
 		high: 'priority-high',
 		medium: 'priority-medium',

@@ -33,65 +33,34 @@ function reviveDates<T>(obj: T): T {
 	return result as T;
 }
 
-export function serializeEventLogs(logs: EventLog[]): string {
-	return JSON.stringify(logs);
-}
-
-export function deserializeEventLogs(json: string): EventLog[] {
+/**
+ * JSON 配列をデシリアライズし、日時フィールドを Date に復元する汎用ヘルパー。
+ * パース失敗・非配列の場合は空配列を返し、`label` を含むエラーをコンソールに出力する。
+ */
+function deserializeArray<T>(json: string, label: string): T[] {
 	try {
 		const parsed: unknown = JSON.parse(json);
 		if (!Array.isArray(parsed)) return [];
-		return (parsed as unknown[]).map(reviveDates) as EventLog[];
+		return (parsed as unknown[]).map(reviveDates) as T[];
 	} catch (e) {
-		console.error('Failed to deserialize event logs:', e);
+		console.error(`Failed to deserialize ${label}:`, e);
 		return [];
 	}
 }
 
-export function serializeDeals(deals: Deal[]): string {
-	return JSON.stringify(deals);
-}
+export const serializeEventLogs = (logs: EventLog[]): string => JSON.stringify(logs);
+export const deserializeEventLogs = (json: string): EventLog[] =>
+	deserializeArray<EventLog>(json, 'event logs');
 
-export function deserializeDeals(json: string): Deal[] {
-	try {
-		const parsed: unknown = JSON.parse(json);
-		if (!Array.isArray(parsed)) return [];
-		return (parsed as unknown[]).map(reviveDates) as Deal[];
-	} catch (e) {
-		console.error('Failed to deserialize deals:', e);
-		return [];
-	}
-}
+export const serializeDeals = (deals: Deal[]): string => JSON.stringify(deals);
+export const deserializeDeals = (json: string): Deal[] => deserializeArray<Deal>(json, 'deals');
 
-export function serializeTasks(tasks: Task[]): string {
-	return JSON.stringify(tasks);
-}
+export const serializeTasks = (tasks: Task[]): string => JSON.stringify(tasks);
+export const deserializeTasks = (json: string): Task[] => deserializeArray<Task>(json, 'tasks');
 
-export function deserializeTasks(json: string): Task[] {
-	try {
-		const parsed: unknown = JSON.parse(json);
-		if (!Array.isArray(parsed)) return [];
-		return (parsed as unknown[]).map(reviveDates) as Task[];
-	} catch (e) {
-		console.error('Failed to deserialize tasks:', e);
-		return [];
-	}
-}
-
-export function serializeOperationLogs(logs: OperationLog[]): string {
-	return JSON.stringify(logs);
-}
-
-export function deserializeOperationLogs(json: string): OperationLog[] {
-	try {
-		const parsed: unknown = JSON.parse(json);
-		if (!Array.isArray(parsed)) return [];
-		return (parsed as unknown[]).map(reviveDates) as OperationLog[];
-	} catch (e) {
-		console.error('Failed to deserialize operation logs:', e);
-		return [];
-	}
-}
+export const serializeOperationLogs = (logs: OperationLog[]): string => JSON.stringify(logs);
+export const deserializeOperationLogs = (json: string): OperationLog[] =>
+	deserializeArray<OperationLog>(json, 'operation logs');
 
 export function safeSave(key: string, data: unknown): boolean {
 	try {
