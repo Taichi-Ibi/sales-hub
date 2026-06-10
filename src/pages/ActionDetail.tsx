@@ -4,6 +4,7 @@ import { useStore } from '../store/StoreContext';
 import { elapsedSince } from '../lib/time';
 import { MASK_TYPE_MAP } from '../lib/maskTypes';
 import { CategoryTag, RiskBadge } from '../components/Badge';
+import { ContextDrilldown } from '../components/Drilldown';
 import { Button } from '../components/Button';
 import { DraftEditor } from '../components/DraftEditor';
 import { MaskingPanel } from '../components/MaskingPanel';
@@ -172,6 +173,10 @@ export function ActionDetail() {
               ))}
             </ul>
           </section>
+
+          {/* 経緯のドリルダウン: 原文と案件プロパティ。
+              詳細→詳細の遷移でも開閉状態を持ち越さないよう案件IDでリセット。 */}
+          <ContextDrilldown key={action.id} action={action} />
 
           {/* 下書き */}
           <section>

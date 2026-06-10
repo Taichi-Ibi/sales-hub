@@ -34,6 +34,7 @@ npm run preview    # ビルド結果の確認
 src/
   data/actions.ts        # サンプルデータ（架空）。status で表示先一覧が一意に決まる
   data/inbox.ts          # Inbox のサンプルデータ（Slack/メール/議事録の原文）
+  data/deals.ts          # 案件プロパティ（構造化情報＋非構造化メモ。定期自動更新のイメージ）
   types.ts               # ドメイン型（Action / InboxItem / Category / Risk / Status / MaskedEntity）
   lib/time.ts            # 経過時間の算出・色分け（NOW は固定値 2026-06-10T10:00:00）
   lib/tokenize.ts        # 簡易分かち書き（文字種境界で分割。形態素解析のシミュレート）
@@ -44,6 +45,7 @@ src/
     Badge.tsx            # 経過/カテゴリ/高リスク/状態の各バッジ
     Button.tsx           # 主/副/危険/リンク のボタン
     DraftEditor.tsx      # 下書き（伏せ字チップ埋め込みの編集領域）
+    Drilldown.tsx        # S2 経緯のドリルダウン（原文＋案件プロパティ。折りたたみ）
     MaskingPanel.tsx     # S3 伏せ字の確認・復元パネル（右スライドイン。マスク作成は不可）
     ConfirmDialog.tsx    # 棄却の確認ダイアログ
     Toaster.tsx          # トースト（右下・2.5秒）
@@ -79,6 +81,14 @@ src/
 - マスキング（伏せる操作）は Inbox でのみ行う。台帳側は復元のみ
   （`MaskingPanel` は確認・復元・「未マスクの疑い」の無視だけ）。
 - タスク化時、`knownSensitive` のうち未マスクの語は Action の「未マスクの疑い」に引き継ぐ。
+
+### 経緯のドリルダウン（S2）
+
+- 各 Action は `origin`（元になった原文の抜粋: Slack/メール/議事録）を持ち、詳細画面の
+  「経緯を深掘り」で折りたたみ表示する。原文は**伏せ字適用済み**で表示（台帳ではマスクを外さない）。
+  Inbox に実体があれば `origin.inboxItemId` で遷移できる。
+- 案件プロパティは `data/deals.ts`。`Action.counterparty` で紐付け、構造化フィールド＋
+  「最近の動き」（日付つき非構造化メモ）＋最終更新/更新サイクル表示で定期自動更新を表現する。
 
 ## 実装上の約束
 

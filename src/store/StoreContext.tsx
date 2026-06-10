@@ -234,6 +234,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         suspectedUnmasked: seed.knownSensitive.filter(
           (s) => !item.masks.some((m) => m.text === s) && draft.includes(s),
         ),
+        // 経緯ドリルダウン用に原文を引き継ぐ（表示時にマスクを適用）。
+        origin: {
+          source: item.source,
+          title: item.title,
+          sender: item.sender,
+          receivedAt: item.receivedAt,
+          body: item.body,
+          inboxItemId: item.id,
+        },
       };
       setActions((prev) => [action, ...prev]);
       patchInbox(id, (i) => ({ ...i, status: 'タスク化済み', resultActionId: actionId }));

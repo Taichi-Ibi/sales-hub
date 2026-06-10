@@ -60,6 +60,18 @@ export interface InboxItem {
   distilled: DistilledSeed;
 }
 
+// タスクの出どころ（経緯ドリルダウン用）。原文の抜粋を Action 自身が持ち、
+// Inbox に実体が残っていれば inboxItemId で遷移できる。
+// body は原文（マスク前）。表示時に maskedEntities を適用してチップにする。
+export interface ActionOrigin {
+  source: InboxSource;
+  title: string;
+  sender: string;
+  receivedAt: string;
+  body: string;
+  inboxItemId?: string;
+}
+
 export interface Action {
   id: string;
   category: Category;
@@ -74,6 +86,7 @@ export interface Action {
   draft: string; // 下書き本文（トークン埋め込み）
   maskedEntities: MaskedEntity[];
   suspectedUnmasked: string[]; // 未マスクの疑い文字列
+  origin?: ActionOrigin; // 経緯: 元になった原文（Slack/メール/議事録）
   // S4/S5 表示用の補助情報（任意）
   handedOffLabel?: string; // 例 "FSへ回した: 1時間前"
   completedDate?: string; // 例 "6/9"
