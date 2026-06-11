@@ -1,8 +1,15 @@
 @import 'tailwindcss';
 
 /*
- * デザイン指針（仕様書 §9）のトークン。
+ * デザイントークンの単一の出典（DESIGN.md §9）。
  * 内勤担当が毎日・大量に・速く捌く業務ツール。走査性と落ち着きを優先。
+ *
+ * 色は下記8系統だけを使う。コンポーネントで生 hex や Tailwind 既定色
+ * （amber/green/blue/purple…）を直接書かない。濃淡が要るときは
+ * トークンの不透明度修飾（例: bg-warn/10, border-good/30）で表す。
+ *   ニュートラル: page / surface / line / ink / ink-sub
+ *   ブランド    : accent（青）/ accent-soft（淡い青）/ gold（金）
+ *   セマンティック: good（緑・成功/進行中）/ warn（橙・注意/待ち）/ danger（赤・危険/緊急）
  */
 @theme {
   /* ベース（DESIGN.md §2 Neutral） */
@@ -13,14 +20,14 @@
   --color-ink-sub: #6b7280; /* 補助文字 */
 
   /* Primary / Accent（DESIGN.md §2 Primary） */
-  --color-accent: #074194; /* Brand Blue: 主アクション・ナビ・見出し */
+  --color-accent: #074194; /* Brand Blue: 主アクション・ナビ・見出し・情報 */
   --color-gold: #ffd742; /* Attention Gold: 優先タグ・高リスクバッジ限定 */
   --color-accent-soft: #edf4fc; /* Light Blue: 背景アクセント */
 
-  /* Semantic */
-  --color-danger: #cc111a; /* Important Red（DESIGN.md §2） */
-  --color-warn: #d97706; /* 経過24-72h/警告/FS承認待ち */
-  --color-good: #059669; /* 経過24h未満/完了済み */
+  /* Semantic（意味で使い分ける3色。装飾目的では使わない） */
+  --color-danger: #cc111a; /* Important Red: 危険/緊急/棄却 */
+  --color-warn: #b45309; /* 注意/警告/FS承認待ち/経過24-72h（淡背景上で可読な濃いめの橙） */
+  --color-good: #059669; /* 成功/進行中/完了済み/経過24h未満 */
 
   /*
    * ナビ用パレット（DESIGN.md §4 Navigation）。

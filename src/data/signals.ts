@@ -30,10 +30,11 @@ export interface SignalPage {
   lastSeen: string;
 }
 
+// 種別はアイコンとラベルで区別する。背景はニュートラルに統一（色の乱立を避ける）。
 export const SIGNAL_KIND_META: Record<SignalKind, { icon: string; cls: string }> = {
-  兆候: { icon: '📈', cls: 'bg-amber-50 text-amber-700' },
-  繰り返しの質問: { icon: '🔁', cls: 'bg-blue-50 text-blue-700' },
-  ボトルネック: { icon: '🚧', cls: 'bg-purple-50 text-purple-700' },
+  兆候: { icon: '📈', cls: 'bg-surface text-ink-sub' },
+  繰り返しの質問: { icon: '🔁', cls: 'bg-surface text-ink-sub' },
+  ボトルネック: { icon: '🚧', cls: 'bg-surface text-ink-sub' },
 };
 
 export const SIGNAL_PAGES: SignalPage[] = [

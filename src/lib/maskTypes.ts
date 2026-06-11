@@ -14,38 +14,21 @@ export interface MaskTypeMeta {
   label: string;
   icon: string;
   example: string;
-  /** チップ（下書き内・辞書）の配色。 */
+  /** チップ（下書き内・辞書）の配色。全種別で共通（トークン由来）。 */
   chipClass: string;
-  /** 種別ピッカーで選択中に使う枠線色。 */
+  /** 種別ピッカーで選択中に使う枠線色（トークン由来）。 */
   ringClass: string;
 }
 
-// 識別色は DESIGN.md トークン外（種別の識別性を保つため意図的に生 hex を使用）。
+// 伏せ字は「機密」という単一の意味なので配色も一つに統一する（DESIGN.md トークンの accent）。
+// 種別の区別はアイコンとラベル（氏名①等）で示し、色では分けない。
+const CHIP_CLASS = 'bg-accent-soft text-accent';
+const RING_CLASS = 'border-accent ring-accent/30';
+
 export const MASK_TYPES: MaskTypeMeta[] = [
-  {
-    type: '氏名',
-    label: '氏名',
-    icon: '👤',
-    example: '田中 一郎',
-    chipClass: 'bg-accent-soft text-accent',
-    ringClass: 'border-accent ring-accent/30',
-  },
-  {
-    type: '会社',
-    label: '会社・組織',
-    icon: '🏢',
-    example: '○○商事',
-    chipClass: 'bg-[#eef2ff] text-[#4338ca]',
-    ringClass: 'border-[#4338ca] ring-[#4338ca]/30',
-  },
-  {
-    type: '連絡先',
-    label: '連絡先',
-    icon: '✉️',
-    example: 'a@x.co / 03-…',
-    chipClass: 'bg-[#ecfdf5] text-[#047857]',
-    ringClass: 'border-[#047857] ring-[#047857]/30',
-  },
+  { type: '氏名', label: '氏名', icon: '👤', example: '田中 一郎', chipClass: CHIP_CLASS, ringClass: RING_CLASS },
+  { type: '会社', label: '会社・組織', icon: '🏢', example: '○○商事', chipClass: CHIP_CLASS, ringClass: RING_CLASS },
+  { type: '連絡先', label: '連絡先', icon: '✉️', example: 'a@x.co / 03-…', chipClass: CHIP_CLASS, ringClass: RING_CLASS },
 ];
 
 export const MASK_TYPE_MAP: Record<MaskType, MaskTypeMeta> = {
@@ -56,7 +39,7 @@ export const MASK_TYPE_MAP: Record<MaskType, MaskTypeMeta> = {
     label: '契約番号・NDA',
     icon: '📄',
     example: 'NDA-2024-018',
-    chipClass: 'bg-[#f5f3ff] text-[#6d28d9]',
-    ringClass: 'border-[#6d28d9] ring-[#6d28d9]/30',
+    chipClass: CHIP_CLASS,
+    ringClass: RING_CLASS,
   },
 } as Record<MaskType, MaskTypeMeta>;

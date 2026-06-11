@@ -308,7 +308,7 @@ export function InboxDetail() {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-semibold text-ink">{item.title}</h1>
                 {reviewing && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-warn/15 px-2 py-0.5 text-xs font-medium text-warn">
                     🛡️ 目視確認待ち
                   </span>
                 )}
@@ -372,11 +372,11 @@ export function InboxDetail() {
           {/* 要確認: ロジックの警告 or 確認の案内 */}
           {reviewing && (
             (item.attention ?? []).length > 0 ? (
-              <div className="rounded-lg border border-warn/40 bg-amber-50 px-4 py-3">
-                <p className="mb-1 text-xs font-semibold text-amber-800">目視確認のポイント</p>
+              <div className="rounded-lg border border-warn/40 bg-warn/10 px-4 py-3">
+                <p className="mb-1 text-xs font-semibold text-warn">目視確認のポイント</p>
                 <ul className="space-y-1">
                   {(item.attention ?? []).map((r, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-sm text-amber-800">
+                    <li key={i} className="flex items-start gap-1.5 text-sm text-warn">
                       <span aria-hidden className="shrink-0">⚠</span>
                       <span>{r}</span>
                     </li>

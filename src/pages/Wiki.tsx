@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { InboxItem } from '../types';
 import { WIKI_PAGES } from '../data/wiki';
@@ -23,16 +23,6 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'signals', label: 'シグナル' },
   { key: 'decisions', label: '意思決定' },
 ];
-
-const TAB_DESCRIPTIONS: Record<TabKey, string> = {
-  projects:
-    '1案件=1ページをAIが維持します。記述には出典がつき、受信箱の原文から毎朝自動更新。担当が変わっても引き継げる「組織の営業メモリ」です。',
-  customers: '案件を横断した「この会社と当社の関係」。窓口の傾向・取引の現況をAIが顧客単位で整理します。',
-  people: '人物ごとの交渉スタイル・関心事・最終接点。商談前ブリーフの「関係者」から参照されます。',
-  meetings: 'カレンダー由来の会議一覧。開催前は事前ブリーフ、終了後は議事録とフォローアップが見られます。',
-  signals: '単一案件では見えない横断傾向（兆候・繰り返しの質問・ボトルネック）をAIが検出します。',
-  decisions: '「誰が・いつ・何を・なぜ」決めたかの記録。AIは Decision Brief（提案）まで、記録は人が行います。',
-};
 
 function isTabKey(v: string | null): v is TabKey {
   return TABS.some((t) => t.key === v);
@@ -66,7 +56,7 @@ function CustomersTab() {
         <button
           key={c.id}
           onClick={() => navigate(`/wiki/customer/${c.id}`)}
-          className={`flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition-all hover:bg-surface ${c.alerts.length > 0 ? 'bg-amber-50' : 'bg-white'}`}
+          className={`flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition-all hover:bg-surface ${c.alerts.length > 0 ? 'bg-warn/10' : 'bg-white'}`}
         >
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-semibold text-ink">{c.name}</p>
@@ -256,7 +246,6 @@ function DecisionsTab() {
 export function Wiki() {
   const { inboxItems, decisions } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showInfo, setShowInfo] = useState(false);
   const tabParam = searchParams.get('tab');
   const tab: TabKey = isTabKey(tabParam) ? tabParam : 'projects';
 
@@ -271,30 +260,8 @@ export function Wiki() {
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-4 flex items-center gap-2">
         <h1 className="text-xl font-semibold text-ink">ナレッジ</h1>
-        <button
-          onClick={() => setShowInfo((v) => !v)}
-          aria-expanded={showInfo}
-          aria-label="このページの説明"
-          className="flex h-5 w-5 items-center justify-center rounded-full border border-line bg-surface text-xs text-ink-sub hover:bg-line"
-        >
-          i
-        </button>
-      </div>
-
-      {showInfo && (
-        <div className="mb-3 rounded-lg border border-line bg-accent-soft px-4 py-3 text-sm text-ink">
-          {TAB_DESCRIPTIONS[tab]}
-        </div>
-      )}
-
-      {/* 自動更新の稼働状況（wiki 層全体） */}
-      <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-sub">
-        <span aria-hidden>🤖</span>
-        <span className="font-medium text-ink">全ページ AI 維持</span>
-        <span aria-hidden>·</span>
-        <span>毎朝6:00に再生成＋整合性チェック</span>
       </div>
 
       {/* タブ: ページ種別（モバイルは横スクロール） */}
@@ -310,10 +277,7 @@ export function Wiki() {
               key={t.key}
               role="tab"
               aria-selected={active}
-              onClick={() => {
-                setSearchParams(t.key === 'projects' ? {} : { tab: t.key }, { replace: true });
-                setShowInfo(false);
-              }}
+              onClick={() => setSearchParams(t.key === 'projects' ? {} : { tab: t.key }, { replace: true })}
               className={`flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                 active ? 'font-medium text-ink' : 'text-ink-sub hover:text-ink'
               }`}
