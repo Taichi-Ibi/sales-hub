@@ -2,7 +2,9 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import type { Action, InboxItem, MaskType, Status } from '../types';
 import { SEED_ACTIONS } from '../data/actions';
 import { SEED_INBOX } from '../data/inbox';
+import { DEALS } from '../data/deals';
 import { tokenize } from '../lib/tokenize';
+import { detectMaskType } from '../lib/autoDetect';
 
 // 完了系の操作で使う「今日」（モック固定。§8.1 の現在時刻に合わせる）。
 const TODAY_LABEL = '6/10';
@@ -24,6 +26,7 @@ interface StoreValue {
   inboxItems: InboxItem[];
   ledgerMode: LedgerMode;
   toasts: Toast[];
+  analysisRunning: boolean;
   setLedgerMode: (m: LedgerMode) => void;
   getAction: (id: string) => Action | undefined;
   markInProgress: (id: string) => void;
@@ -36,12 +39,16 @@ interface StoreValue {
   unmask: (id: string, token: string) => void; // 復元: トークンを元の値に戻す（台帳は復元のみ）
   ignoreSuspected: (id: string, text: string) => void;
   dismissToast: (id: number) => void;
-  // Inbox: 分かち書き(CPUシミュレート) → タップでマスキング → AIタスク化
+  // Inbox: 分かち書き(CPUシミュレート) → タップでマスキング → 案件選択 → AI Ready → バッチ解析 → タスク化
   getInboxItem: (id: string) => InboxItem | undefined;
   finishTokenize: (id: string) => void; // 分かち書き完了 → マスキング中
   maskInboxToken: (id: string, text: string, type: MaskType) => void;
-  unmaskInboxToken: (id: string, token: string) => void;
-  distillInboxItem: (id: string) => void; // AIタスク化 → 台帳に Action を追加
+  unmaskInboxToken: (id: string, token: string, atIndex: number) => void;
+  unmaskAllInboxTokens: (id: string) => void;
+  setInboxCounterparty: (id: string, counterparty: string) => void; // 案件名を設定
+  markAiReady: (id: string) => void; // AI Readyにする（マスク・案件選択が前提。解析は行わない）
+  runAiAnalysis: () => void; // バッチ解析: aiReady かつ未タスク化のアイテムを一括処理
+  runSingleAnalysis: (id: string) => void; // 単件解析: 指定アイテムのみ即時処理
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -55,6 +62,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
   const [ledgerMode, setLedgerMode] = useState<LedgerMode>('normal');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [analysisRunning, setAnalysisRunning] = useState(false);
 
   const patch = useCallback((id: string, fn: (a: Action) => Action) => {
     setActions((prev) => prev.map((a) => (a.id === id ? fn(a) : a)));
@@ -172,11 +180,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   // 分かち書きの完了（CPU実行のシミュレート）。トークン列を確定しマスキング工程へ。
+  // 電話番号・メールアドレスはルールベースで自動マスク（連絡先）。誤検出は手動で復元可能。
+  // 案件名と完全一致する文字列が本文にあれば案件を自動選択（長い名称を優先して誤マッチ防止）。
   const finishTokenize = useCallback(
     (id: string) => {
-      patchInbox(id, (i) =>
-        i.tokens ? i : { ...i, tokens: tokenize(i.body), status: 'マスキング中' },
-      );
+      patchInbox(id, (i) => {
+        if (i.tokens) return i;
+        const tokens = tokenize(i.body);
+        const autoMasks: typeof i.masks = [];
+        const seen = new Set<string>();
+        for (const t of tokens) {
+          if (seen.has(t)) continue;
+          seen.add(t);
+          const type = detectMaskType(t);
+          if (!type) continue;
+          if (i.masks.some((m) => m.text === t)) continue;
+          const n = i.masks.filter((m) => m.type === type).length + autoMasks.filter((m) => m.type === type).length + 1;
+          autoMasks.push({ text: t, type, token: `〔${type}${circled(n)}〕`, excludedIndices: [] });
+        }
+        let counterparty = i.counterparty;
+        if (!counterparty) {
+          const byLength = [...DEALS].sort((a, b) => b.counterparty.length - a.counterparty.length);
+          counterparty = byLength.find((d) => i.body.includes(d.counterparty))?.counterparty ?? '';
+        }
+        return { ...i, tokens, masks: [...i.masks, ...autoMasks], status: 'マスキング中', counterparty };
+      });
     },
     [patchInbox],
   );
@@ -188,26 +216,60 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (i.masks.some((m) => m.text === text)) return i;
         const n = i.masks.filter((m) => m.type === type).length + 1;
         const token = `〔${type}${circled(n)}〕`;
-        return { ...i, masks: [...i.masks, { text, type, token }] };
+        return { ...i, masks: [...i.masks, { text, type, token, excludedIndices: [] }] };
       });
     },
     [patchInbox],
   );
 
+  // 指定位置の出現のみ復元（excludedIndices に追加）。
   const unmaskInboxToken = useCallback(
-    (id: string, token: string) => {
-      patchInbox(id, (i) => ({ ...i, masks: i.masks.filter((m) => m.token !== token) }));
+    (id: string, token: string, atIndex: number) => {
+      patchInbox(id, (i) => ({
+        ...i,
+        masks: i.masks.map((m) =>
+          m.token === token
+            ? { ...m, excludedIndices: [...(m.excludedIndices ?? []), atIndex] }
+            : m,
+        ),
+      }));
     },
     [patchInbox],
   );
 
-  // AIタスク化（シミュレート）。マスク済みの経緯から Action を生成し台帳へ追加する。
-  // Inbox で付けたマスクは要約・背景・下書きに引き継がれ、台帳側では復元のみ可能。
-  const distillInboxItem = useCallback(
+  const unmaskAllInboxTokens = useCallback(
     (id: string) => {
-      const item = inboxItems.find((i) => i.id === id);
-      if (!item || item.status === 'タスク化済み') return;
+      patchInbox(id, (i) => ({ ...i, masks: [] }));
+    },
+    [patchInbox],
+  );
+
+  // 案件名を設定する。
+  const setInboxCounterparty = useCallback(
+    (id: string, counterparty: string) => {
+      patchInbox(id, (i) => ({ ...i, counterparty }));
+    },
+    [patchInbox],
+  );
+
+  // AI Readyにする（案件選択・マスク完了の宣言のみ。解析はバッチで行う）。
+  const markAiReady = useCallback(
+    (id: string) => {
+      patchInbox(id, (i) => (i.aiReady ? i : { ...i, aiReady: true }));
+    },
+    [patchInbox],
+  );
+
+  // 単体のタスク化ロジック（内部用）。draft が空の場合はアクション不要として完了扱い。
+  const distillOne = useCallback(
+    (id: string, items: InboxItem[]) => {
+      const item = items.find((i) => i.id === id);
+      if (!item || item.status === 'タスクあり') return;
       const seed = item.distilled;
+      if (!seed.draft) {
+        patchInbox(id, (i) => ({ ...i, status: 'タスクあり' }));
+        return;
+      }
       const applyMasks = (text: string) =>
         item.masks.reduce((acc, m) => acc.split(m.text).join(m.token), text);
       const draft = applyMasks(seed.draft);
@@ -217,9 +279,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         category: seed.category,
         risk: seed.risk,
         title: seed.title,
-        counterparty: seed.counterparty,
+        counterparty: item.counterparty || seed.counterparty,
         dueDate: seed.dueDate,
-        createdAt: '2026-06-10T09:55:00', // NOW 直前。経過バッジは「分」表示になる
+        createdAt: '2026-06-10T09:55:00',
         status: '未確認',
         summary: applyMasks(seed.summary),
         context: seed.context.map(applyMasks),
@@ -230,11 +292,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           decryptedValue: m.text,
           occurrences: Math.max(1, draft.split(m.token).length - 1),
         })),
-        // マスクし損ねた既知の機微語は「未マスクの疑い」として台帳に引き継ぐ。
         suspectedUnmasked: seed.knownSensitive.filter(
           (s) => !item.masks.some((m) => m.text === s) && draft.includes(s),
         ),
-        // 経緯ドリルダウン用に原文を引き継ぐ（表示時にマスクを適用）。
         origin: {
           source: item.source,
           title: item.title,
@@ -245,11 +305,43 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         },
       };
       setActions((prev) => [action, ...prev]);
-      patchInbox(id, (i) => ({ ...i, status: 'タスク化済み', resultActionId: actionId }));
-      addToast('タスク化しました');
+      patchInbox(id, (i) => ({ ...i, status: 'タスクあり', aiReady: true, resultActionId: actionId }));
     },
-    [inboxItems, patchInbox, addToast],
+    [patchInbox],
   );
+
+  // 単件解析: 指定アイテムのみ即時処理（詳細画面の「今すぐ解析」用）。
+  const runSingleAnalysis = useCallback(
+    (id: string) => {
+      const target = inboxItems.find((i) => i.id === id);
+      if (!target || !target.aiReady || target.status === 'タスクあり') return;
+      setAnalysisRunning(true);
+      window.setTimeout(() => {
+        distillOne(id, inboxItems);
+        setAnalysisRunning(false);
+        addToast(target.distilled.draft ? 'タスクを生成しました' : '解析完了（タスクなし）');
+      }, 1500);
+    },
+    [inboxItems, distillOne, addToast],
+  );
+
+  // バッチ解析: aiReady かつ未タスク化のアイテムをまとめて処理（1時間ごと自動 or 手動）。
+  const runAiAnalysis = useCallback(() => {
+    const pending = inboxItems.filter((i) => i.aiReady && i.status !== 'タスクあり');
+    if (pending.length === 0) {
+      addToast('解析する新規データがありません');
+      return;
+    }
+    setAnalysisRunning(true);
+    // 解析シミュレート（1.5秒）
+    window.setTimeout(() => {
+      const snapshot = pending; // タイムアウト時点のリスト（モックなので許容）
+      snapshot.forEach((item) => distillOne(item.id, inboxItems));
+      setAnalysisRunning(false);
+      const taskCount = snapshot.filter((i) => !!i.distilled.draft).length;
+      addToast(taskCount > 0 ? `${taskCount}件のタスクを生成しました` : '解析完了（新規タスクなし）');
+    }, 1500);
+  }, [inboxItems, distillOne, addToast]);
 
   const value = useMemo<StoreValue>(
     () => ({
@@ -257,6 +349,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       inboxItems,
       ledgerMode,
       toasts,
+      analysisRunning,
       setLedgerMode,
       getAction,
       markInProgress,
@@ -273,13 +366,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       finishTokenize,
       maskInboxToken,
       unmaskInboxToken,
-      distillInboxItem,
+      unmaskAllInboxTokens,
+      setInboxCounterparty,
+      markAiReady,
+      runAiAnalysis,
+      runSingleAnalysis,
     }),
     [
       actions,
       inboxItems,
       ledgerMode,
       toasts,
+      analysisRunning,
       getAction,
       markInProgress,
       updateDraft,
@@ -295,7 +393,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       finishTokenize,
       maskInboxToken,
       unmaskInboxToken,
-      distillInboxItem,
+      unmaskAllInboxTokens,
+      setInboxCounterparty,
+      markAiReady,
+      runAiAnalysis,
+      runSingleAnalysis,
     ],
   );
 

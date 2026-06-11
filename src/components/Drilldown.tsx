@@ -131,7 +131,7 @@ export function ContextDrilldown({ action }: { action: Action }) {
                   onClick={() => navigate(`/inbox/${origin.inboxItemId}`)}
                   className="mt-2 text-sm font-medium text-accent hover:underline"
                 >
-                  Inboxで開く ❯
+                  受信箱で開く ❯
                 </button>
               )}
             </>

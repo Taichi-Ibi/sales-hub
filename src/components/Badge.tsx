@@ -29,12 +29,12 @@ export function CategoryTag({ category }: { category: Category }) {
   );
 }
 
-/** 高リスクバッジ。高のみ表示、低は何も出さない（§7 S1）。 */
+/** 高リスクバッジ。高のみ表示、低は何も出さない（§7 S1）。Attention Gold で目立たせる。 */
 export function RiskBadge({ risk }: { risk: Risk }) {
   if (risk !== '高') return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-danger/10 px-2 py-0.5 text-xs font-semibold text-danger">
-      <span aria-hidden>🔴</span>高リスク
+    <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-bold bg-gold text-ink">
+      <span aria-hidden>⚠</span>高リスク
     </span>
   );
 }

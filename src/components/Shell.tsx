@@ -30,13 +30,13 @@ interface NavItem {
 export function Shell() {
   const { actions, inboxItems } = useStore();
   const location = useLocation();
-  const inboxCount = inboxItems.filter((i) => i.status !== 'タスク化済み').length;
+  const inboxCount = inboxItems.filter((i) => !i.aiReady && i.status !== 'タスクあり').length;
   const ledgerCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
 
   // 2画面構成: Inbox（入口）と台帳（要対応・依頼中・完了をタブで持つ作業場）。
   const items: NavItem[] = [
-    { to: '/inbox', icon: '📨', label: 'Inbox', count: inboxCount },
-    { to: '/', end: true, icon: '📥', label: '台帳', count: ledgerCount },
+    { to: '/inbox', icon: '📨', label: '受信箱', count: inboxCount },
+    { to: '/', end: true, icon: '📥', label: 'タスク', count: ledgerCount },
     { to: '/settings', icon: '⚙', label: '設定' },
   ];
 
@@ -44,17 +44,18 @@ export function Shell() {
   const currentLabel = location.pathname.startsWith('/action')
     ? '詳細'
     : (items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
-        ?.label ?? '台帳');
+        ?.label ?? 'タスク');
 
   return (
     <div className="flex h-full min-h-screen flex-col">
-      {/* 上部バー（高さ56px）。Slack 風の濃いオーバージン。 */}
+      {/* 上部バー（高さ56px）。Brand Blue のクロム（DESIGN.md §4 Navigation）。 */}
       <header className="flex h-14 shrink-0 items-center gap-3 bg-nav-bar px-4 text-white sm:gap-4 sm:px-5">
         <div className="flex items-center gap-2 font-semibold">
-          <span className="grid size-7 place-items-center rounded-md bg-accent text-sm text-white">
-            蒸
-          </span>
-          <span className="hidden sm:inline">アクション台帳</span>
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true" className="shrink-0">
+            <rect width="28" height="28" rx="4" fill="#ffd742"/>
+            <path d="M17 5 L8 17 L13 17 L10 23 L20 11 L15 11 Z" fill="#074194"/>
+          </svg>
+          <span className="hidden sm:inline">Action Hub</span>
         </div>
         {/* 現在地（パンくず）。どのタブにいるか常に明示。 */}
         <span aria-hidden className="text-white/40">
@@ -105,7 +106,7 @@ export function Shell() {
             >
               {({ isActive }) => (
                 <>
-                  {/* 選択中は左端にインジケータ帯（Slack の「今ここ」表現）。 */}
+                  {/* 選択中は左端にインジケータ帯で「今ここ」を示す。 */}
                   {isActive && (
                     <span aria-hidden className="absolute inset-y-1 left-0 w-1 rounded-r bg-white" />
                   )}
@@ -144,7 +145,7 @@ export function Shell() {
           >
             {({ isActive }) => (
               <>
-                {/* 選択中は上端にインジケータ帯。どのタブか一目で分かる。 */}
+                {/* 選択中は上端にインジケータ帯で「今ここ」を示す。 */}
                 {isActive && (
                   <span aria-hidden className="absolute inset-x-5 top-0 h-0.5 rounded-b bg-accent" />
                 )}

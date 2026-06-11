@@ -53,7 +53,7 @@ export function MaskingPanel({ action, onClose, onUnmask, onIgnore }: Props) {
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <p className="mb-4 rounded-lg bg-surface px-3 py-2 text-xs leading-relaxed text-ink-sub">
-            伏せ字は Inbox（原文）の段階でタップして付けます。台帳ではマスキングは行わず、
+            伏せ字は受信箱（原文）の段階でタップして付けます。台帳ではマスキングは行わず、
             ここで元の値を確認・<span className="font-medium text-ink">復元</span>
             だけができます。金額は伏せません。
           </p>
@@ -113,7 +113,7 @@ export function MaskingPanel({ action, onClose, onUnmask, onIgnore }: Props) {
                 ))}
               </ul>
               <p className="mt-2 text-xs text-ink-sub">
-                伏せる場合は Inbox の原文に戻ってタップでマスキングしてください。
+                伏せる場合は受信箱の原文に戻ってタップでマスキングしてください。
               </p>
             </section>
           )}

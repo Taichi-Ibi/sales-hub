@@ -21,7 +21,7 @@ export function ActionCard({ action, from, footer, priority, muted }: Props) {
   const open = () => navigate(`/action/${action.id}`, { state: { from } });
 
   const wrapClass = priority
-    ? 'border-accent/40 bg-white shadow-sm ring-1 ring-accent/20 hover:bg-surface'
+    ? 'border-gold/60 bg-white shadow-sm ring-1 ring-gold/40 hover:bg-surface'
     : muted
       ? 'border-line bg-white opacity-65 hover:opacity-100 hover:bg-surface'
       : 'border-line bg-white hover:bg-surface';
@@ -30,8 +30,8 @@ export function ActionCard({ action, from, footer, priority, muted }: Props) {
     <div
       className={`relative overflow-hidden rounded-lg border transition-all ${wrapClass}`}
     >
-      {/* 最優先は左端にアクセントの帯（Slack の選択中インジケータに倣う）。 */}
-      {priority ? <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-accent" /> : null}
+      {/* 最優先は左端に Gold の帯（Attention Gold で視覚的な優先度を表現）。 */}
+      {priority ? <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gold" /> : null}
       <button
         onClick={open}
         className={`flex w-full items-center gap-3 py-3 pr-4 text-left ${priority ? 'pl-5' : 'pl-4'}`}
@@ -41,7 +41,7 @@ export function ActionCard({ action, from, footer, priority, muted }: Props) {
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-1.5">
             {priority ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-white">
+              <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-gold text-ink">
                 <span aria-hidden>★</span>優先 {priority}
               </span>
             ) : null}

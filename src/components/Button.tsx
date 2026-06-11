@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'link';
+type Variant = 'primary' | 'secondary' | 'danger' | 'warning' | 'link';
 
 const VARIANT_CLASS: Record<Variant, string> = {
   // 主: 塗り・アクセント
@@ -12,6 +12,9 @@ const VARIANT_CLASS: Record<Variant, string> = {
   // 危険: 枠線・赤文字
   danger:
     'border border-danger/40 bg-white text-danger hover:bg-danger/5 disabled:border-line disabled:text-ink-sub disabled:cursor-not-allowed',
+  // 警告: 塗り・アンバー（任意項目が未設定のまま進む場合）
+  warning:
+    'bg-warn text-white hover:bg-warn/90 disabled:bg-line disabled:text-ink-sub disabled:cursor-not-allowed',
   // 文字リンク
   link: 'text-accent hover:underline px-1 py-0.5',
 };
@@ -24,8 +27,8 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({ variant = 'secondary', className = '', children, ...rest }: Props) {
   const base =
     variant === 'link'
-      ? 'inline-flex items-center gap-1 rounded-md text-sm font-medium transition-colors'
-      : 'inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors';
+      ? 'inline-flex items-center gap-1 rounded text-sm font-medium transition-colors'
+      : 'inline-flex items-center justify-center gap-1.5 rounded px-4 py-2 text-sm font-medium transition-colors';
   return (
     <button className={`${base} ${VARIANT_CLASS[variant]} ${className}`} {...rest}>
       {children}

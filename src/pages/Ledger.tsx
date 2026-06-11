@@ -425,7 +425,7 @@ export function Ledger() {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="text-xl font-semibold text-ink">アクション台帳</h1>
+        <h1 className="text-xl font-semibold text-ink">Action Hub</h1>
         {/* デモ用: 表示状態の切替（§13 で許可）。要対応タブのみ対象。 */}
         {tab === 'todo' && (
           <div className="ml-auto flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5 text-xs">

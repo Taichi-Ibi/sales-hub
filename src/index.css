@@ -5,32 +5,40 @@
  * 内勤担当が毎日・大量に・速く捌く業務ツール。走査性と落ち着きを優先。
  */
 @theme {
-  --color-page: #ffffff; /* ページ地 */
-  --color-surface: #f7f8fa; /* カード/パネル地 */
-  --color-line: #e5e7eb; /* 罫線 */
-  --color-ink: #1a1d21; /* 主文字 */
-  --color-ink-sub: #6b7280; /* 副文字（補足） */
-  --color-accent: #2f5bea; /* 主アクション/選択中 */
-  --color-danger: #dc2626; /* 高リスク/経過72h以上/棄却 */
+  /* ベース（DESIGN.md §2 Neutral） */
+  --color-page: #ffffff; /* Page Background */
+  --color-surface: #f9f9f9; /* Background Secondary（カード地） */
+  --color-line: #dfdfdf; /* Border */
+  --color-ink: #333333; /* Text Primary */
+  --color-ink-sub: #6b7280; /* 補助文字 */
+
+  /* Primary / Accent（DESIGN.md §2 Primary） */
+  --color-accent: #074194; /* Brand Blue: 主アクション・ナビ・見出し */
+  --color-gold: #ffd742; /* Attention Gold: 優先タグ・高リスクバッジ限定 */
+  --color-accent-soft: #edf4fc; /* Light Blue: 背景アクセント */
+
+  /* Semantic */
+  --color-danger: #cc111a; /* Important Red（DESIGN.md §2） */
   --color-warn: #d97706; /* 経過24-72h/警告/FS承認待ち */
   --color-good: #059669; /* 経過24h未満/完了済み */
 
   /*
-   * ナビ用パレット（Slack のデザイン思想を参照）。
-   * 濃いオーバージン色のクロム（左ナビ・上部バー）で本文の白を引き立て、
-   * 選択中はソリッドな青で「今ここ」を明確に示す。未読件数は赤バッジ。
+   * ナビ用パレット（DESIGN.md §4 Navigation）。
+   * Brand Blue ベタ塗りのクロム（左ナビ・上部バー）、白文字。
+   * 選択中はわずかに明るい青で「今ここ」を示す。未読件数は Important Red。
    */
-  --color-nav: #3f0e40; /* 左ナビ地（オーバージン） */
-  --color-nav-bar: #350d36; /* 上部バー地（やや濃い） */
-  --color-nav-hover: #4a154b; /* ホバー */
-  --color-nav-active: #1164a3; /* 選択中（Slack ブルー） */
-  --color-nav-text: #cbc2cc; /* ナビ通常文字 */
-  --color-nav-badge: #cd2553; /* 未読件数バッジ */
+  --color-nav: #074194; /* 左ナビ地（Brand Blue） */
+  --color-nav-bar: #074194; /* 上部バー地（同色） */
+  --color-nav-hover: #0a4fa8; /* ホバー（わずかに明るく） */
+  --color-nav-active: #0a4fa8; /* 選択中 */
+  --color-nav-text: #ffffff; /* 通常文字（白） */
+  --color-nav-badge: #cc111a; /* 未読件数バッジ（Important Red） */
 
   --font-sans:
     'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
-  --radius: 8px;
+  --radius: 8px; /* カード角丸（DESIGN.md §4 Cards） */
+  --radius-button: 4px; /* ボタン・入力角丸（DESIGN.md §4 Buttons） */
 }
 
 html,
@@ -44,6 +52,7 @@ body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: var(--color-page);
+  line-height: 1.75;
   -webkit-font-smoothing: antialiased;
 }
 

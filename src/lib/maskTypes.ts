@@ -20,13 +20,14 @@ export interface MaskTypeMeta {
   ringClass: string;
 }
 
+// 識別色は DESIGN.md トークン外（種別の識別性を保つため意図的に生 hex を使用）。
 export const MASK_TYPES: MaskTypeMeta[] = [
   {
     type: '氏名',
     label: '氏名',
     icon: '👤',
     example: '田中 一郎',
-    chipClass: 'bg-accent/10 text-accent',
+    chipClass: 'bg-accent-soft text-accent',
     ringClass: 'border-accent ring-accent/30',
   },
   {
@@ -45,7 +46,12 @@ export const MASK_TYPES: MaskTypeMeta[] = [
     chipClass: 'bg-[#ecfdf5] text-[#047857]',
     ringClass: 'border-[#047857] ring-[#047857]/30',
   },
-  {
+];
+
+export const MASK_TYPE_MAP: Record<MaskType, MaskTypeMeta> = {
+  ...Object.fromEntries(MASK_TYPES.map((m) => [m.type, m])),
+  // 契約番号はピッカーには出さないが、既存マスク済みデータの表示に使う。
+  契約番号: {
     type: '契約番号',
     label: '契約番号・NDA',
     icon: '📄',
@@ -53,8 +59,4 @@ export const MASK_TYPES: MaskTypeMeta[] = [
     chipClass: 'bg-[#f5f3ff] text-[#6d28d9]',
     ringClass: 'border-[#6d28d9] ring-[#6d28d9]/30',
   },
-];
-
-export const MASK_TYPE_MAP: Record<MaskType, MaskTypeMeta> = Object.fromEntries(
-  MASK_TYPES.map((m) => [m.type, m]),
-) as Record<MaskType, MaskTypeMeta>;
+} as Record<MaskType, MaskTypeMeta>;

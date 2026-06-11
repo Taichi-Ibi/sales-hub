@@ -1,45 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { InboxItem, MaskType } from '../types';
 import { useStore } from '../store/StoreContext';
 import { SOURCE_META } from '../data/inbox';
+import { DEALS, type Deal } from '../data/deals';
 import { elapsedSince } from '../lib/time';
 import { isMaskable } from '../lib/tokenize';
 import { MASK_TYPES, MASK_TYPE_MAP } from '../lib/maskTypes';
 import { Button } from '../components/Button';
-
-/** 処理の現在地（分かち書き → マスキング → AIタスク化）。 */
-function Steps({ current }: { current: 1 | 2 | 3 }) {
-  const steps = ['分かち書き', 'マスキング', 'AIタスク化'];
-  return (
-    <ol className="flex flex-wrap items-center gap-1.5 text-xs">
-      {steps.map((s, i) => {
-        const n = (i + 1) as 1 | 2 | 3;
-        const state = n < current ? 'done' : n === current ? 'now' : 'todo';
-        return (
-          <li key={s} className="flex items-center gap-1.5">
-            {i > 0 && (
-              <span aria-hidden className="text-ink-sub/60">
-                →
-              </span>
-            )}
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${
-                state === 'now'
-                  ? 'bg-accent/10 text-accent'
-                  : state === 'done'
-                    ? 'bg-good/10 text-good'
-                    : 'bg-surface text-ink-sub'
-              }`}
-            >
-              {state === 'done' ? '✔' : `${n}.`} {s}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 /**
  * 分かち書き済みの原文。トークンをタップして伏せる／チップを再タップして復元する。
@@ -48,45 +17,98 @@ function Steps({ current }: { current: 1 | 2 | 3 }) {
 function TokenizedBody({
   item,
   interactive,
-  selected,
+  selectedRange,
   onSelect,
   onUnmask,
 }: {
   item: InboxItem;
   interactive: boolean;
-  selected: string | null;
-  onSelect: (text: string | null) => void;
-  onUnmask: (token: string) => void;
+  selectedRange: { start: number; end: number } | null;
+  onSelect: (index: number | null) => void;
+  onUnmask: (token: string, atIndex: number) => void;
 }) {
-  const maskByText = new Map(item.masks.map((m) => [m.text, m] as const));
+  const tokens = item.tokens!;
+
+  // 各マスクのテキストをトークン列の中で探し、開始インデックス→{マスク,終了インデックス} を構築。
+  // 複数トークンを連結したマスクにも対応。
+  // 長いマスクを優先して評価（「川島 紗英」が「川島」より先に位置を確保する）。
+  // occupied で占有済み位置を追跡し、短いマスクが同じ位置を上書きするのを防ぐ。
+  const maskAt = new Map<number, { mask: (typeof item.masks)[number]; endIndex: number }>();
+  const occupied = new Set<number>();
+  const byLength = [...item.masks].sort((a, b) => b.text.length - a.text.length);
+  for (const mask of byLength) {
+    const excluded = new Set(mask.excludedIndices ?? []);
+    for (let i = 0; i < tokens.length; i++) {
+      if (excluded.has(i) || occupied.has(i)) continue;
+      let built = '';
+      for (let j = i; j < tokens.length; j++) {
+        if (occupied.has(j) && j > i) break; // span 途中に既占有があれば中断
+        built += tokens[j];
+        if (built === mask.text) {
+          maskAt.set(i, { mask, endIndex: j });
+          for (let k = i; k <= j; k++) occupied.add(k);
+          break;
+        }
+        if (built.length > mask.text.length) break;
+      }
+    }
+  }
+
+  // 選択テキストと同じ文字列が出現する全トークン位置をハイライト対象とする。
+  // 同一語は一括マスクされるので、他の出現箇所も薄くハイライトして示す。
+  const highlightedIndices = new Set<number>();
+  if (selectedRange) {
+    const selText = tokens.slice(selectedRange.start, selectedRange.end + 1).join('');
+    for (let i = 0; i < tokens.length; i++) {
+      let built = '';
+      for (let j = i; j < tokens.length; j++) {
+        built += tokens[j];
+        if (built === selText) { for (let k = i; k <= j; k++) highlightedIndices.add(k); break; }
+        if (built.length > selText.length) break;
+      }
+    }
+  }
+
+  let skip = -1;
   return (
     <div className="whitespace-pre-wrap rounded-lg border border-line bg-white p-3 text-sm leading-loose text-ink">
-      {item.tokens!.map((t, i) => {
-        const mask = maskByText.get(t);
-        if (mask) {
-          const meta = MASK_TYPE_MAP[mask.type];
+      {tokens.map((t, i) => {
+        if (i <= skip) return null;
+
+        const entry = maskAt.get(i);
+        if (entry) {
+          skip = entry.endIndex;
+          const meta = MASK_TYPE_MAP[entry.mask.type];
           return (
             <button
               key={i}
               type="button"
               disabled={!interactive}
-              onClick={() => onUnmask(mask.token)}
+              onClick={() => onUnmask(entry.mask.token, i)}
               title={interactive ? 'タップで復元' : undefined}
-              className={`mx-0.5 rounded px-1 py-0.5 text-xs font-medium ${meta.chipClass} ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
+              className={`mx-0.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${meta.chipClass} ${interactive ? 'cursor-pointer hover:opacity-75' : 'cursor-default'}`}
             >
-              <span aria-hidden>{meta.icon}</span> {mask.token}
+              <span aria-hidden>{meta.icon}</span>
+              <span>{entry.mask.token}</span>
+              <span className="opacity-50">({entry.mask.text})</span>
             </button>
           );
         }
+
         if (!interactive || !isMaskable(t)) return <span key={i}>{t}</span>;
-        const isSelected = selected === t;
+        const isPrimary = !!selectedRange && i >= selectedRange.start && i <= selectedRange.end;
+        const isSecondary = !isPrimary && highlightedIndices.has(i);
         return (
           <button
             key={i}
             type="button"
-            onClick={() => onSelect(isSelected ? null : t)}
+            onClick={() => onSelect(isPrimary ? null : i)}
             className={`rounded px-0.5 transition-colors ${
-              isSelected ? 'bg-accent text-white' : 'hover:bg-accent/10'
+              isPrimary
+                ? 'bg-accent text-white'
+                : isSecondary
+                  ? 'bg-accent/20 text-ink'
+                  : 'bg-surface hover:bg-accent/10'
             }`}
           >
             {t}
@@ -99,35 +121,111 @@ function TokenizedBody({
 
 /** タップした語の種別を選ぶバー。選択中だけ出る。 */
 function MaskTypeBar({
-  text,
   onPick,
   onCancel,
+  canExtendPrev,
+  canExtendNext,
+  onExtendPrev,
+  onExtendNext,
 }: {
-  text: string;
   onPick: (type: MaskType) => void;
   onCancel: () => void;
+  canExtendPrev: boolean;
+  canExtendNext: boolean;
+  onExtendPrev: () => void;
+  onExtendNext: () => void;
 }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
-      <span className="text-sm text-ink">
-        「<span className="font-bold">{text}</span>」を伏せる:
-      </span>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {MASK_TYPES.map((m) => (
-          <button
-            key={m.type}
-            onClick={() => onPick(m.type)}
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${m.chipClass} hover:opacity-80`}
-          >
-            <span aria-hidden>{m.icon}</span>
-            {m.label}
-          </button>
-        ))}
-        <button onClick={onCancel} className="px-1.5 text-xs text-ink-sub hover:text-ink">
-          キャンセル
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
+      {canExtendPrev && (
+        <button
+          onClick={onExtendPrev}
+          title="前の語と繋げる"
+          className="inline-flex size-7 items-center justify-center rounded-full border border-line bg-white text-sm text-ink-sub transition-colors hover:border-accent hover:text-accent"
+        >
+          +
         </button>
-      </div>
+      )}
+      {MASK_TYPES.map((m) => (
+        <button
+          key={m.type}
+          onClick={() => onPick(m.type)}
+          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${m.chipClass} hover:opacity-80`}
+        >
+          <span aria-hidden>{m.icon}</span>
+          {m.label}
+        </button>
+      ))}
+      {canExtendNext && (
+        <button
+          onClick={onExtendNext}
+          title="次の語と繋げる"
+          className="inline-flex size-7 items-center justify-center rounded-full border border-line bg-white text-sm text-ink-sub transition-colors hover:border-accent hover:text-accent"
+        >
+          +
+        </button>
+      )}
+      <button
+        onClick={onCancel}
+        title="キャンセル"
+        className="ml-1 inline-flex size-7 items-center justify-center rounded-full text-sm text-ink-sub transition-colors hover:text-ink"
+      >
+        ×
+      </button>
     </div>
+  );
+}
+
+const TOP_N = 10;
+
+function sortDealsByRecent(deals: Deal[]): Deal[] {
+  const toNum = (d: string) => { const [m, day] = d.split('/').map(Number); return (m ?? 0) * 31 + (day ?? 0); };
+  return [...deals].sort((a, b) => toNum(b.notes[0]?.date ?? '0/0') - toNum(a.notes[0]?.date ?? '0/0'));
+}
+
+function DealPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const sorted = useMemo(() => sortDealsByRecent(DEALS), []);
+  const top = sorted.slice(0, TOP_N);
+  const more = sorted.slice(TOP_N);
+  const selectedInMore = more.some((d) => d.counterparty === value);
+  const showMore = expanded || selectedInMore;
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5">
+        {top.map((d) => (
+          <DealButton key={d.counterparty} deal={d} selected={value === d.counterparty} onSelect={onChange} />
+        ))}
+        {showMore && more.map((d) => (
+          <DealButton key={d.counterparty} deal={d} selected={value === d.counterparty} onSelect={onChange} />
+        ))}
+      </div>
+      {more.length > 0 && !selectedInMore && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 text-xs text-ink-sub hover:text-accent"
+        >
+          {expanded ? '▲ 閉じる' : `▼ もっと見る（${more.length}件）`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function DealButton({ deal, selected, onSelect }: { deal: Deal; selected: boolean; onSelect: (v: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(selected ? '' : deal.counterparty)}
+      className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+        selected
+          ? 'border-accent bg-accent text-white'
+          : 'border-line bg-white text-ink hover:border-accent/50 hover:bg-surface'
+      }`}
+    >
+      {deal.counterparty}
+    </button>
   );
 }
 
@@ -137,11 +235,11 @@ export function InboxDetail() {
   const store = useStore();
   const item = store.getInboxItem(id);
 
-  const [selected, setSelected] = useState<string | null>(null);
-  // AIタスク化の進行表示（シミュレート）。0=待機 1=経緯読み取り 2=抽出
-  const [aiStep, setAiStep] = useState<0 | 1 | 2>(0);
+  const [selectedRange, setSelectedRange] = useState<{ start: number; end: number } | null>(null);
+  const [showMaskHelp, setShowMaskHelp] = useState(false);
+  const [showAiReadyConfirm, setShowAiReadyConfirm] = useState(false);
 
-  // 未処理の原文を開いたら分かち書きを実行（CPU実行のシミュレート。約1秒）。
+  // 未処理の原文を開いたら分かち書きを実行（シミュレート。約1秒）。
   const needsTokenize = !!item && !item.tokens;
   useEffect(() => {
     if (!needsTokenize) return;
@@ -150,27 +248,13 @@ export function InboxDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, needsTokenize]);
 
-  // AIタスク化（シミュレート）。2段階の進行表示のあと台帳へ追加する。
-  useEffect(() => {
-    if (aiStep === 0) return;
-    const t = window.setTimeout(() => {
-      if (aiStep === 1) setAiStep(2);
-      else {
-        store.distillInboxItem(id);
-        setAiStep(0);
-      }
-    }, 800);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiStep, id]);
-
   if (!item) {
     return (
       <div className="py-20 text-center text-ink-sub">
         アイテムが見つかりません。
         <div className="mt-2">
           <Button variant="link" onClick={() => navigate('/inbox')}>
-            Inboxへ戻る
+            受信箱へ戻る
           </Button>
         </div>
       </div>
@@ -179,9 +263,9 @@ export function InboxDetail() {
 
   const meta = SOURCE_META[item.source];
   const { label: elapsed } = elapsedSince(item.receivedAt);
-  const done = item.status === 'タスク化済み';
-  const masking = item.status === 'マスキング中' && aiStep === 0;
-  const step: 1 | 2 | 3 = !item.tokens ? 1 : done || aiStep > 0 ? 3 : 2;
+  const done = item.status === 'タスクあり';
+  const masking = item.status === 'マスキング中' && !item.aiReady;
+  const aiReadyComplete = item.masks.length > 0 && !!item.counterparty;
 
   return (
     <div>
@@ -189,7 +273,7 @@ export function InboxDetail() {
         onClick={() => navigate('/inbox')}
         className="mb-4 inline-flex items-center text-sm font-medium text-accent hover:underline"
       >
-        ❮ Inboxへ戻る
+        ❮ 受信箱へ戻る
       </button>
 
       <div className="overflow-hidden rounded-xl border border-line bg-white">
@@ -204,24 +288,19 @@ export function InboxDetail() {
             <span aria-hidden>・</span>
             <span className="tabular-nums">{elapsed}前</span>
           </div>
-          <h1 className="text-xl font-semibold text-ink">{item.title}</h1>
-          <div className="mt-3">
-            <Steps current={step} />
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold text-ink">{item.title}</h1>
+            {item.aiReady && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
+                ✨ AI Ready
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex flex-col gap-5 p-4 sm:p-5">
           {/* 原文 */}
           <section>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-ink">◆ 原文</h2>
-              {masking && (
-                <p className="text-xs text-ink-sub">
-                  語をタップして伏せる／チップを再タップで復元
-                </p>
-              )}
-            </div>
-
             {!item.tokens ? (
               // 分かち書き中（CPU実行のシミュレート）
               <div className="relative">
@@ -229,13 +308,7 @@ export function InboxDetail() {
                   {item.body}
                 </div>
                 <div className="absolute inset-0 grid place-items-center rounded-lg bg-white/70">
-                  <div className="rounded-lg border border-line bg-white px-4 py-3 text-center shadow-sm">
-                    <p className="text-sm font-medium text-ink">分かち書きを実行中…</p>
-                    <p className="mt-0.5 text-xs text-ink-sub">形態素解析（CPUのみ・GPU不要）</p>
-                    <div className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-line">
-                      <div className="h-full w-2/3 animate-pulse rounded-full bg-accent" />
-                    </div>
-                  </div>
+                  <p className="text-sm font-medium text-ink-sub">ロード中…</p>
                 </div>
               </div>
             ) : (
@@ -243,48 +316,84 @@ export function InboxDetail() {
                 <TokenizedBody
                   item={item}
                   interactive={masking}
-                  selected={selected}
-                  onSelect={setSelected}
-                  onUnmask={(token) => store.unmaskInboxToken(item.id, token)}
+                  selectedRange={selectedRange}
+                  onSelect={(i) => setSelectedRange(i === null ? null : { start: i, end: i })}
+                  onUnmask={(token, atIndex) => store.unmaskInboxToken(item.id, token, atIndex)}
                 />
-                {masking && selected && (
-                  <MaskTypeBar
-                    text={selected}
-                    onPick={(type) => {
-                      store.maskInboxToken(item.id, selected, type);
-                      setSelected(null);
-                    }}
-                    onCancel={() => setSelected(null)}
-                  />
+                {masking && selectedRange && (() => {
+                  const tokens = item.tokens!;
+                  const text = tokens.slice(selectedRange.start, selectedRange.end + 1).join('');
+                  return (
+                    <MaskTypeBar
+                      onPick={(type) => {
+                        store.maskInboxToken(item.id, text, type);
+                        setSelectedRange(null);
+                      }}
+                      onCancel={() => setSelectedRange(null)}
+                      canExtendPrev={selectedRange.start > 0}
+                      canExtendNext={selectedRange.end < tokens.length - 1}
+                      onExtendPrev={() => setSelectedRange((s) => s ? { ...s, start: s.start - 1 } : s)}
+                      onExtendNext={() => setSelectedRange((s) => s ? { ...s, end: s.end + 1 } : s)}
+                    />
+                  );
+                })()}
+                {masking && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <button
+                      onClick={() => setShowMaskHelp((v) => !v)}
+                      title="操作方法"
+                      className="inline-flex size-5 items-center justify-center rounded-full border border-line bg-white text-xs text-ink-sub/70 hover:text-ink-sub"
+                    >
+                      i
+                    </button>
+                    {showMaskHelp && (
+                      <p className="text-xs text-ink-sub">語をタップして伏せる／チップをタップで1件復元</p>
+                    )}
+                    {item.masks.length > 0 && (
+                      <button
+                        onClick={() => store.unmaskAllInboxTokens(item.id)}
+                        className="ml-auto text-xs text-ink-sub hover:text-danger"
+                      >
+                        全解除
+                      </button>
+                    )}
+                  </div>
                 )}
               </>
             )}
           </section>
 
-          {/* マスキング状況 */}
-          {item.tokens && (
+          {/* 案件選択: 分かち書き完了後・タスク化前に表示 */}
+          {item.tokens && !done && (
             <section>
-              <h2 className="mb-2 text-sm font-semibold text-ink">◆ マスキング状況</h2>
-              {item.masks.length === 0 ? (
-                <p className="text-sm text-ink-sub">
-                  伏せ字はまだありません。原文の人名・連絡先・契約番号などをタップしてください（金額は伏せません）。
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2 text-sm">
-                  {item.masks.map((m) => (
-                    <span
-                      key={m.token}
-                      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${MASK_TYPE_MAP[m.type].chipClass}`}
-                    >
-                      <span aria-hidden>{MASK_TYPE_MAP[m.type].icon}</span>
-                      {m.token}
-                      <span className="opacity-70">＝ {m.text}</span>
-                    </span>
-                  ))}
+              <div className="mb-1.5 flex items-center gap-2">
+                <h2 className="text-sm font-medium text-ink">案件名</h2>
+                {item.source === 'mail' && item.counterparty && !item.aiReady && (
+                  <span className="rounded border border-line bg-surface px-1.5 py-0.5 text-xs text-ink-sub">
+                    ドメイン判定
+                  </span>
+                )}
+              </div>
+              {item.aiReady ? (
+                <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink">
+                  🏢 {item.counterparty}
                 </div>
+              ) : (
+                <>
+                  <DealPicker
+                    value={item.counterparty}
+                    onChange={(v) => store.setInboxCounterparty(item.id, v)}
+                  />
+                  {!item.counterparty && (
+                    <p className="mt-1.5 text-xs text-ink-sub">
+                      AIは案件ごとに時系列でデータを解析します。紐付ける案件を選択してください。
+                    </p>
+                  )}
+                </>
               )}
             </section>
           )}
+
         </div>
 
         {/* フッター: 工程に応じた操作 */}
@@ -292,7 +401,7 @@ export function InboxDetail() {
           {done ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-good">
-                ✔ タスク化済み — 台帳に追加されています
+                ✔ タスクあり — 台帳に追加されています
               </span>
               {item.resultActionId && (
                 <Button
@@ -302,26 +411,28 @@ export function InboxDetail() {
                     navigate(`/action/${item.resultActionId}`, { state: { from: '/inbox' } })
                   }
                 >
-                  台帳で開く ▶
+                  タスクで開く ▶
                 </Button>
               )}
             </div>
-          ) : aiStep > 0 ? (
-            <div className="flex items-center gap-3 text-sm text-ink">
-              <span aria-hidden className="animate-pulse">
-                🤖
-              </span>
-              <span className="font-medium">
-                {aiStep === 1 ? '経緯を読み取っています…' : 'アクションを抽出しています…'}
-              </span>
+          ) : item.aiReady ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-sm font-medium text-accent">✨ AI Ready — 解析キューに追加済み</span>
+              <Button
+                variant="primary"
+                disabled={store.analysisRunning}
+                onClick={() => store.runSingleAnalysis(item.id)}
+              >
+                {store.analysisRunning ? '解析中…' : '今すぐ解析'}
+              </Button>
             </div>
           ) : item.tokens ? (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-ink-sub">
-                マスキングが済んだら、AIが経緯を読み取ってタスク化します。
-              </p>
-              <Button variant="primary" onClick={() => setAiStep(1)}>
-                マスキング完了 — AIにタスク化させる ▶
+            <div className="flex items-center justify-end">
+              <Button
+                variant={aiReadyComplete ? 'primary' : 'warning'}
+                onClick={() => aiReadyComplete ? store.markAiReady(item.id) : setShowAiReadyConfirm(true)}
+              >
+                AI Ready
               </Button>
             </div>
           ) : (
@@ -329,6 +440,19 @@ export function InboxDetail() {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={showAiReadyConfirm}
+        title={
+          !item.counterparty && item.masks.length === 0
+            ? '案件名とマスキングが未設定ですが、AI Ready にしますか？'
+            : !item.counterparty
+              ? '案件名が未設定ですが、AI Ready にしますか？'
+              : 'マスキングがありませんが、AI Ready にしますか？'
+        }
+        confirmLabel="AI Ready にする"
+        onConfirm={() => { store.markAiReady(item.id); setShowAiReadyConfirm(false); }}
+        onCancel={() => setShowAiReadyConfirm(false)}
+      />
     </div>
   );
 }

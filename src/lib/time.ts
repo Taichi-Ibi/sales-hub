@@ -35,6 +35,15 @@ export function elapsedSince(createdAt: string, now: Date = NOW): Elapsed {
   return { label, level };
 }
 
+/** 次の毎正時実行までの時刻ラベルと残り分数を返す。 */
+export function nextHourlyRun(now: Date = NOW): { timeLabel: string; minutesUntil: number } {
+  const next = new Date(now.getTime());
+  next.setHours(next.getHours() + 1, 0, 0, 0);
+  const minutesUntil = Math.round((next.getTime() - now.getTime()) / (60 * 1000));
+  const timeLabel = `${next.getHours()}:${String(next.getMinutes()).padStart(2, '0')}`;
+  return { timeLabel, minutesUntil };
+}
+
 /** "2026-06-12" → "6/12" */
 export function shortDate(iso: string): string {
   const d = new Date(iso);

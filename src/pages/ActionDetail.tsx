@@ -12,7 +12,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 
 /** 戻り先ラベル。台帳はタブ（?tab=…）ごと、Inbox はそのまま。 */
 function backLabel(from: string): string {
-  if (from.startsWith('/inbox')) return '❮ Inboxへ戻る';
+  if (from.startsWith('/inbox')) return '❮ 受信箱へ戻る';
   if (from.includes('tab=waiting')) return '❮ 台帳（依頼中）へ戻る';
   if (from.includes('tab=done')) return '❮ 台帳（完了）へ戻る';
   return '❮ 台帳へ戻る';

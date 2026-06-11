@@ -24,12 +24,13 @@ export interface MaskedEntity {
 export type InboxSource = 'slack' | 'mail' | 'minutes';
 
 // 分かち書き・AI解析の実行中はページ側の一時状態で表現し、status には持たない。
-export type InboxStatus = '未処理' | 'マスキング中' | 'タスク化済み';
+export type InboxStatus = '未処理' | 'マスキング中' | 'タスクあり';
 
 export interface InboxMask {
   text: string; // 分かち書きトークンの文字列。同一文字列は一括で同じトークンに置換
   type: MaskType;
   token: string; // 例 "〔氏名①〕"
+  excludedIndices?: number[]; // 個別に復元されたトークン開始位置（その位置だけチップを非表示）
 }
 
 // AIが「経緯を読み取ってタスク化」した結果のシミュレート用シード。
@@ -54,6 +55,8 @@ export interface InboxItem {
   receivedAt: string; // "2026-06-10T08:40:00"
   body: string; // 原文
   status: InboxStatus;
+  aiReady: boolean; // AI が安全に読める状態（マスク済み・案件選択済み）か。タスク化とは独立
+  counterparty: string; // 案件名。メール: ドメインから自動判定。Slack/議事録: 手動選択
   tokens?: string[]; // 分かち書き結果（CPU実行のシミュレート完了後にセット）
   masks: InboxMask[];
   resultActionId?: string; // タスク化で生成された Action
