@@ -17,15 +17,17 @@ export default function App() {
     <StoreProvider>
       <Routes>
         <Route element={<Shell />}>
-          <Route path="/" element={<Inbox />} />
-          <Route path="/ledger" element={<Ledger />} />
+          {/* ホームは「今日」（やる/待ち/済み）。受信箱は例外レビューに格下げ */}
+          <Route path="/" element={<Ledger />} />
+          <Route path="/inbox" element={<Inbox />} />
+          <Route path="/inbox/:id" element={<InboxDetail />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/action/:id" element={<ActionDetail />} />
-          <Route path="/inbox/:id" element={<InboxDetail />} />
-          {/* 旧URL互換: FS承認/完了済みは台帳のタブに統合した */}
-          <Route path="/approvals" element={<Navigate to="/ledger?tab=waiting" replace />} />
-          <Route path="/archive" element={<Navigate to="/ledger?tab=done" replace />} />
+          {/* 旧URL互換 */}
+          <Route path="/ledger" element={<Navigate to="/" replace />} />
+          <Route path="/approvals" element={<Navigate to="/?tab=waiting" replace />} />
+          <Route path="/archive" element={<Navigate to="/?tab=done" replace />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/settings/deals" element={<SettingsDeals />} />
           <Route path="/settings/domains" element={<SettingsDomains />} />

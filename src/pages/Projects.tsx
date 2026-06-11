@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PROJECTS } from '../data/projects';
-import type { SalesPhase, Project } from '../data/projects';
+import { WIKI_PAGES } from '../data/wiki';
+import type { SalesPhase, WikiPage } from '../data/wiki';
 import { elapsedSince } from '../lib/time';
 
 type ProjectFilter = 'すべて' | SalesPhase;
@@ -23,60 +23,61 @@ const FILTERS: { value: ProjectFilter; label: string }[] = [
   { value: '受注', label: '受注' },
 ];
 
-function ProjectRow({ project }: { project: Project }) {
+function ProjectRow({ page }: { page: WikiPage }) {
   const navigate = useNavigate();
-  const done = project.status === '完了';
+  const done = page.status === '完了';
+  const alertCount = page.alerts.length;
 
   return (
     <button
-      onClick={() => navigate(`/projects/${project.id}`)}
-      className={`flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition-all hover:bg-surface ${done ? 'bg-white opacity-60' : project.alertCount > 0 ? 'bg-amber-50' : 'bg-white'}`}
-      aria-label={`${project.counterparty} を開く`}
+      onClick={() => navigate(`/projects/${page.id}`)}
+      className={`flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition-all hover:bg-surface ${done ? 'bg-white opacity-60' : alertCount > 0 ? 'bg-amber-50' : 'bg-white'}`}
+      aria-label={`${page.counterparty} のページを開く`}
     >
       {/* 左: 社名 */}
       <div className="min-w-0 flex-1">
         <p className={`truncate text-[15px] text-ink ${done ? 'font-medium' : 'font-semibold'}`}>
-          {project.counterparty}
+          {page.counterparty}
         </p>
-        <p className="mt-0.5 text-xs text-ink-sub">{project.salesRep}　·　{project.category}</p>
+        <p className="mt-0.5 text-xs text-ink-sub">{page.salesRep}　·　{page.category}</p>
       </div>
-      {/* 中央: ヘルス + 更新日 */}
+      {/* 中央: アラート + 更新日 */}
       <div className="flex shrink-0 flex-col items-end gap-0.5">
-        {project.alertCount > 0 && (
+        {alertCount > 0 && (
           <span className="inline-flex items-center rounded bg-danger/10 px-1.5 py-0.5 text-[10px] font-semibold text-danger">
             アラート
           </span>
         )}
         <span className="tabular-nums text-[10px] text-ink-sub">
-          最終更新日 {elapsedSince(project.updatedAt).label}前
+          最終更新日 {elapsedSince(page.updatedAt).label}前
         </span>
       </div>
       {/* 右端: 商談フェーズ */}
-      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${PHASE_STYLE[project.salesPhase]}`}>
-        {project.salesPhase}
+      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${PHASE_STYLE[page.salesPhase]}`}>
+        {page.salesPhase}
       </span>
     </button>
   );
 }
 
+/** 案件一覧。1案件=1ページの wiki を AI が維持する（蓄積される資産）。 */
 export function Projects() {
   const [filter, setFilter] = useState<ProjectFilter>('すべて');
   const [showInfo, setShowInfo] = useState(false);
-  const infoRef = useRef<HTMLDivElement>(null);
 
-  const filtered = (filter === 'すべて' ? PROJECTS : PROJECTS.filter((p) => p.salesPhase === filter))
+  const filtered = (filter === 'すべて' ? WIKI_PAGES : WIKI_PAGES.filter((p) => p.salesPhase === filter))
     .slice()
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
-        <h1 className="text-xl font-semibold text-ink">プロジェクト</h1>
-        <div className="relative" ref={infoRef}>
+        <h1 className="text-xl font-semibold text-ink">案件</h1>
+        <div className="relative">
           <button
             onClick={() => setShowInfo((v) => !v)}
             className="grid size-5 place-items-center rounded-full border border-line text-xs font-medium text-ink-sub transition-colors hover:border-accent/60 hover:text-accent"
-            aria-label="プロジェクトページの説明を表示"
+            aria-label="案件ページの説明を表示"
             aria-expanded={showInfo}
           >
             i
@@ -88,14 +89,22 @@ export function Projects() {
                 onClick={() => setShowInfo(false)}
                 aria-hidden
               />
-              <div className="absolute left-0 top-7 z-20 w-64 rounded-lg border border-line bg-white p-3 shadow-md">
+              <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-line bg-white p-3 shadow-md">
                 <p className="text-sm text-ink-sub">
-                  取引先ごとの案件をまとめて管理します。タスクや原文と紐付けて進捗を追えます。
+                  1案件=1ページをAIが維持します。記述には出典がつき、受信箱の原文から毎朝自動更新。担当が変わっても引き継げる「組織の営業メモリ」です。
                 </p>
               </div>
             </>
           )}
         </div>
+      </div>
+
+      {/* 自動更新の稼働状況 */}
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-sub">
+        <span aria-hidden>🤖</span>
+        <span className="font-medium text-ink">全ページ AI 維持</span>
+        <span aria-hidden>·</span>
+        <span>毎朝6:00に再生成＋整合性チェック</span>
       </div>
 
       <div className="mb-3 flex items-center gap-3 overflow-x-auto text-sm">
@@ -112,12 +121,12 @@ export function Projects() {
 
       {filtered.length === 0 ? (
         <div className="grid place-items-center rounded-lg border border-line bg-surface py-20 text-center">
-          <p className="text-lg font-semibold text-ink">該当するプロジェクトはありません</p>
+          <p className="text-lg font-semibold text-ink">該当する案件はありません</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map((p) => (
-            <ProjectRow key={p.id} project={p} />
+            <ProjectRow key={p.id} page={p} />
           ))}
         </div>
       )}

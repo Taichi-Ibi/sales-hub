@@ -22,7 +22,7 @@ export function Toaster() {
             <button
               onClick={() => {
                 dismissToast(t.id);
-                navigate(`/action/${t.actionId}`, { state: { from: '/ledger' } });
+                navigate(`/action/${t.actionId}`, { state: { from: '/' } });
               }}
               className="shrink-0 whitespace-nowrap text-xs font-normal text-white/70 underline hover:text-white"
             >

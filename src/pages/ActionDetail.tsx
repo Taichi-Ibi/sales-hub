@@ -75,19 +75,20 @@ function DecryptedDraft({ draft, entities }: { draft: string; entities: MaskedEn
   );
 }
 
-/** 戻り先ラベル。台帳はタブ（?tab=…）ごと、Inbox はそのまま。 */
+/** 戻り先ラベル。「今日」はタブ（?tab=…）ごと、受信箱・案件はそのまま。 */
 function backLabel(from: string): string {
   if (from.startsWith('/inbox')) return '❮ 受信箱へ戻る';
-  if (from.includes('tab=waiting')) return '❮ 台帳（依頼中）へ戻る';
-  if (from.includes('tab=done')) return '❮ 台帳（完了）へ戻る';
-  return '❮ 台帳へ戻る';
+  if (from.startsWith('/projects')) return '❮ 案件ページへ戻る';
+  if (from.includes('tab=waiting')) return '❮ 今日（待ち）へ戻る';
+  if (from.includes('tab=done')) return '❮ 今日（済み）へ戻る';
+  return '❮ 今日へ戻る';
 }
 
 export function ActionDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/ledger';
+  const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   const store = useStore();
   const action = store.getAction(id);
@@ -103,10 +104,10 @@ export function ActionDetail() {
   if (!action) {
     return (
       <div className="py-20 text-center text-ink-sub">
-        アクションが見つかりません。
+        タスクが見つかりません。
         <div className="mt-2">
-          <Button variant="link" onClick={() => navigate('/ledger')}>
-            台帳へ戻る
+          <Button variant="link" onClick={() => navigate('/')}>
+            今日へ戻る
           </Button>
         </div>
       </div>
@@ -140,7 +141,7 @@ export function ActionDetail() {
     if (action.status === '承認済み') {
       return (
         <span className="text-sm font-medium text-good">
-          FS承認済み（送信可能）— 台帳の「依頼中」タブから送信できます
+          FS承認済み（送信可能）— 「今日」の待ちタブから送信できます
         </span>
       );
     }
@@ -176,7 +177,7 @@ export function ActionDetail() {
             variant="primary"
             onClick={() => {
               store.handToFS(action.id);
-              navigate('/ledger?tab=waiting');
+              navigate('/?tab=waiting');
             }}
           >
             FS承認へ回す ▶

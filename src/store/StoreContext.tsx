@@ -1,20 +1,20 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { Action, InboxItem, MaskType, Status } from '../types';
+import type { WikiUpdate } from '../data/wiki';
 import { SEED_ACTIONS } from '../data/actions';
 import { SEED_INBOX } from '../data/inbox';
-import { DEALS } from '../data/deals';
 import { tokenize } from '../lib/tokenize';
-import { detectMaskType } from '../lib/autoDetect';
 
-// 完了系の操作で使う「今日」（モック固定。§8.1 の現在時刻に合わせる）。
+// 完了系の操作で使う「今日」（モック固定。lib/time.ts の NOW に合わせる）。
 const TODAY_LABEL = '6/10';
+// 実行時に発生するイベントの時刻表現（モックでは NOW 固定）。
+const NOW_ISO = '2026-06-10T10:00:00';
+const NOW_SHORT = '6/10 10:00';
 
 const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
 function circled(n: number): string {
   return CIRCLED[n - 1] ?? `(${n})`;
 }
-
-export type LedgerMode = 'normal' | 'empty' | 'loading';
 
 export interface Toast {
   id: number;
@@ -26,10 +26,10 @@ export interface Toast {
 interface StoreValue {
   actions: Action[];
   inboxItems: InboxItem[];
-  ledgerMode: LedgerMode;
   toasts: Toast[];
   analysisRunning: boolean;
-  setLedgerMode: (m: LedgerMode) => void;
+  /** 実行時に wiki ページへ追記された更新（counterparty → 更新リスト）。 */
+  wikiAppends: Record<string, WikiUpdate[]>;
   getAction: (id: string) => Action | undefined;
   markInProgress: (id: string) => void;
   updateDraft: (id: string, draft: string) => void;
@@ -37,23 +37,21 @@ interface StoreValue {
   handToFS: (id: string) => void; // 高リスク: FS承認へ回す → FS承認待ち
   reject: (id: string) => void; // 棄却 → 棄却
   demoApproveByFS: (id: string) => void; // (デモ)FSが承認 → 承認済み
-  send: (id: string) => void; // S4: 送信する → 送信済み
+  send: (id: string) => void; // 承認済みからの送信 → 送信済み
   unmask: (id: string, token: string) => void; // 復元: トークンを元の値に戻す（台帳は復元のみ）
   ignoreSuspected: (id: string, text: string) => void;
   dismissToast: (id: number) => void;
-  // Inbox: 分かち書き(CPUシミュレート) → タップでマスキング → 案件選択 → AI Ready → バッチ解析 → タスク化
+  // 受信箱（マスキング目視ゲート）。
+  // 機密情報がないことを保証できるのは人間のみ。ロジックの自動マスクは補助で、
+  // すべてのアイテムは人が目視確認・マスク補正・案件選択をしてからAIに渡す（handOffToAi）。
   getInboxItem: (id: string) => InboxItem | undefined;
-  finishTokenize: (id: string) => void; // 分かち書き完了 → マスキング中
   maskInboxToken: (id: string, text: string, type: MaskType, atIndex?: number) => void;
   unmaskInboxToken: (id: string, token: string, atIndex: number) => void;
-  unmaskAllInboxTokens: (id: string) => void;
-  setInboxCounterparty: (id: string, counterparty: string) => void; // 案件名を設定
-  markAiReady: (id: string) => void; // AI Readyにする（マスク・案件選択が前提。解析は行わない）
-  runAiAnalysis: () => void; // バッチ解析: aiReady かつ未タスク化のアイテムを一括処理
-  runSingleAnalysis: (id: string) => void; // 単件解析: 指定アイテムのみ即時処理
-  cancelInboxItem: (id: string) => void; // アーカイブ（AIに渡さない）
-  unarchiveInboxItem: (id: string) => void; // アーカイブを戻す
-  setInboxMemo: (id: string, memo: string) => void; // メモを保存
+  setInboxCounterparty: (id: string, counterparty: string) => void;
+  handOffToAi: (id: string) => void; // 目視確認してAIに渡す → 解析（シミュレート）→ 処理済み
+  archiveInboxItem: (id: string) => void; // AIに渡さない
+  unarchiveInboxItem: (id: string) => void;
+  setInboxMemo: (id: string, memo: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -63,11 +61,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     SEED_ACTIONS.map((a) => ({ ...a, context: [...a.context], maskedEntities: a.maskedEntities.map((e) => ({ ...e })), suspectedUnmasked: [...a.suspectedUnmasked] })),
   );
   const [inboxItems, setInboxItems] = useState<InboxItem[]>(() =>
-    SEED_INBOX.map((i) => ({ ...i, masks: i.masks.map((m) => ({ ...m })), distilled: { ...i.distilled, context: [...i.distilled.context], knownSensitive: [...i.distilled.knownSensitive] } })),
+    SEED_INBOX.map((i) => ({
+      ...i,
+      // 分かち書きは受信時に自動実行済みという建て付け（初期化時に付与）。
+      tokens: i.tokens ?? tokenize(i.body),
+      masks: i.masks.map((m) => ({ ...m })),
+      distilled: { ...i.distilled, context: [...i.distilled.context], knownSensitive: [...i.distilled.knownSensitive] },
+    })),
   );
-  const [ledgerMode, setLedgerMode] = useState<LedgerMode>('normal');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [analysisRunning, setAnalysisRunning] = useState(false);
+  const [wikiAppends, setWikiAppends] = useState<Record<string, WikiUpdate[]>>({});
 
   const patch = useCallback((id: string, fn: (a: Action) => Action) => {
     setActions((prev) => prev.map((a) => (a.id === id ? fn(a) : a)));
@@ -177,41 +181,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patch],
   );
 
-  // ───────── Inbox ─────────
+  // ───────── 受信箱（マスキング目視ゲート） ─────────
 
   const getInboxItem = useCallback(
     (id: string) => inboxItems.find((i) => i.id === id),
     [inboxItems],
-  );
-
-  // 分かち書きの完了（CPU実行のシミュレート）。トークン列を確定しマスキング工程へ。
-  // 電話番号・メールアドレスはルールベースで自動マスク（連絡先）。誤検出は手動で復元可能。
-  // 案件名と完全一致する文字列が本文にあれば案件を自動選択（長い名称を優先して誤マッチ防止）。
-  const finishTokenize = useCallback(
-    (id: string) => {
-      patchInbox(id, (i) => {
-        if (i.tokens) return i;
-        const tokens = tokenize(i.body);
-        const autoMasks: typeof i.masks = [];
-        const seen = new Set<string>();
-        for (const t of tokens) {
-          if (seen.has(t)) continue;
-          seen.add(t);
-          const type = detectMaskType(t);
-          if (!type) continue;
-          if (i.masks.some((m) => m.text === t)) continue;
-          const n = i.masks.filter((m) => m.type === type).length + autoMasks.filter((m) => m.type === type).length + 1;
-          autoMasks.push({ text: t, type, token: `〔${type}${circled(n)}〕`, excludedIndices: [] });
-        }
-        let counterparty = i.counterparty;
-        if (!counterparty) {
-          const byLength = [...DEALS].sort((a, b) => b.counterparty.length - a.counterparty.length);
-          counterparty = byLength.find((d) => i.body.includes(d.counterparty))?.counterparty ?? '';
-        }
-        return { ...i, tokens, masks: [...i.masks, ...autoMasks], status: 'マスキング中', counterparty };
-      });
-    },
-    [patchInbox],
   );
 
   // タップされたトークン文字列を伏せる。同一文字列の出現はすべて同じトークンになる。
@@ -256,14 +230,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patchInbox],
   );
 
-  const unmaskAllInboxTokens = useCallback(
-    (id: string) => {
-      patchInbox(id, (i) => ({ ...i, masks: [] }));
-    },
-    [patchInbox],
-  );
-
-  // 案件名を設定する。
+  // 案件名を設定する（警告「案件不明」の解決）。
   const setInboxCounterparty = useCallback(
     (id: string, counterparty: string) => {
       patchInbox(id, (i) => ({ ...i, counterparty }));
@@ -271,22 +238,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patchInbox],
   );
 
-  // AI Readyにする（案件選択・マスク完了の宣言のみ。解析はバッチで行う）。
-  const markAiReady = useCallback(
-    (id: string) => {
-      patchInbox(id, (i) => (i.aiReady ? i : { ...i, aiReady: true }));
-    },
-    [patchInbox],
-  );
-
   // 単体のタスク化ロジック（内部用）。draft が空の場合はアクション不要として完了扱い。
+  // タスク化と同時に、該当案件の wiki ページへ「取込」更新を追記する。
   const distillOne = useCallback(
     (id: string, items: InboxItem[]) => {
       const item = items.find((i) => i.id === id);
-      if (!item || item.status === 'タスクあり') return;
+      if (!item || item.status === '処理済み') return;
       const seed = item.distilled;
+      const counterparty = item.counterparty || seed.counterparty;
       if (!seed.draft) {
-        patchInbox(id, (i) => ({ ...i, status: 'タスクあり' }));
+        patchInbox(id, (i) => ({
+          ...i,
+          status: '処理済み',
+          processedAt: NOW_ISO,
+          verifiedBy: '山田 内勤',
+          analysisNote: 'タスクなし',
+          attention: undefined,
+        }));
         return;
       }
       const applyMasks = (text: string) =>
@@ -298,9 +266,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         category: seed.category,
         risk: seed.risk,
         title: seed.title,
-        counterparty: item.counterparty || seed.counterparty,
+        counterparty,
         dueDate: seed.dueDate,
-        createdAt: '2026-06-10T09:55:00',
+        createdAt: NOW_ISO,
         status: '未確認',
         summary: applyMasks(seed.summary),
         context: seed.context.map(applyMasks),
@@ -324,17 +292,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         },
       };
       setActions((prev) => [action, ...prev]);
-      patchInbox(id, (i) => ({ ...i, status: 'タスクあり', aiReady: true, resultActionId: actionId }));
+      patchInbox(id, (i) => ({
+        ...i,
+        status: '処理済み',
+        processedAt: NOW_ISO,
+        verifiedBy: '山田 内勤',
+        resultActionId: actionId,
+        attention: undefined,
+      }));
+      if (counterparty) {
+        setWikiAppends((prev) => ({
+          ...prev,
+          [counterparty]: [
+            {
+              at: NOW_SHORT,
+              kind: '取込',
+              summary: `${item.source === 'mail' ? 'メール' : item.source === 'slack' ? 'Slack' : '議事録'}「${item.title}」からタスク「${seed.title}」を生成`,
+              source: { label: item.title, inboxItemId: item.id },
+            },
+            ...(prev[counterparty] ?? []),
+          ],
+        }));
+      }
       addToast('タスク化しました', { actionId, actionTitle: seed.title });
     },
     [patchInbox, addToast],
   );
 
-  // 単件解析: 指定アイテムのみ即時処理（詳細画面の「今すぐ解析」用）。
-  const runSingleAnalysis = useCallback(
+  // 目視確認の完了: 人がマスクを確認したアイテムをAIに渡す（解析シミュレート 1.5秒）。
+  const handOffToAi = useCallback(
     (id: string) => {
       const target = inboxItems.find((i) => i.id === id);
-      if (!target || !target.aiReady || target.status === 'タスクあり') return;
+      if (!target || target.status === '処理済み') return;
       setAnalysisRunning(true);
       window.setTimeout(() => {
         distillOne(id, inboxItems);
@@ -345,16 +334,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [inboxItems, distillOne, addToast],
   );
 
-  const cancelInboxItem = useCallback(
+  const archiveInboxItem = useCallback(
     (id: string) => {
-      patchInbox(id, (i) => ({ ...i, status: 'キャンセル' }));
+      patchInbox(id, (i) => ({ ...i, status: 'アーカイブ' }));
     },
     [patchInbox],
   );
 
   const unarchiveInboxItem = useCallback(
     (id: string) => {
-      patchInbox(id, (i) => ({ ...i, status: '未処理', aiReady: false }));
+      patchInbox(id, (i) => ({ ...i, status: '要確認' }));
     },
     [patchInbox],
   );
@@ -366,32 +355,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patchInbox],
   );
 
-  // バッチ解析: aiReady かつ未タスク化のアイテムをまとめて処理（1時間ごと自動 or 手動）。
-  const runAiAnalysis = useCallback(() => {
-    const pending = inboxItems.filter((i) => i.aiReady && i.status !== 'タスクあり');
-    if (pending.length === 0) {
-      addToast('解析する新規データがありません');
-      return;
-    }
-    setAnalysisRunning(true);
-    // 解析シミュレート（1.5秒）
-    window.setTimeout(() => {
-      const snapshot = pending; // タイムアウト時点のリスト（モックなので許容）
-      snapshot.forEach((item) => distillOne(item.id, inboxItems));
-      setAnalysisRunning(false);
-      const taskCount = snapshot.filter((i) => !!i.distilled.draft).length;
-      addToast(taskCount > 0 ? `${taskCount}件のタスクを生成しました` : '解析完了（新規タスクなし）');
-    }, 1500);
-  }, [inboxItems, distillOne, addToast]);
-
   const value = useMemo<StoreValue>(
     () => ({
       actions,
       inboxItems,
-      ledgerMode,
       toasts,
       analysisRunning,
-      setLedgerMode,
+      wikiAppends,
       getAction,
       markInProgress,
       updateDraft,
@@ -404,24 +374,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ignoreSuspected,
       dismissToast,
       getInboxItem,
-      finishTokenize,
       maskInboxToken,
       unmaskInboxToken,
-      unmaskAllInboxTokens,
       setInboxCounterparty,
-      markAiReady,
-      runAiAnalysis,
-      runSingleAnalysis,
-      cancelInboxItem,
+      handOffToAi,
+      archiveInboxItem,
       unarchiveInboxItem,
       setInboxMemo,
     }),
     [
       actions,
       inboxItems,
-      ledgerMode,
       toasts,
       analysisRunning,
+      wikiAppends,
       getAction,
       markInProgress,
       updateDraft,
@@ -434,15 +400,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ignoreSuspected,
       dismissToast,
       getInboxItem,
-      finishTokenize,
       maskInboxToken,
       unmaskInboxToken,
-      unmaskAllInboxTokens,
       setInboxCounterparty,
-      markAiReady,
-      runAiAnalysis,
-      runSingleAnalysis,
-      cancelInboxItem,
+      handOffToAi,
+      archiveInboxItem,
       unarchiveInboxItem,
       setInboxMemo,
     ],
@@ -458,7 +420,8 @@ export function useStore(): StoreValue {
   return ctx;
 }
 
-// 一覧の振り分けはステータスで一意に決まる（§8.3）。
+// 一覧の振り分けはステータスで一意に決まる。
+// 「今日」ビューのタブ: やる（自分が動かす）/ 待ち（他人待ち）/ 済み（ログ）。
 export const LEDGER_STATUSES: Status[] = ['未確認', '対応中'];
 export const APPROVAL_STATUSES: Status[] = ['FS承認待ち', '承認済み'];
 export const ARCHIVE_STATUSES: Status[] = ['送信済み', '棄却'];

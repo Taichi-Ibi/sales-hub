@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { InboxItem, MaskType } from '../types';
 import { useStore } from '../store/StoreContext';
@@ -11,6 +11,11 @@ import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function formatDateTime(iso: string): string {
   const d = new Date(iso);
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
@@ -202,7 +207,7 @@ function DealPicker({ value, onChange }: { value: string; onChange: (v: string) 
   const top = sorted.slice(0, TOP_N);
   const more = sorted.slice(TOP_N);
 
-  // ドメイン判定された案件が Top5 外の場合は先頭に追加して常に表示する。
+  // 自動判定された案件が Top5 外の場合は先頭に追加して常に表示する。
   const detectedInMore = value ? more.find((d) => d.counterparty === value) : undefined;
   const displayTop = detectedInMore ? [detectedInMore, ...top] : top;
   const displayMore = detectedInMore ? more.filter((d) => d.counterparty !== value) : more;
@@ -245,6 +250,12 @@ function DealButton({ deal, selected, onSelect }: { deal: Deal; selected: boolea
   );
 }
 
+/**
+ * 受信箱の詳細。状態によって役割が変わる:
+ *   要確認   : 目視確認（マスク補正・案件選択）→「確認してAIに渡す」
+ *   処理済み : 目視確認→AI解析の記録の確認（読み取り専用・監査ログ）
+ *   待機中   : 予定の確認（イベント終了後、議事録がゲートに入る）
+ */
 export function InboxDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -253,17 +264,8 @@ export function InboxDetail() {
 
   const [selectedRange, setSelectedRange] = useState<{ start: number; end: number } | null>(null);
   const [showMaskHelp, setShowMaskHelp] = useState(false);
-  const [showAiReadyConfirm, setShowAiReadyConfirm] = useState(false);
+  const [showHandOffConfirm, setShowHandOffConfirm] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
-
-  // 未処理の原文を開いたら分かち書きを実行（シミュレート。約1秒）。
-  const needsTokenize = !!item && !item.tokens;
-  useEffect(() => {
-    if (!needsTokenize) return;
-    const t = window.setTimeout(() => store.finishTokenize(id), 1100);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, needsTokenize]);
 
   if (!item) {
     return (
@@ -280,9 +282,13 @@ export function InboxDetail() {
 
   const meta = SOURCE_META[item.source];
   const { label: elapsed } = elapsedSince(item.receivedAt);
-  const done = item.status === 'タスクあり';
-  const masking = item.status === 'マスキング中' && !item.aiReady;
-  const aiReadyComplete = item.masks.length > 0 && !!item.counterparty;
+  const reviewing = item.status === '要確認';
+  const processed = item.status === '処理済み';
+  const waiting = item.status === '待機中';
+  // 未マスクの疑い（knownSensitive のうちまだマスクされていない語）が残っているか。
+  const unresolvedSensitive = item.distilled.knownSensitive.filter(
+    (s) => item.body.includes(s) && !item.masks.some((m) => m.text === s),
+  );
 
   return (
     <div>
@@ -296,13 +302,22 @@ export function InboxDetail() {
       <div className="overflow-hidden bg-white">
         {/* ヘッダー */}
         <div className="border-b border-line p-4 sm:p-5">
-          {/* タイトル行: [ソースアイコン] [タイトル] [badges] + 時刻右寄せ */}
           <div className="flex items-start gap-3">
             <span className="mt-0.5 shrink-0 text-xl" aria-hidden>{meta.icon}</span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-semibold text-ink">{item.title}</h1>
-                {masking && (
+                {reviewing && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    🛡️ 目視確認待ち
+                  </span>
+                )}
+                {processed && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-good/10 px-2 py-0.5 text-xs font-medium text-good">
+                    ✔ 確認・処理済み
+                  </span>
+                )}
+                {reviewing && (
                   <div className="relative">
                     <button
                       onClick={() => setShowMaskHelp((v) => !v)}
@@ -322,16 +337,9 @@ export function InboxDetail() {
                     )}
                   </div>
                 )}
-                {item.aiReady && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
-                    ✨ AI Ready
-                  </span>
-                )}
               </div>
-              {/* タイトル下のメタ情報（受信箱と同じ） */}
               <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-ink-sub">
                 {item.eventType && <span>{EVENT_TYPE_ICON[item.eventType]} {item.eventType}</span>}
-                {item.eventAt && <span className="tabular-nums text-ink-sub/60">{elapsed}前</span>}
                 {item.source === 'mail' && (
                   <>
                     <span>From: {item.sender}</span>
@@ -361,46 +369,79 @@ export function InboxDetail() {
         </div>
 
         <div className="flex flex-col gap-5 p-4 sm:p-5">
-          {/* 原文 */}
-          <section>
-            {!item.tokens ? (
-              // 分かち書き中（CPU実行のシミュレート）
-              <div className="relative">
-                <div className="whitespace-pre-wrap rounded-lg border border-line bg-surface p-3 text-sm leading-loose text-ink-sub/60">
-                  {item.body}
-                </div>
-                <div className="absolute inset-0 grid place-items-center rounded-lg bg-white/70">
-                  <p className="text-sm font-medium text-ink-sub">ロード中…</p>
-                </div>
+          {/* 要確認: ロジックの警告 or 確認の案内 */}
+          {reviewing && (
+            (item.attention ?? []).length > 0 ? (
+              <div className="rounded-lg border border-warn/40 bg-amber-50 px-4 py-3">
+                <p className="mb-1 text-xs font-semibold text-amber-800">目視確認のポイント</p>
+                <ul className="space-y-1">
+                  {(item.attention ?? []).map((r, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-sm text-amber-800">
+                      <span aria-hidden className="shrink-0">⚠</span>
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : (
-              <>
-                <TokenizedBody
-                  item={item}
-                  interactive={masking}
-                  selectedRange={selectedRange}
-                  onSelect={(i) => setSelectedRange(i === null ? null : { start: i, end: i })}
-                  onUnmask={(token, atIndex) => store.unmaskInboxToken(item.id, token, atIndex)}
+              <div className="flex items-start gap-2 rounded-lg border border-good/30 bg-good/5 px-4 py-3 text-sm text-ink">
+                <span aria-hidden className="shrink-0">✓</span>
+                <p>
+                  自動マスク {item.masks.length}件・案件判定済み。機密情報が残っていないか目視で確認し、問題なければAIに渡してください。
+                </p>
+              </div>
+            )
+          )}
+
+          {/* 処理済み: 目視確認→AI解析の記録（監査ログ） */}
+          {processed && (
+            <div className="flex items-start gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-sm text-ink">
+              <span aria-hidden className="shrink-0">🛡️</span>
+              <div className="min-w-0 flex-1">
+                <p>
+                  {item.processedAt && <span className="tabular-nums">{formatDateTime(item.processedAt)} </span>}
+                  <span className="font-medium">{item.verifiedBy ?? '担当者'}</span> が目視確認
+                  （マスク {item.masks.length}件）→ AI解析 →{' '}
+                  {item.resultActionId ? 'タスク生成' : item.analysisNote ?? 'タスクなし'}。
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 待機中: イベント終了後にゲートへ */}
+          {waiting && (
+            <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-ink">
+              <span aria-hidden className="shrink-0">⏳</span>
+              <p>この予定はイベント終了後、議事録・メモが目視確認待ちに入ります。確認するとAIが解析します。</p>
+            </div>
+          )}
+
+          {/* 原文（レビュー中のみタップでマスキング可能） */}
+          <section>
+            <TokenizedBody
+              item={item}
+              interactive={reviewing}
+              selectedRange={selectedRange}
+              onSelect={(i) => setSelectedRange(i === null ? null : { start: i, end: i })}
+              onUnmask={(token, atIndex) => store.unmaskInboxToken(item.id, token, atIndex)}
+            />
+            {reviewing && selectedRange && (() => {
+              const tokens = item.tokens!;
+              const text = tokens.slice(selectedRange.start, selectedRange.end + 1).join('');
+              return (
+                <MaskTypeBar
+                  onPick={(type) => {
+                    store.maskInboxToken(item.id, text, type, selectedRange.start);
+                    setSelectedRange(null);
+                  }}
+                  onCancel={() => setSelectedRange(null)}
+                  canExtendPrev={selectedRange.start > 0}
+                  canExtendNext={selectedRange.end < tokens.length - 1}
+                  onExtendPrev={() => setSelectedRange((s) => s ? { ...s, start: s.start - 1 } : s)}
+                  onExtendNext={() => setSelectedRange((s) => s ? { ...s, end: s.end + 1 } : s)}
                 />
-                {masking && selectedRange && (() => {
-                  const tokens = item.tokens!;
-                  const text = tokens.slice(selectedRange.start, selectedRange.end + 1).join('');
-                  return (
-                    <MaskTypeBar
-                      onPick={(type) => {
-                        store.maskInboxToken(item.id, text, type, selectedRange.start);
-                        setSelectedRange(null);
-                      }}
-                      onCancel={() => setSelectedRange(null)}
-                      canExtendPrev={selectedRange.start > 0}
-                      canExtendNext={selectedRange.end < tokens.length - 1}
-                      onExtendPrev={() => setSelectedRange((s) => s ? { ...s, start: s.start - 1 } : s)}
-                      onExtendNext={() => setSelectedRange((s) => s ? { ...s, end: s.end + 1 } : s)}
-                    />
-                  );
-                })()}
-              </>
-            )}
+              );
+            })()}
           </section>
 
           {/* メモ（トグル） */}
@@ -426,35 +467,32 @@ export function InboxDetail() {
             )}
           </section>
 
-          {/* 案件選択: 分かち書き完了後・タスク化前に表示 */}
-          {item.tokens && !done && (
+          {/* プロジェクト（レビュー中は選択可能） */}
+          {!waiting && (
             <section>
               <div className="mb-1.5 flex items-center gap-2">
                 <h2 className="text-sm font-medium text-ink">プロジェクト</h2>
               </div>
-              {item.aiReady ? (
-                <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink">
-                  🏢 {item.counterparty}
-                </div>
+              {reviewing ? (
+                <DealPicker
+                  value={item.counterparty}
+                  onChange={(v) => store.setInboxCounterparty(item.id, v)}
+                />
               ) : (
-                <>
-                  <DealPicker
-                    value={item.counterparty}
-                    onChange={(v) => store.setInboxCounterparty(item.id, v)}
-                  />
-                </>
+                <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink">
+                  🏢 {item.counterparty || '—'}
+                </div>
               )}
             </section>
           )}
-
         </div>
 
-        {/* フッター: 工程に応じた操作 */}
+        {/* フッター: 状態に応じた操作 */}
         <div className="border-t border-line bg-surface p-4 sm:p-5">
-          {done ? (
+          {processed ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-good">
-                ✔ タスクあり — 台帳に追加されています
+                {item.resultActionId ? '✔ タスク化済み — 「今日」に追加されています' : `✔ 解析済み — ${item.analysisNote ?? 'タスクなし'}`}
               </span>
               {item.resultActionId && (
                 <Button
@@ -468,43 +506,55 @@ export function InboxDetail() {
                 </Button>
               )}
             </div>
-          ) : item.aiReady ? (
+          ) : reviewing ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-sm font-medium text-accent">✨ AI Ready — 解析キューに追加済み</span>
+              <button
+                onClick={() => store.archiveInboxItem(item.id)}
+                className="text-sm font-medium text-ink-sub hover:text-ink"
+              >
+                AIに渡さない（アーカイブ）
+              </button>
               <Button
-                variant="primary"
+                variant={item.counterparty && unresolvedSensitive.length === 0 ? 'primary' : 'warning'}
                 disabled={store.analysisRunning}
-                onClick={() => store.runSingleAnalysis(item.id)}
+                onClick={() =>
+                  item.counterparty && unresolvedSensitive.length === 0
+                    ? store.handOffToAi(item.id)
+                    : setShowHandOffConfirm(true)
+                }
               >
-                {store.analysisRunning ? '解析中…' : '今すぐ解析'}
+                {store.analysisRunning ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block size-3 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden />
+                    解析中…
+                  </span>
+                ) : (
+                  '確認してAIに渡す ▶'
+                )}
               </Button>
             </div>
-          ) : item.tokens ? (
-            <div className="flex items-center justify-end">
-              <Button
-                variant={aiReadyComplete ? 'primary' : 'warning'}
-                onClick={() => aiReadyComplete ? store.markAiReady(item.id) : setShowAiReadyConfirm(true)}
-              >
-                AI Ready
-              </Button>
-            </div>
+          ) : waiting ? (
+            <p className="text-xs text-ink-sub">イベント終了後に目視確認待ちへ入ります。今は操作不要です。</p>
           ) : (
-            <p className="text-xs text-ink-sub">読み込み中…</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-ink-sub">アーカイブ済み（AIに渡していません）</span>
+              <Button variant="secondary" className="ml-auto" onClick={() => store.unarchiveInboxItem(item.id)}>
+                要確認に戻す
+              </Button>
+            </div>
           )}
         </div>
       </div>
       <ConfirmDialog
-        open={showAiReadyConfirm}
+        open={showHandOffConfirm}
         title={
-          !item.counterparty && item.masks.length === 0
-            ? 'プロジェクトとマスキングが未設定ですが、AI Ready にしますか？'
-            : !item.counterparty
-              ? 'プロジェクトが未設定ですが、AI Ready にしますか？'
-              : 'マスキングがありませんが、AI Ready にしますか？'
+          !item.counterparty
+            ? 'プロジェクトが未選択ですが、確認済みとしてAIに渡しますか？'
+            : `未マスクの疑い（「${unresolvedSensitive.join('」「')}」）が残っています。マスクせずにAIに渡しますか？`
         }
-        confirmLabel="AI Ready にする"
-        onConfirm={() => { store.markAiReady(item.id); setShowAiReadyConfirm(false); }}
-        onCancel={() => setShowAiReadyConfirm(false)}
+        confirmLabel="このままAIに渡す"
+        onConfirm={() => { store.handOffToAi(item.id); setShowHandOffConfirm(false); }}
+        onCancel={() => setShowHandOffConfirm(false)}
       />
     </div>
   );
