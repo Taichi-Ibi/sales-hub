@@ -404,6 +404,14 @@ export function InboxDetail() {
                   （マスク {item.masks.length}件）→ AI解析 →{' '}
                   {item.resultActionId ? 'タスク生成' : item.analysisNote ?? 'タスクなし'}。
                 </p>
+                {item.source === 'schedule' && item.eventAt && (
+                  <button
+                    onClick={() => navigate(`/meetings/${item.id}`)}
+                    className="mt-1.5 text-sm font-medium text-accent hover:underline"
+                  >
+                    会議ページ（フォローアップ）を開く ❯
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -412,7 +420,17 @@ export function InboxDetail() {
           {waiting && (
             <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-ink">
               <span aria-hidden className="shrink-0">⏳</span>
-              <p>この予定はイベント終了後、議事録・メモが目視確認待ちに入ります。確認するとAIが解析します。</p>
+              <div className="min-w-0 flex-1">
+                <p>この予定はイベント終了後、議事録・メモが目視確認待ちに入ります。確認するとAIが解析します。</p>
+                {item.eventAt && (
+                  <button
+                    onClick={() => navigate(`/meetings/${item.id}`)}
+                    className="mt-1.5 text-sm font-medium text-accent hover:underline"
+                  >
+                    会議ページ（事前ブリーフ）を開く ❯
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
