@@ -84,6 +84,7 @@ export interface InboxItem {
   participants?: string[]; // 参加者名
   location?: string; // 場所・会場
   eventType?: '商談' | '会食' | '移動' | '社内MTG' | 'その他';
+  openQuestions?: string[]; // 会議の未回答の質問（議事録から抽出。フォローアップ表示用）
   // メール専用（任意）
   mailTo?: string; // 受信者（宛先）
   // ユーザーメモ（任意）

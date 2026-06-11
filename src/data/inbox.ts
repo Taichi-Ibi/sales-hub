@@ -8,10 +8,26 @@ import type { InboxItem, InboxSource } from '../types';
 // ロジックの警告（未マスクの疑い・案件不明）は attention で表示し、目視を速くする。
 // 予定・会議は「待機中」とし、イベント終了後に議事録がゲートに入る。
 
+// Raw 層の3ソース: Slack・メール・カレンダー（予定はカレンダー由来として明示）。
 export const SOURCE_META: Record<InboxSource, { icon: string; label: string }> = {
   slack: { icon: '💬', label: 'Slack' },
   mail: { icon: '✉️', label: 'メール' },
-  schedule: { icon: '📅', label: '予定' },
+  schedule: { icon: '📅', label: 'カレンダー' },
+};
+
+// 会議終了デモ（in11）で受信箱に入る議事録。既存の建て付け（in03 と同様、
+// イベント終了後にカレンダーの予定アイテムが議事録としてゲートに入る）を実行時に再現する。
+// 「川島」が辞書未登録のため、目視確認で人がマスク補正する教材を兼ねる。
+export const DEMO_MINUTES: Record<
+  string,
+  Pick<InboxItem, 'body' | 'attention' | 'masks' | 'openQuestions'>
+> = {
+  in11: {
+    body: '■北斗電装 オンライン定例（6/10 10:30-11:00）\n出席: 北斗電装 川島 紗英様、当社 三好\n議題: 解約条項（通知期間）の見直し\n・川島様より: 45日への短縮は社内（調達部門）の強い要望。ただし60日であれば持ち帰って検討の余地があるとの感触。\n・当社方針（60日折衷案）は6/13までに文書で正式回答することで合意。\n・契約 CT-2024-118 の条項変更手続きは、先方法務がドラフトを用意。',
+    attention: ['未マスクの疑い: 「川島」が辞書に未登録のまま本文に残っています'],
+    masks: [{ text: 'CT-2024-118', type: '契約番号', token: '〔契約番号①〕', auto: true }],
+    openQuestions: ['45日案で再打診された場合の当社最終ライン（法務確認中）'],
+  },
 };
 
 export const SEED_INBOX: InboxItem[] = [
@@ -139,6 +155,7 @@ export const SEED_INBOX: InboxItem[] = [
       { text: 'NDA-2026-009', type: '契約番号', token: '〔契約番号①〕', auto: true },
     ],
     resultActionId: 'a10',
+    openQuestions: ['正式見積書の提出時期（NDA締結後を予定）'],
     distilled: {
       category: '法務',
       risk: '高',
@@ -207,7 +224,41 @@ export const SEED_INBOX: InboxItem[] = [
     },
   },
 
-  // ── 待機中: 予定・会議。イベント終了後、議事録がマスキングゲートに入る ──
+  // ── 待機中: 予定・会議（カレンダー由来）。イベント終了後、議事録がマスキングゲートに入る ──
+  // in11: まもなく開始する商談（NOW=10:00 の30分後）。「今日」のまもなく開始バナーと
+  // 事前ブリーフ（/meetings/in11）の主役。会議終了デモで DEMO_MINUTES が議事録として入る。
+  {
+    id: 'in11',
+    source: 'schedule',
+    title: '北斗電装 オンライン定例（6/10 10:30）',
+    sender: '',
+    receivedAt: '2026-06-10T08:00:00',
+    eventAt: '2026-06-10T10:30:00',
+    eventEnd: '2026-06-10T11:00:00',
+    eventType: '商談',
+    participants: ['北斗電装 川島 紗英', '三好 玲（当社）'],
+    location: 'WEB会議',
+    body: '■北斗電装 オンライン定例（6/10 10:30-11:00）\n出席: 北斗電装 川島様、当社 三好\n議題: 解約条項（通知期間）の見直し要望について\n・6/9受領メール（90日→45日への短縮要望）の論点整理\n・当社回答方針のすり合わせ（回答期限 6/13）',
+    status: '待機中',
+    counterparty: '北斗電装',
+    masks: [],
+    distilled: {
+      category: '契約',
+      risk: '高',
+      title: '解約条項の回答（60日折衷案）を文書で送付',
+      counterparty: '北斗電装',
+      dueDate: '2026-06-13',
+      summary: '定例で合意した方針（通知期間60日の折衷案）を、6/13までに文書で正式回答する。',
+      context: [
+        '先方は45日を希望も、60日なら持ち帰り検討の余地あり',
+        '条項変更ドラフトは先方法務が用意',
+        '対象契約は CT-2024-118',
+      ],
+      draft:
+        '川島様\nお世話になっております。本日はお時間をいただきありがとうございました。解約条項の通知期間につきまして、60日とする折衷案にて、6/13までに正式なご回答を文書でお送りいたします。対象契約は CT-2024-118 です。',
+      knownSensitive: ['川島', 'CT-2024-118'],
+    },
+  },
   {
     id: 'in08',
     source: 'schedule',

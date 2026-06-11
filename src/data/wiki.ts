@@ -24,7 +24,7 @@ export interface WikiStatement {
   source?: SourceRef;
 }
 
-export type WikiUpdateKind = '取込' | '定期更新' | '整合性チェック';
+export type WikiUpdateKind = '取込' | '定期更新' | '整合性チェック' | '意思決定';
 
 export interface WikiUpdate {
   at: string; // 表示用 "6/10 06:00"

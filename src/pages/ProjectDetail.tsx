@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { findWikiPage, QA_FALLBACK } from '../data/wiki';
-import type { SalesPhase, SourceRef, WikiQA, WikiUpdate } from '../data/wiki';
+import type { SalesPhase, SourceRef, WikiQA } from '../data/wiki';
 import { SOURCE_META } from '../data/inbox';
 import { useStore } from '../store/StoreContext';
 import { Button } from '../components/Button';
+import { DecisionStatusPill, SourceChip, UpdateTimeline, Field } from '../components/WikiParts';
 import { shortDate, elapsedSince } from '../lib/time';
 
 const PHASE_ORDER: SalesPhase[] = ['リード', '商談', '提案', '契約', '受注'];
@@ -48,74 +49,6 @@ function PhaseBar({ current }: { current: SalesPhase }) {
         );
       })}
     </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-xs text-ink-sub">{label}</dt>
-      <dd className="text-sm text-ink">{value ?? <span className="text-ink-sub/60">—</span>}</dd>
-    </div>
-  );
-}
-
-/** 出典チップ。受信箱に実体があれば原文へ遷移できる。 */
-function SourceChip({ source }: { source: SourceRef }) {
-  const navigate = useNavigate();
-  const cls =
-    'inline-flex max-w-full items-center gap-1 rounded border border-line bg-white px-1.5 py-0.5 text-[11px] text-ink-sub';
-  if (!source.inboxItemId) {
-    return (
-      <span className={cls} title="原文は保持期間を過ぎています">
-        <span aria-hidden>📎</span>
-        <span className="min-w-0 truncate">{source.label}</span>
-      </span>
-    );
-  }
-  return (
-    <button
-      onClick={() => navigate(`/inbox/${source.inboxItemId}`)}
-      className={`${cls} transition-colors hover:border-accent/50 hover:text-accent`}
-      title="原文を開く"
-    >
-      <span aria-hidden>📎</span>
-      <span className="min-w-0 truncate">{source.label}</span>
-      <span aria-hidden>❯</span>
-    </button>
-  );
-}
-
-const UPDATE_KIND_META: Record<WikiUpdate['kind'], { icon: string; cls: string }> = {
-  取込: { icon: '📥', cls: 'bg-accent-soft text-accent' },
-  定期更新: { icon: '🔄', cls: 'bg-surface text-ink-sub' },
-  整合性チェック: { icon: '🩺', cls: 'bg-[#ecfdf5] text-[#047857]' },
-};
-
-/** 更新履歴のタイムライン。AIがこのページを維持していることを可視化する。 */
-function UpdateTimeline({ updates }: { updates: WikiUpdate[] }) {
-  return (
-    <ul className="flex flex-col gap-2">
-      {updates.map((u, i) => {
-        const meta = UPDATE_KIND_META[u.kind];
-        return (
-          <li key={i} className="flex items-start gap-2 text-sm">
-            <span className="w-20 shrink-0 pt-0.5 tabular-nums text-xs text-ink-sub">{u.at}</span>
-            <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${meta.cls}`}>
-              <span aria-hidden>{meta.icon}</span> {u.kind}
-            </span>
-            <span className="min-w-0 flex-1 text-ink">
-              {u.summary}
-              {u.source && (
-                <span className="ml-1.5 inline-flex align-middle">
-                  <SourceChip source={u.source} />
-                </span>
-              )}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 
@@ -202,7 +135,7 @@ function AskPanel({ qa, counterparty }: { qa: WikiQA[]; counterparty: string }) 
 export function ProjectDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const { actions, inboxItems, wikiAppends } = useStore();
+  const { actions, inboxItems, wikiAppends, decisions } = useStore();
   const page = findWikiPage(id);
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [showActivities, setShowActivities] = useState(false);
@@ -213,7 +146,7 @@ export function ProjectDetail() {
       <div className="py-20 text-center text-ink-sub">
         案件ページが見つかりません。
         <div className="mt-2">
-          <Button variant="link" onClick={() => navigate('/projects')}>
+          <Button variant="link" onClick={() => navigate('/wiki')}>
             案件一覧へ戻る
           </Button>
         </div>
@@ -222,6 +155,7 @@ export function ProjectDetail() {
   }
 
   const relatedActions = actions.filter((a) => a.counterparty === page.counterparty);
+  const relatedDecisions = decisions.filter((d) => d.counterparty === page.counterparty);
   const activities = [...inboxItems]
     .filter((i) => i.counterparty === page.counterparty)
     .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
@@ -234,7 +168,7 @@ export function ProjectDetail() {
   return (
     <div>
       <button
-        onClick={() => navigate('/projects')}
+        onClick={() => navigate('/wiki')}
         className="mb-4 inline-flex items-center text-sm font-medium text-accent hover:underline"
       >
         ❮ 案件一覧へ戻る
@@ -370,6 +304,35 @@ export function ProjectDetail() {
               </>
             )}
           </section>
+
+          {/* 関連する意思決定（Decision Log） */}
+          {relatedDecisions.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-sm font-semibold text-ink">
+                ◆ 関連する意思決定
+                <span className="ml-1.5 rounded-full bg-surface px-1.5 py-0.5 text-xs font-semibold tabular-nums text-ink-sub">
+                  {relatedDecisions.length}
+                </span>
+              </h2>
+              <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line">
+                {relatedDecisions.map((d) => (
+                  <li key={d.id}>
+                    <button
+                      onClick={() => navigate(`/decisions/${d.id}`, { state: { from: `/projects/${id}` } })}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface"
+                    >
+                      <span aria-hidden className="shrink-0 text-base">⚖️</span>
+                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{d.title}</p>
+                      <DecisionStatusPill status={d.status} />
+                      {d.deadline && d.status === '提案中' && (
+                        <span className="shrink-0 text-xs text-ink-sub">期限 {shortDate(d.deadline)}</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/* 次回打ち合わせ */}
           {page.nextMeeting && (

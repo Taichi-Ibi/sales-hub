@@ -60,10 +60,9 @@ function ProjectRow({ page }: { page: WikiPage }) {
   );
 }
 
-/** 案件一覧。1案件=1ページの wiki を AI が維持する（蓄積される資産）。 */
-export function Projects() {
+/** 案件一覧（ナレッジハブの「案件」タブ本体）。1案件=1ページの wiki を AI が維持する。 */
+export function ProjectListSection() {
   const [filter, setFilter] = useState<ProjectFilter>('すべて');
-  const [showInfo, setShowInfo] = useState(false);
 
   const filtered = (filter === 'すべて' ? WIKI_PAGES : WIKI_PAGES.filter((p) => p.salesPhase === filter))
     .slice()
@@ -71,42 +70,6 @@ export function Projects() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
-        <h1 className="text-xl font-semibold text-ink">案件</h1>
-        <div className="relative">
-          <button
-            onClick={() => setShowInfo((v) => !v)}
-            className="grid size-5 place-items-center rounded-full border border-line text-xs font-medium text-ink-sub transition-colors hover:border-accent/60 hover:text-accent"
-            aria-label="案件ページの説明を表示"
-            aria-expanded={showInfo}
-          >
-            i
-          </button>
-          {showInfo && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowInfo(false)}
-                aria-hidden
-              />
-              <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-line bg-white p-3 shadow-md">
-                <p className="text-sm text-ink-sub">
-                  1案件=1ページをAIが維持します。記述には出典がつき、受信箱の原文から毎朝自動更新。担当が変わっても引き継げる「組織の営業メモリ」です。
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* 自動更新の稼働状況 */}
-      <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-sub">
-        <span aria-hidden>🤖</span>
-        <span className="font-medium text-ink">全ページ AI 維持</span>
-        <span aria-hidden>·</span>
-        <span>毎朝6:00に再生成＋整合性チェック</span>
-      </div>
-
       <div className="mb-3 flex items-center gap-3 overflow-x-auto text-sm">
         {FILTERS.map((f) => (
           <button

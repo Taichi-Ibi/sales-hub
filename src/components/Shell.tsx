@@ -29,18 +29,22 @@ interface NavItem {
 }
 
 export function Shell() {
-  const { actions, inboxItems } = useStore();
+  const { actions, inboxItems, decisions, digestViewed } = useStore();
   const location = useLocation();
   // 受信箱バッジ = 目視確認待ち（要確認）件数。確認済みは数えない。
   const reviewCount = inboxItems.filter((i) => i.status === '要確認').length;
   const todayCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
-  const projectAlertCount = WIKI_PAGES.reduce((sum, p) => sum + p.alerts.length, 0);
+  // ナレッジバッジ = wiki アラート + 判断待ち（提案中）の意思決定。
+  const knowledgeCount =
+    WIKI_PAGES.reduce((sum, p) => sum + p.alerts.length, 0) +
+    decisions.filter((d) => d.status === '提案中').length;
 
-  // New Version の構成: 今日（日次ビュー・ホーム）→ 案件（AIが維持する wiki）
-  // → 受信箱（マスキング目視ゲート: 全件人が確認）→ 設定（スキーマ層）。
+  // OODA を一周する構成: 今日（Act・ホーム）→ ダイジェスト（朝の Observe→Act 一覧）
+  // → ナレッジ（Orient: AIが維持する wiki）→ 受信箱（Observe 入口の目視ゲート）→ 設定。
   const items: NavItem[] = [
     { to: '/', end: true, icon: '📋', label: '今日', count: todayCount },
-    { to: '/projects', icon: '📚', label: '案件', count: projectAlertCount > 0 ? projectAlertCount : undefined },
+    { to: '/digest', icon: '🌅', label: 'ダイジェスト', count: digestViewed ? undefined : 1 },
+    { to: '/wiki', icon: '📚', label: 'ナレッジ', count: knowledgeCount > 0 ? knowledgeCount : undefined },
     { to: '/inbox', icon: '📬', label: '受信箱', count: reviewCount > 0 ? reviewCount : undefined },
     { to: '/settings', icon: '⚙️', label: '設定' },
   ];
@@ -48,8 +52,12 @@ export function Shell() {
   // 上部バーに「今どこにいるか」を出す（詳細画面は各一覧の下層として扱う）。
   const currentLabel = location.pathname.startsWith('/action')
     ? '詳細'
-    : (items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
-        ?.label ?? '今日');
+    : location.pathname.startsWith('/projects') ||
+        location.pathname.startsWith('/meetings') ||
+        location.pathname.startsWith('/decisions')
+      ? 'ナレッジ'
+      : (items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
+          ?.label ?? '今日');
 
   return (
     <div className="flex h-screen flex-col">

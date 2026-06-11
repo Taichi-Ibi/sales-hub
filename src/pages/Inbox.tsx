@@ -14,7 +14,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'すべて', label: 'すべて' },
   { value: 'slack', label: `${SOURCE_META.slack.icon} Slack` },
   { value: 'mail', label: `${SOURCE_META.mail.icon} メール` },
-  { value: 'schedule', label: `${SOURCE_META.schedule.icon} 予定` },
+  { value: 'schedule', label: `${SOURCE_META.schedule.icon} カレンダー` },
 ];
 
 const EVENT_TYPE_LABEL: Record<NonNullable<InboxItem['eventType']>, string> = {
@@ -322,7 +322,7 @@ export function Inbox() {
       {/* 待機中: 予定・会議。終了後に議事録がゲートに入る */}
       {waitingItems.length > 0 && (
         <section>
-          <SectionHeader title="予定" count={waitingItems.length} dot="bg-accent" note="終了後に議事録がゲートに入ります" />
+          <SectionHeader title="予定（カレンダー）" count={waitingItems.length} dot="bg-accent" note="終了後に議事録がゲートに入ります" />
           <div className="flex flex-col gap-1">
             {waitingItems.map((i) => (
               <WaitingRow key={i.id} item={i} />

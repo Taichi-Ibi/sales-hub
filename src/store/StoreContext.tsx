@@ -1,8 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { Action, InboxItem, MaskType, Status } from '../types';
 import type { WikiUpdate } from '../data/wiki';
+import type { Decision } from '../data/decisions';
 import { SEED_ACTIONS } from '../data/actions';
-import { SEED_INBOX } from '../data/inbox';
+import { DEMO_MINUTES, SEED_INBOX } from '../data/inbox';
+import { SEED_DECISIONS } from '../data/decisions';
 import { tokenize } from '../lib/tokenize';
 
 // 完了系の操作で使う「今日」（モック固定。lib/time.ts の NOW に合わせる）。
@@ -52,6 +54,16 @@ interface StoreValue {
   archiveInboxItem: (id: string) => void; // AIに渡さない
   unarchiveInboxItem: (id: string) => void;
   setInboxMemo: (id: string, memo: string) => void;
+  // 会議終了デモ: 予定（待機中）を終了させ、議事録を目視確認待ちに入れる。
+  // 以降は通常の目視ゲート（handOffToAi）をそのまま通る。ゲートを迂回する経路は作らない。
+  endMeetingDemo: (id: string) => void;
+  // 意思決定ログ（Decision Log）。AIは Decision Brief（提案）まで。記録は人が行う。
+  decisions: Decision[];
+  getDecision: (id: string) => Decision | undefined;
+  recordDecision: (id: string) => void; // 提案中 → 決定済み（wiki 更新履歴に追記）
+  // ダイジェストの未閲覧バッジ。
+  digestViewed: boolean;
+  markDigestViewed: () => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -72,6 +84,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [analysisRunning, setAnalysisRunning] = useState(false);
   const [wikiAppends, setWikiAppends] = useState<Record<string, WikiUpdate[]>>({});
+  const [decisions, setDecisions] = useState<Decision[]>(() =>
+    SEED_DECISIONS.map((d) => ({
+      ...d,
+      background: [...d.background],
+      stakeholders: [...d.stakeholders],
+      options: d.options.map((o) => ({ ...o })),
+      risks: [...d.risks],
+      sources: [...d.sources],
+      followUps: [...d.followUps],
+    })),
+  );
+  const [digestViewed, setDigestViewed] = useState(false);
 
   const patch = useCallback((id: string, fn: (a: Action) => Action) => {
     setActions((prev) => prev.map((a) => (a.id === id ? fn(a) : a)));
@@ -355,6 +379,72 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patchInbox],
   );
 
+  // 会議終了デモ: 予定アイテム自身が議事録としてゲートに入る（in03 と同じ建て付けを実行時に再現）。
+  // 自動マスク・警告はローカル前処理の結果。タスク化は人の目視確認（handOffToAi）後にのみ起きる。
+  const endMeetingDemo = useCallback(
+    (id: string) => {
+      const minutes = DEMO_MINUTES[id];
+      if (!minutes) return;
+      patchInbox(id, (i) => {
+        if (i.status !== '待機中') return i;
+        return {
+          ...i,
+          status: '要確認',
+          receivedAt: NOW_ISO,
+          body: minutes.body,
+          tokens: tokenize(minutes.body),
+          attention: minutes.attention ? [...minutes.attention] : undefined,
+          masks: minutes.masks.map((m) => ({ ...m })),
+          openQuestions: minutes.openQuestions ? [...minutes.openQuestions] : undefined,
+        };
+      });
+      addToast('会議が終了し、議事録が目視確認待ちに入りました');
+    },
+    [patchInbox, addToast],
+  );
+
+  // ───────── 意思決定ログ ─────────
+
+  const getDecision = useCallback(
+    (id: string) => decisions.find((d) => d.id === id),
+    [decisions],
+  );
+
+  // 決定として記録する（人の操作）。提案中 → 決定済み にし、推奨案を決定理由として採用。
+  // 該当案件の wiki 更新履歴に「意思決定」を追記する（取込と同じ仕組み）。
+  const recordDecision = useCallback(
+    (id: string) => {
+      const target = decisions.find((d) => d.id === id);
+      if (!target || target.status !== '提案中') return;
+      setDecisions((prev) =>
+        prev.map((d) =>
+          d.id === id
+            ? { ...d, status: '決定済み', decidedAt: NOW_SHORT, rationale: d.rationale ?? d.recommendation }
+            : d,
+        ),
+      );
+      if (target.counterparty) {
+        setWikiAppends((prev) => ({
+          ...prev,
+          [target.counterparty]: [
+            {
+              at: NOW_SHORT,
+              kind: '意思決定',
+              summary: `「${target.title}」を決定として記録（推奨案を採用）`,
+            },
+            ...(prev[target.counterparty] ?? []),
+          ],
+        }));
+      }
+      addToast('意思決定を記録しました');
+    },
+    [decisions, addToast],
+  );
+
+  const markDigestViewed = useCallback(() => {
+    setDigestViewed(true);
+  }, []);
+
   const value = useMemo<StoreValue>(
     () => ({
       actions,
@@ -381,6 +471,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       archiveInboxItem,
       unarchiveInboxItem,
       setInboxMemo,
+      endMeetingDemo,
+      decisions,
+      getDecision,
+      recordDecision,
+      digestViewed,
+      markDigestViewed,
     }),
     [
       actions,
@@ -407,6 +503,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       archiveInboxItem,
       unarchiveInboxItem,
       setInboxMemo,
+      endMeetingDemo,
+      decisions,
+      getDecision,
+      recordDecision,
+      digestViewed,
+      markDigestViewed,
     ],
   );
 

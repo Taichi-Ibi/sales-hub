@@ -385,6 +385,59 @@ const TAB_DESCRIPTIONS: Record<TabKey, string> = {
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
+/**
+ * まもなく開始する会議のバナー（動線B:「この案件、今どうなってる？」）。
+ * カレンダー連動で2時間以内に始まる予定を出し、1クリックで事前ブリーフへ。
+ * 突然始まる商談でも、経緯と論点に5秒で追いつけるようにする。
+ */
+function UpcomingMeetingBanner() {
+  const { inboxItems } = useStore();
+  const navigate = useNavigate();
+
+  const upcoming = inboxItems
+    .filter((i) => {
+      if (i.source !== 'schedule' || i.status !== '待機中' || !i.eventAt) return false;
+      const start = new Date(i.eventAt).getTime();
+      return start >= NOW.getTime() && start <= NOW.getTime() + 2 * 60 * 60 * 1000;
+    })
+    .sort((a, b) => a.eventAt!.localeCompare(b.eventAt!));
+
+  if (upcoming.length === 0) return null;
+
+  return (
+    <div className="mb-4 flex flex-col gap-2">
+      {upcoming.map((m) => {
+        const start = new Date(m.eventAt!);
+        const minutesUntil = Math.round((start.getTime() - NOW.getTime()) / (60 * 1000));
+        const timeLabel = `${start.getHours()}:${String(start.getMinutes()).padStart(2, '0')}`;
+        return (
+          <div
+            key={m.id}
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-accent/40 bg-accent-soft px-4 py-3"
+          >
+            <span aria-hidden className="shrink-0 text-lg">🕥</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ink">
+                まもなく開始　<span className="tabular-nums">{timeLabel}</span>　{m.title}
+              </p>
+              <p className="mt-0.5 text-xs text-ink-sub">
+                あと{minutesUntil}分{m.location ? `　·　📍 ${m.location}` : ''}
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              className="shrink-0"
+              onClick={() => navigate(`/meetings/${m.id}`, { state: { from: '/' } })}
+            >
+              事前ブリーフを開く ❯
+            </Button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** 「今日」（ホーム）。やる・待ち・済みの3タブを1画面に集約した作業場。 */
 export function Ledger() {
   const { actions } = useStore();
@@ -424,6 +477,9 @@ export function Ledger() {
           {TAB_DESCRIPTIONS[tab]}
         </div>
       )}
+
+      {/* まもなく開始する会議（カレンダー連動 → 事前ブリーフ） */}
+      <UpcomingMeetingBanner />
 
       {/* タブ: やる（自分が動かす）/ 待ち（他人待ち）/ 済み（ログ） */}
       <div
