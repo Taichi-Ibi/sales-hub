@@ -2,13 +2,78 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store/StoreContext';
 import { elapsedSince } from '../lib/time';
+import type { MaskedEntity } from '../types';
 import { MASK_TYPE_MAP } from '../lib/maskTypes';
 import { CategoryTag, RiskBadge } from '../components/Badge';
 import { ContextDrilldown } from '../components/Drilldown';
 import { Button } from '../components/Button';
-import { DraftEditor } from '../components/DraftEditor';
 import { MaskingPanel } from '../components/MaskingPanel';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+
+type DraftSegment = { type: 'plain'; text: string } | { type: 'token'; original: string; value: string; maskType: string };
+
+function parseDecryptedDraft(draft: string, entities: MaskedEntity[]): DraftSegment[] {
+  const map = new Map(entities.map((e) => [e.token, { value: e.decryptedValue, maskType: e.type }]));
+  const segments: DraftSegment[] = [];
+  const regex = /〔[^〕]+〕/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(draft)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: 'plain', text: draft.slice(lastIndex, match.index) });
+    }
+    const entry = map.get(match[0]);
+    segments.push({ type: 'token', original: match[0], value: entry?.value ?? match[0], maskType: entry?.maskType ?? '' });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < draft.length) {
+    segments.push({ type: 'plain', text: draft.slice(lastIndex) });
+  }
+  return segments;
+}
+
+function DecryptedDraft({ draft, entities }: { draft: string; entities: MaskedEntity[] }) {
+  const [copied, setCopied] = useState(false);
+  const segments = parseDecryptedDraft(draft, entities);
+  const plainText = segments.map((s) => (s.type === 'plain' ? s.text : s.value)).join('');
+
+  function copy() {
+    navigator.clipboard.writeText(plainText).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-ink">◆ 下書き（復元済み）</h2>
+        <button
+          onClick={copy}
+          className="flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+          aria-label="下書きをコピー"
+        >
+          {copied ? '✔ コピーしました' : '📋 コピー'}
+        </button>
+      </div>
+      <div className="whitespace-pre-wrap rounded-lg border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink">
+        {segments.map((seg, i) =>
+          seg.type === 'plain' ? (
+            <span key={i}>{seg.text}</span>
+          ) : (
+            <span
+              key={i}
+              className={`rounded px-0.5 font-medium ${MASK_TYPE_MAP[seg.maskType as keyof typeof MASK_TYPE_MAP]?.chipClass ?? 'bg-accent-soft text-accent'}`}
+              title={seg.original}
+            >
+              {seg.value}
+            </span>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
 
 /** 戻り先ラベル。台帳はタブ（?tab=…）ごと、Inbox はそのまま。 */
 function backLabel(from: string): string {
@@ -29,8 +94,6 @@ export function ActionDetail() {
 
   const [maskOpen, setMaskOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [maskVersion, setMaskVersion] = useState(0);
-
   // 初回に開いたら「対応中」に進める（§7 S2 状態バリエーション）。
   useEffect(() => {
     if (action?.status === '未確認') store.markInProgress(action.id);
@@ -51,8 +114,6 @@ export function ActionDetail() {
   }
 
   const { label: elapsedLabel } = elapsedSince(action.createdAt);
-  const isLedger = action.status === '未確認' || action.status === '対応中';
-  const isReadOnly = !isLedger;
   const hasSuspect = action.suspectedUnmasked.length > 0;
 
   const Footer = () => {
@@ -134,22 +195,29 @@ export function ActionDetail() {
         {backLabel(from)}
       </button>
 
-      <div className="overflow-hidden rounded-xl border border-line bg-white">
+      <div className="overflow-hidden bg-white">
         {/* ヘッダー */}
         <div className="border-b border-line p-4 sm:p-5">
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-ink-sub">
-            <CategoryTag category={action.category} />
-            <RiskBadge risk={action.risk} />
-            <span className="inline-flex items-center gap-1 tabular-nums">
-              <span aria-hidden>⏱</span>
-              {elapsedLabel}
-            </span>
-            <span aria-hidden>・</span>
-            <span>状態:{action.status}</span>
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 shrink-0 text-xl" aria-hidden>📋</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold text-ink">
+                  {action.counterparty} {action.title}
+                </h1>
+                <CategoryTag category={action.category} />
+                <RiskBadge risk={action.risk} />
+              </div>
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-ink-sub">
+                <span className="inline-flex items-center gap-1 tabular-nums">
+                  <span aria-hidden>⏱</span>
+                  {elapsedLabel}
+                </span>
+                <span aria-hidden>·</span>
+                <span>{action.status}</span>
+              </p>
+            </div>
           </div>
-          <h1 className="text-xl font-semibold text-ink">
-            {action.counterparty} {action.title}
-          </h1>
         </div>
 
         <div className="flex flex-col gap-6 p-4 sm:p-5">
@@ -178,59 +246,27 @@ export function ActionDetail() {
               詳細→詳細の遷移でも開閉状態を持ち越さないよう案件IDでリセット。 */}
           <ContextDrilldown key={action.id} action={action} />
 
-          {/* 下書き */}
+          {/* 下書き（復元済みプレビュー + コピー） */}
           <section>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ink">◆ 下書き（編集可）</h2>
-              <Button variant="link" onClick={() => setMaskOpen(true)}>
-                伏せ字を確認・復元
-              </Button>
-            </div>
-            <DraftEditor
-              draft={action.draft}
-              version={maskVersion}
-              entities={action.maskedEntities}
-              readOnly={isReadOnly}
-              onCommit={(text) => store.updateDraft(action.id, text)}
-              onChipClick={() => setMaskOpen(true)}
-            />
+            <DecryptedDraft draft={action.draft} entities={action.maskedEntities} />
           </section>
 
-          {/* マスキング状況 */}
-          <section>
-            <h2 className="mb-2 text-sm font-semibold text-ink">◆ マスキング状況</h2>
-            <div className="flex flex-wrap gap-2 text-sm">
-              {action.maskedEntities.length === 0 ? (
-                <span className="text-sm text-ink-sub">伏せ字はありません。</span>
-              ) : (
-                action.maskedEntities.map((e) => (
-                  <span
-                    key={e.token}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${MASK_TYPE_MAP[e.type].chipClass}`}
-                  >
-                    <span aria-hidden>{MASK_TYPE_MAP[e.type].icon}</span>
-                    {e.token}
-                    <span className="opacity-70">・{e.occurrences}回</span>
-                  </span>
-                ))
-              )}
+          {/* 未マスクの疑いがある場合のみ警告を表示 */}
+          {hasSuspect && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-sm text-warn">
+              <span aria-hidden>⚠</span>
+              <span>
+                未マスクの疑い：「{action.suspectedUnmasked.join('」「')}
+                」が下書きに含まれています
+              </span>
+              <button
+                onClick={() => setMaskOpen(true)}
+                className="ml-auto font-medium text-accent hover:underline"
+              >
+                確認する
+              </button>
             </div>
-            {hasSuspect ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-sm text-warn">
-                <span aria-hidden>⚠</span>
-                <span>
-                  未マスクの疑い：「{action.suspectedUnmasked.join('」「')}
-                  」が下書きに含まれています
-                </span>
-                <button
-                  onClick={() => setMaskOpen(true)}
-                  className="ml-auto font-medium text-accent hover:underline"
-                >
-                  確認する
-                </button>
-              </div>
-            ) : null}
-          </section>
+          )}
         </div>
 
         {/* フッターアクション */}
@@ -243,14 +279,8 @@ export function ActionDetail() {
         <MaskingPanel
           action={action}
           onClose={() => setMaskOpen(false)}
-          onUnmask={(token) => {
-            store.unmask(action.id, token);
-            setMaskVersion((v) => v + 1);
-          }}
-          onIgnore={(text) => {
-            store.ignoreSuspected(action.id, text);
-            setMaskVersion((v) => v + 1);
-          }}
+          onUnmask={(token) => store.unmask(action.id, token)}
+          onIgnore={(text) => store.ignoreSuspected(action.id, text)}
         />
       )}
 

@@ -170,10 +170,6 @@ function TodoTab() {
 
   return (
     <>
-      <p className="mb-4 text-sm text-ink-sub">
-        今日・明日までに対応すべきことから。それ以降は下に格納しています。
-      </p>
-
       {/* フィルタ/ソートバー */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Select
@@ -302,9 +298,6 @@ function WaitingTab() {
 
   return (
     <>
-      <p className="mb-4 text-sm text-ink-sub">
-        FSへ承認を依頼した案件。承認されるとここから送信できます。
-      </p>
       {list.length === 0 ? (
         <div className="grid place-items-center rounded-lg border border-line bg-surface py-20 text-center">
           <p className="text-lg font-semibold text-ink">依頼中の案件はありません</p>
@@ -406,10 +399,17 @@ function DoneTab() {
   );
 }
 
+const TAB_DESCRIPTIONS: Record<TabKey, string> = {
+  todo: '今日・明日までに対応すべきことから。それ以降は下に格納しています。',
+  waiting: 'FSへ承認を依頼した案件。承認されるとここから送信できます。',
+  done: '送信済みと棄却のアクション履歴です。',
+};
+
 /** アクション台帳（S1）。要対応・依頼中・完了の3タブを1画面に集約した作業場。 */
 export function Ledger() {
-  const { actions, ledgerMode, setLedgerMode } = useStore();
+  const { actions } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [showInfo, setShowInfo] = useState(false);
   const tabParam = searchParams.get('tab');
   const tab: TabKey = tabParam === 'waiting' || tabParam === 'done' ? tabParam : 'todo';
 
@@ -425,28 +425,28 @@ export function Ledger() {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="text-xl font-semibold text-ink">Action Hub</h1>
-        {/* デモ用: 表示状態の切替（§13 で許可）。要対応タブのみ対象。 */}
-        {tab === 'todo' && (
-          <div className="ml-auto flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5 text-xs">
-            {(['normal', 'empty', 'loading'] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setLedgerMode(m)}
-                className={`rounded-md px-2 py-1 ${ledgerMode === m ? 'bg-white font-medium text-ink shadow-sm' : 'text-ink-sub'}`}
-              >
-                {m === 'normal' ? '通常' : m === 'empty' ? '空' : '読込中'}
-              </button>
-            ))}
-          </div>
-        )}
+        <h1 className="text-xl font-semibold text-ink">タスク</h1>
+        <button
+          onClick={() => setShowInfo((v) => !v)}
+          aria-expanded={showInfo}
+          aria-label="このページの説明"
+          className="flex h-5 w-5 items-center justify-center rounded-full border border-line bg-surface text-xs text-ink-sub hover:bg-line"
+        >
+          i
+        </button>
       </div>
+
+      {showInfo && (
+        <div className="mb-3 rounded-lg border border-line bg-accent-soft px-4 py-3 text-sm text-ink">
+          {TAB_DESCRIPTIONS[tab]}
+        </div>
+      )}
 
       {/* タブ: 要対応（自分が動かす）/ 依頼中（他人待ち）/ 完了（ログ） */}
       <div
         role="tablist"
         aria-label="台帳の表示切替"
-        className="mb-4 flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5 text-sm"
+        className="mb-4 flex items-center gap-3 overflow-x-auto text-sm"
       >
         {TABS.map((t) => {
           const active = tab === t.key;
@@ -455,17 +455,13 @@ export function Ledger() {
               key={t.key}
               role="tab"
               aria-selected={active}
-              onClick={() => setSearchParams(t.key === 'todo' ? {} : { tab: t.key }, { replace: true })}
-              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 sm:flex-none ${
-                active ? 'bg-white font-medium text-ink shadow-sm' : 'text-ink-sub'
+              onClick={() => { setSearchParams(t.key === 'todo' ? {} : { tab: t.key }, { replace: true }); setShowInfo(false); }}
+              className={`flex items-center gap-1.5 whitespace-nowrap transition-colors ${
+                active ? 'font-medium text-ink' : 'text-ink-sub hover:text-ink'
               }`}
             >
               {t.label}
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
-                  active ? 'bg-surface text-ink-sub' : 'bg-white text-ink-sub'
-                }`}
-              >
+              <span className="rounded-full bg-surface px-1.5 py-0.5 text-xs font-semibold tabular-nums text-ink-sub">
                 {counts[t.key]}
               </span>
             </button>

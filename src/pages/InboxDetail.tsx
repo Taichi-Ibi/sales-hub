@@ -430,7 +430,7 @@ export function InboxDetail() {
           {item.tokens && !done && (
             <section>
               <div className="mb-1.5 flex items-center gap-2">
-                <h2 className="text-sm font-medium text-ink">案件名</h2>
+                <h2 className="text-sm font-medium text-ink">プロジェクト</h2>
               </div>
               {item.aiReady ? (
                 <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink">
@@ -489,7 +489,7 @@ export function InboxDetail() {
               </Button>
             </div>
           ) : (
-            <p className="text-xs text-ink-sub">分かち書きの完了をお待ちください…</p>
+            <p className="text-xs text-ink-sub">読み込み中…</p>
           )}
         </div>
       </div>
@@ -497,9 +497,9 @@ export function InboxDetail() {
         open={showAiReadyConfirm}
         title={
           !item.counterparty && item.masks.length === 0
-            ? '案件名とマスキングが未設定ですが、AI Ready にしますか？'
+            ? 'プロジェクトとマスキングが未設定ですが、AI Ready にしますか？'
             : !item.counterparty
-              ? '案件名が未設定ですが、AI Ready にしますか？'
+              ? 'プロジェクトが未設定ですが、AI Ready にしますか？'
               : 'マスキングがありませんが、AI Ready にしますか？'
         }
         confirmLabel="AI Ready にする"
