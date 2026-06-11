@@ -65,8 +65,8 @@ export function Shell() {
       <header className="flex h-14 shrink-0 items-center gap-3 bg-nav-bar px-4 text-white sm:gap-4 sm:px-5">
         <Link to="/" className="flex items-center gap-2 font-semibold hover:opacity-80">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true" className="shrink-0">
-            <rect width="28" height="28" rx="4" fill="#ffd742"/>
-            <path d="M17 5 L8 17 L13 17 L10 23 L20 11 L15 11 Z" fill="#074194"/>
+            <rect width="28" height="28" rx="4" fill="var(--color-gold)"/>
+            <path d="M17 5 L8 17 L13 17 L10 23 L20 11 L15 11 Z" fill="var(--color-accent)"/>
           </svg>
           <span className="hidden sm:inline">Sales Hub</span>
         </Link>

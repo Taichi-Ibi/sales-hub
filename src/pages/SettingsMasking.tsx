@@ -7,11 +7,12 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const MASK_TYPES: MaskType[] = ['氏名', '会社', '連絡先'];
 
+// 伏せ字は単一の意味（機密）なので配色も統一する（種別はラベルで判別）。
 const MASK_TYPE_STYLE: Record<MaskType, string> = {
   氏名: 'bg-accent-soft text-accent',
-  会社: 'bg-amber-50 text-amber-700',
-  連絡先: 'bg-green-50 text-green-700',
-  契約番号: 'bg-purple-50 text-purple-700',
+  会社: 'bg-accent-soft text-accent',
+  連絡先: 'bg-accent-soft text-accent',
+  契約番号: 'bg-accent-soft text-accent',
 };
 
 interface SensitiveWord {

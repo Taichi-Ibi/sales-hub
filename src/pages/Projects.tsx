@@ -6,12 +6,14 @@ import { elapsedSince } from '../lib/time';
 
 type ProjectFilter = 'すべて' | SalesPhase;
 
+// フェーズはラベル文字で判別する。色は受注（成功=good）だけ意味を持たせ、
+// 他はニュートラルに統一（パイプライン色の虹色化を避ける）。
 const PHASE_STYLE: Record<SalesPhase, string> = {
   リード: 'bg-surface text-ink-sub',
-  商談: 'bg-blue-50 text-blue-700',
-  提案: 'bg-amber-50 text-amber-700',
-  契約: 'bg-purple-50 text-purple-700',
-  受注: 'bg-green-50 text-green-700',
+  商談: 'bg-surface text-ink-sub',
+  提案: 'bg-surface text-ink-sub',
+  契約: 'bg-surface text-ink-sub',
+  受注: 'bg-good/10 text-good',
 };
 
 const FILTERS: { value: ProjectFilter; label: string }[] = [
@@ -31,7 +33,7 @@ function ProjectRow({ page }: { page: WikiPage }) {
   return (
     <button
       onClick={() => navigate(`/projects/${page.id}`)}
-      className={`flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition-all hover:bg-surface ${done ? 'bg-white opacity-60' : alertCount > 0 ? 'bg-amber-50' : 'bg-white'}`}
+      className={`flex w-full items-center gap-3 rounded-lg border border-line px-4 py-3 text-left transition-all hover:bg-surface ${done ? 'bg-white opacity-60' : alertCount > 0 ? 'bg-warn/10' : 'bg-white'}`}
       aria-label={`${page.counterparty} のページを開く`}
     >
       {/* 左: 社名 */}

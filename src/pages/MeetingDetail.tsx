@@ -163,9 +163,9 @@ function PreMeetingBrief({ item }: { item: InboxItem }) {
             {page.alerts.length > 0 && (
               <section>
                 <h2 className="mb-2 text-sm font-semibold text-ink">◆ リスク</h2>
-                <ul className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <ul className="space-y-1.5 rounded-lg border border-warn/30 bg-warn/10 px-4 py-3">
                   {page.alerts.map((alert, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-sm font-medium text-amber-800">
+                    <li key={i} className="flex items-start gap-1.5 text-sm font-medium text-warn">
                       <span aria-hidden className="shrink-0">⚠️</span>
                       <span>
                         {alert.text}
@@ -370,8 +370,8 @@ export function MeetingDetail() {
 
       {/* 議事録が目視確認待ちの間は、確認導線を最優先に出す（内容はゲート通過後のみ） */}
       {reviewing && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="flex items-start gap-2 text-sm font-medium text-amber-800">
+        <div className="mb-4 rounded-lg border border-warn/30 bg-warn/10 px-4 py-3">
+          <p className="flex items-start gap-2 text-sm font-medium text-warn">
             <span aria-hidden className="shrink-0">📬</span>
             議事録が届いています。目視確認が完了するまで、議事録の内容とフォローアップは表示されません（機密がないことを保証できるのは人間のみ）。
           </p>

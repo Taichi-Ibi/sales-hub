@@ -197,11 +197,11 @@ export function ProjectDetail() {
           {/* 直近の状況（全記述に出典） */}
           <section>
             <h2 className="mb-2 text-sm font-semibold text-ink">◆ 直近の状況</h2>
-            <div className={`rounded-lg border px-4 py-3 ${page.alerts.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-line bg-surface'}`}>
+            <div className={`rounded-lg border px-4 py-3 ${page.alerts.length > 0 ? 'border-warn/30 bg-warn/10' : 'border-line bg-surface'}`}>
               {page.alerts.length > 0 && (
                 <ul className="mb-3 space-y-1.5">
                   {page.alerts.map((alert, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-sm font-medium text-amber-800">
+                    <li key={i} className="flex items-start gap-1.5 text-sm font-medium text-warn">
                       <span aria-hidden className="shrink-0">⚠️</span>
                       <span>
                         {alert.text}

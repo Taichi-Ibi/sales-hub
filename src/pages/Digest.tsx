@@ -15,30 +15,14 @@ const GENERATED_AT_ISO = '2026-06-10T06:00:00';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
-/** OODAセクションの見出し。「今日」の SectionHeader と同型＋英語ラベル。 */
-function OodaHeader({
-  title,
-  en,
-  note,
-  count,
-  dot,
-}: {
-  title: string;
-  en: string;
-  note: string;
-  count: number;
-  dot: string;
-}) {
+/** OODAセクションの見出し（日本語＋英語ラベル＋件数）。 */
+function OodaHeader({ title, en, count }: { title: string; en: string; count: number }) {
   return (
     <div className="mb-2 mt-7 flex flex-wrap items-center gap-2 first:mt-0">
-      <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${dot}`} />
-      <h2 className="text-sm font-bold tracking-wide text-ink">
+      <h2 className="text-sm font-bold text-ink">
         {title} <span className="font-medium text-ink-sub">{en}</span>
       </h2>
-      <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-sub">
-        {count}
-      </span>
-      <span className="text-xs text-ink-sub">{note}</span>
+      <span className="text-xs font-semibold tabular-nums text-ink-sub">{count}</span>
     </div>
   );
 }
@@ -80,14 +64,6 @@ export function Digest() {
         </span>
       </div>
 
-      {/* 生成の建て付け */}
-      <div className="mb-3 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-sub">
-        <span aria-hidden>🤖</span>
-        <span className="font-medium text-ink">毎朝6:00に生成</span>
-        <span aria-hidden>·</span>
-        <span>目視確認済みの原文（Slack・メール・カレンダー）と wiki から。全記述に出典つき</span>
-      </div>
-
       {/* ヘッドライン */}
       <div className="mb-2 rounded-lg border border-line bg-accent-soft px-4 py-3">
         <p className="text-sm font-medium leading-relaxed text-ink">{DAILY_DIGEST.headline}</p>
@@ -95,13 +71,7 @@ export function Digest() {
 
       {/* 観測 Observe */}
       <section>
-        <OodaHeader
-          title="観測"
-          en="Observe"
-          note="昨日からの新しい動き"
-          count={DAILY_DIGEST.observe.length}
-          dot="bg-accent"
-        />
+        <OodaHeader title="観測" en="Observe" count={DAILY_DIGEST.observe.length} />
         <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
           {DAILY_DIGEST.observe.map((o, i) => {
             const meta = SOURCE_META[o.source];
@@ -126,13 +96,13 @@ export function Digest() {
         {newSinceGenerated.length > 0 && (
           <button
             onClick={() => navigate('/inbox')}
-            className="mt-2 flex w-full items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-left text-sm hover:bg-amber-100"
+            className="mt-2 flex w-full items-center gap-2 rounded-lg border border-warn/30 bg-warn/10 px-4 py-2.5 text-left text-sm hover:bg-warn/15"
           >
             <span aria-hidden>🛡️</span>
-            <span className="min-w-0 flex-1 font-medium text-amber-800">
+            <span className="min-w-0 flex-1 font-medium text-warn">
               生成後の新着 — 目視確認待ち {newSinceGenerated.length}件
             </span>
-            <span className="shrink-0 text-xs text-amber-800">
+            <span className="shrink-0 text-xs text-warn">
               確認するとAIが取り込みます（全件目視確認制） ❯
             </span>
           </button>
@@ -141,20 +111,14 @@ export function Digest() {
 
       {/* 状況認識 Orient */}
       <section>
-        <OodaHeader
-          title="状況認識"
-          en="Orient"
-          note="つながりと認識ギャップ"
-          count={DAILY_DIGEST.orient.length}
-          dot="bg-warn"
-        />
+        <OodaHeader title="状況認識" en="Orient" count={DAILY_DIGEST.orient.length} />
         <ul className="flex flex-col gap-2">
           {DAILY_DIGEST.orient.map((o, i) => (
             <li
               key={i}
-              className={`rounded-lg border px-4 py-3 ${o.gap ? 'border-amber-200 bg-amber-50' : 'border-line bg-white'}`}
+              className={`rounded-lg border px-4 py-3 ${o.gap ? 'border-warn/30 bg-warn/10' : 'border-line bg-white'}`}
             >
-              <p className={`text-sm leading-relaxed ${o.gap ? 'font-medium text-amber-800' : 'text-ink'}`}>
+              <p className={`text-sm leading-relaxed ${o.gap ? 'font-medium text-warn' : 'text-ink'}`}>
                 {o.gap && <span aria-hidden className="mr-1.5">⚠️</span>}
                 {o.text}
               </p>
@@ -178,13 +142,7 @@ export function Digest() {
 
       {/* 意思決定 Decide */}
       <section>
-        <OodaHeader
-          title="意思決定"
-          en="Decide"
-          note="判断が必要な論点"
-          count={decideItems.length}
-          dot="bg-purple-500"
-        />
+        <OodaHeader title="意思決定" en="Decide" count={decideItems.length} />
         <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
           {decideItems.map(({ item, decision }) => (
             <li key={item.decisionId}>
@@ -213,13 +171,7 @@ export function Digest() {
 
       {/* 実行 Act */}
       <section>
-        <OodaHeader
-          title="実行"
-          en="Act"
-          note="今日の推奨アクション"
-          count={DAILY_DIGEST.act.length}
-          dot="bg-good"
-        />
+        <OodaHeader title="実行" en="Act" count={DAILY_DIGEST.act.length} />
         <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
           {DAILY_DIGEST.act.map((a, i) => {
             if (a.actionId) {

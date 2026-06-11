@@ -71,26 +71,12 @@ function urgencyCmp(a: Action, b: Action): number {
   return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 }
 
-/** セクション見出し（Slack 風の小見出し＋件数ピル）。 */
-function SectionHeader({
-  title,
-  count,
-  dot,
-  note,
-}: {
-  title: string;
-  count: number;
-  dot: string;
-  note?: string;
-}) {
+/** セクション見出し（小見出し＋件数）。 */
+function SectionHeader({ title, count }: { title: string; count: number }) {
   return (
     <div className="mb-2 mt-6 flex items-center gap-2 first:mt-0">
-      <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${dot}`} />
-      <h2 className="text-sm font-bold tracking-wide text-ink">{title}</h2>
-      <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-sub">
-        {count}
-      </span>
-      {note && <span className="text-xs text-ink-sub">{note}</span>}
+      <h2 className="text-sm font-bold text-ink">{title}</h2>
+      <span className="text-xs font-semibold tabular-nums text-ink-sub">{count}</span>
     </div>
   );
 }
@@ -137,12 +123,12 @@ function TodoTab() {
   const focusCount = groups.today.length + groups.tomorrow.length;
 
   /** フォーカス（今日 / 明日まで）の1セクションを描画。 */
-  const renderFocus = (bucket: 'today' | 'tomorrow', title: string, dot: string) => {
+  const renderFocus = (bucket: 'today' | 'tomorrow', title: string) => {
     const list = groups[bucket];
     if (list.length === 0) return null;
     return (
       <section>
-        <SectionHeader title={title} count={list.length} dot={dot} />
+        <SectionHeader title={title} count={list.length} />
         <div className="flex flex-col gap-2">
           {list.map((a) => (
             <ActionCard key={a.id} action={a} from="/" priority={priorityRank.get(a.id)} />
@@ -210,17 +196,14 @@ function TodoTab() {
       ) : (
         <>
           {/* フォーカス: 今日 / 明日まで */}
-          {renderFocus('today', '今日中', 'bg-danger')}
-          {renderFocus('tomorrow', '明日まで', 'bg-warn')}
+          {renderFocus('today', '今日中')}
+          {renderFocus('tomorrow', '明日まで')}
 
           {/* 今日・明日に対応必須が無いときの達成表示。 */}
           {focusCount === 0 && (
-            <div className="rounded-lg border border-good/30 bg-good/5 px-4 py-6 text-center">
-              <p className="text-base font-semibold text-ink">
-                <span aria-hidden>🎉 </span>今日・明日までの締切はありません
-              </p>
-              <p className="mt-1 text-sm text-ink-sub">差し迫ったタスクはなし。落ち着いて進められます。</p>
-            </div>
+            <p className="rounded-lg border border-line bg-surface px-4 py-5 text-center text-sm text-ink-sub">
+              今日・明日までの締切はありません
+            </p>
           )}
 
           {/* それ以降: 既定はグレーアウトして格納。トグルで展開。 */}
@@ -377,12 +360,6 @@ function DoneTab() {
   );
 }
 
-const TAB_DESCRIPTIONS: Record<TabKey, string> = {
-  todo: 'AIが原文から抽出した「次の一手」。今日・明日までに対応すべきことから並びます。',
-  waiting: 'FSへ承認を依頼したタスク。承認されるとここから送信できます。',
-  done: '送信済みと棄却のタスク履歴です。',
-};
-
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
 /**
@@ -442,7 +419,6 @@ function UpcomingMeetingBanner() {
 export function Ledger() {
   const { actions } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showInfo, setShowInfo] = useState(false);
   const tabParam = searchParams.get('tab');
   const tab: TabKey = tabParam === 'waiting' || tabParam === 'done' ? tabParam : 'todo';
 
@@ -462,21 +438,7 @@ export function Ledger() {
         <span className="text-sm tabular-nums text-ink-sub">
           {NOW.getMonth() + 1}/{NOW.getDate()}（{WEEKDAYS[NOW.getDay()]}）
         </span>
-        <button
-          onClick={() => setShowInfo((v) => !v)}
-          aria-expanded={showInfo}
-          aria-label="このページの説明"
-          className="flex h-5 w-5 items-center justify-center rounded-full border border-line bg-surface text-xs text-ink-sub hover:bg-line"
-        >
-          i
-        </button>
       </div>
-
-      {showInfo && (
-        <div className="mb-3 rounded-lg border border-line bg-accent-soft px-4 py-3 text-sm text-ink">
-          {TAB_DESCRIPTIONS[tab]}
-        </div>
-      )}
 
       {/* まもなく開始する会議（カレンダー連動 → 事前ブリーフ） */}
       <UpcomingMeetingBanner />
@@ -494,7 +456,7 @@ export function Ledger() {
               key={t.key}
               role="tab"
               aria-selected={active}
-              onClick={() => { setSearchParams(t.key === 'todo' ? {} : { tab: t.key }, { replace: true }); setShowInfo(false); }}
+              onClick={() => setSearchParams(t.key === 'todo' ? {} : { tab: t.key }, { replace: true })}
               className={`flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                 active ? 'font-medium text-ink' : 'text-ink-sub hover:text-ink'
               }`}

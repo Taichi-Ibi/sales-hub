@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { InboxItem, InboxSource } from '../types';
 import { useStore } from '../store/StoreContext';
 import { SOURCE_META } from '../data/inbox';
-import { elapsedSince, nextHourlyRun, NOW } from '../lib/time';
+import { elapsedSince, NOW } from '../lib/time';
 
 const SWIPE_CANCEL_WIDTH = 96;
 const SWIPE_CANCEL_THRESHOLD = 60;
@@ -92,7 +92,7 @@ function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => voi
         <button
           onClick={() => navigate(`/inbox/${item.id}`)}
           className={`flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-all hover:brightness-95 ${
-            hasWarning ? 'border-warn/40 bg-amber-50' : 'border-line bg-white'
+            hasWarning ? 'border-warn/40 bg-warn/10' : 'border-line bg-white'
           }`}
           aria-label={`${meta.label} ${item.title} をレビューする`}
         >
@@ -112,7 +112,7 @@ function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => voi
               )}
             </p>
             {(item.attention ?? []).map((r, i) => (
-              <p key={i} className="mt-1 flex items-start gap-1 text-xs font-medium text-amber-800">
+              <p key={i} className="mt-1 flex items-start gap-1 text-xs font-medium text-warn">
                 <span aria-hidden className="shrink-0">⚠</span>
                 <span>{r}</span>
               </p>
@@ -152,7 +152,7 @@ function WaitingRow({ item }: { item: InboxItem }) {
       onClick={() => navigate(`/inbox/${item.id}`)}
       className={`flex w-full items-center gap-2 rounded-lg border px-4 py-2 text-left transition-all ${
         current
-          ? 'border-emerald-200 bg-emerald-50 hover:brightness-95'
+          ? 'border-good/30 bg-good/10 hover:brightness-95'
           : 'border-line/50 bg-surface/50 opacity-70 hover:opacity-100'
       }`}
       aria-label={`${meta.label} ${item.title} を開く`}
@@ -207,14 +207,12 @@ function ProcessedRow({ item, actionButton }: { item: InboxItem; actionButton?: 
   );
 }
 
-/** セクション見出し。 */
-function SectionHeader({ title, count, dot, note }: { title: string; count: number; dot: string; note?: string }) {
+/** セクション見出し（小見出し＋件数）。 */
+function SectionHeader({ title, count }: { title: string; count: number }) {
   return (
     <div className="mb-2 mt-6 flex items-center gap-2 first:mt-0">
-      <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${dot}`} />
-      <h2 className="text-sm font-bold tracking-wide text-ink">{title}</h2>
-      <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-sub">{count}</span>
-      {note && <span className="hidden text-xs text-ink-sub sm:inline">{note}</span>}
+      <h2 className="text-sm font-bold text-ink">{title}</h2>
+      <span className="text-xs font-semibold tabular-nums text-ink-sub">{count}</span>
     </div>
   );
 }
@@ -229,9 +227,6 @@ export function Inbox() {
   const [filter, setFilter] = useState<Filter>('すべて');
   const [showProcessed, setShowProcessed] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
-
-  const { timeLabel: nextRunTime, minutesUntil } = nextHourlyRun(new Date(NOW));
 
   const { reviewItems, waitingItems, processedItems, archivedItems } = useMemo(() => {
     const filtered = inboxItems.filter((i) => filter === 'すべて' || i.source === filter);
@@ -249,43 +244,16 @@ export function Inbox() {
     };
   }, [inboxItems, filter]);
 
-  const processedToday = processedItems.length;
-
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
-        <h1 className="text-xl font-semibold text-ink">受信箱</h1>
-        <div className="relative">
-          <button
-            onClick={() => setShowInfo((v) => !v)}
-            className="grid size-5 place-items-center rounded-full border border-line text-xs font-medium text-ink-sub transition-colors hover:border-accent/60 hover:text-accent"
-            aria-label="受信箱の説明を表示"
-            aria-expanded={showInfo}
-          >
-            i
-          </button>
-          {showInfo && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowInfo(false)} aria-hidden />
-              <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-line bg-white p-3 shadow-md">
-                <p className="text-sm text-ink-sub">
-                  機密情報がないことを保証できるのは人だけです。ロジックが自動マスク・案件判定まで下ごしらえしたうえで、全件、人が目視確認してからAIに渡します。
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      <h1 className="mb-3 text-xl font-semibold text-ink">受信箱</h1>
 
-      {/* 目視ゲートの状態。自動マスクは補助、通過判定は常に人 */}
+      {/* 目視ゲートの原則。機密がないことを保証できるのは人だけ（自動マスクは補助） */}
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-sub">
         <span aria-hidden>🛡️</span>
         <span className="font-medium text-ink">全件 目視確認制</span>
         <span aria-hidden>·</span>
         <span>未確認のデータはAIに渡りません</span>
-        <span aria-hidden>·</span>
-        <span>今日 {processedToday}件確認済み</span>
-        <span className="ml-auto hidden tabular-nums sm:inline">次回解析バッチ {nextRunTime}（あと{minutesUntil}分）</span>
       </div>
 
       <div className="mb-3 flex items-center gap-3 overflow-x-auto text-sm">
@@ -303,7 +271,7 @@ export function Inbox() {
       {/* 目視確認待ち: 全件、人が確認してからAIに渡る */}
       {reviewItems.length > 0 ? (
         <section>
-          <SectionHeader title="目視確認待ち" count={reviewItems.length} dot="bg-warn" note="確認するとAIに渡せます" />
+          <SectionHeader title="目視確認待ち" count={reviewItems.length} />
           <div className="flex flex-col gap-2">
             {reviewItems.map((i) => (
               <ReviewCard key={i.id} item={i} onArchive={() => archiveInboxItem(i.id)} />
@@ -311,18 +279,15 @@ export function Inbox() {
           </div>
         </section>
       ) : (
-        <div className="rounded-lg border border-good/30 bg-good/5 px-4 py-5 text-center">
-          <p className="text-base font-semibold text-ink">
-            <span aria-hidden>🎉 </span>目視確認待ちはありません
-          </p>
-          <p className="mt-1 text-sm text-ink-sub">受信したデータはすべて確認済みです</p>
-        </div>
+        <p className="rounded-lg border border-line bg-surface px-4 py-5 text-center text-sm text-ink-sub">
+          目視確認待ちはありません
+        </p>
       )}
 
       {/* 待機中: 予定・会議。終了後に議事録がゲートに入る */}
       {waitingItems.length > 0 && (
         <section>
-          <SectionHeader title="予定（カレンダー）" count={waitingItems.length} dot="bg-accent" note="終了後に議事録がゲートに入ります" />
+          <SectionHeader title="予定（カレンダー）" count={waitingItems.length} />
           <div className="flex flex-col gap-1">
             {waitingItems.map((i) => (
               <WaitingRow key={i.id} item={i} />

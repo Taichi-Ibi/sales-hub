@@ -43,8 +43,8 @@ export function SourceChip({ source }: { source: SourceRef }) {
 export const UPDATE_KIND_META: Record<WikiUpdate['kind'], { icon: string; cls: string }> = {
   取込: { icon: '📥', cls: 'bg-accent-soft text-accent' },
   定期更新: { icon: '🔄', cls: 'bg-surface text-ink-sub' },
-  整合性チェック: { icon: '🩺', cls: 'bg-[#ecfdf5] text-[#047857]' },
-  意思決定: { icon: '⚖️', cls: 'bg-purple-50 text-purple-700' },
+  整合性チェック: { icon: '🩺', cls: 'bg-good/10 text-good' },
+  意思決定: { icon: '⚖️', cls: 'bg-accent-soft text-accent' },
 };
 
 /** 更新履歴のタイムライン。AIがこのページを維持していることを可視化する。 */
