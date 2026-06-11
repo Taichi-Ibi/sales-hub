@@ -252,9 +252,9 @@ function DealButton({ deal, selected, onSelect }: { deal: Deal; selected: boolea
 
 /**
  * 受信箱の詳細。状態によって役割が変わる:
- *   レビュー待ち : AI送信前レビュー（マスク補正・案件選択）→「承認してAIに渡す」
- *   処理済み     : 承認→AI解析の記録の確認（読み取り専用）
- *   待機中       : 予定の確認（イベント終了後、議事録がレビュー待ちに入る）
+ *   要確認   : 目視確認（マスク補正・案件選択）→「確認してAIに渡す」
+ *   処理済み : 目視確認→AI解析の記録の確認（読み取り専用・監査ログ）
+ *   待機中   : 予定の確認（イベント終了後、議事録がゲートに入る）
  */
 export function InboxDetail() {
   const { id = '' } = useParams();
@@ -282,10 +282,9 @@ export function InboxDetail() {
 
   const meta = SOURCE_META[item.source];
   const { label: elapsed } = elapsedSince(item.receivedAt);
-  const reviewing = item.status === 'レビュー待ち';
+  const reviewing = item.status === '要確認';
   const processed = item.status === '処理済み';
   const waiting = item.status === '待機中';
-  const autoMaskCount = item.masks.filter((m) => m.auto).length;
   // 未マスクの疑い（knownSensitive のうちまだマスクされていない語）が残っているか。
   const unresolvedSensitive = item.distilled.knownSensitive.filter(
     (s) => item.body.includes(s) && !item.masks.some((m) => m.text === s),
@@ -310,12 +309,12 @@ export function InboxDetail() {
                 <h1 className="text-xl font-semibold text-ink">{item.title}</h1>
                 {reviewing && (
                   <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                    🔒 AI送信前レビュー
+                    🛡️ 目視確認待ち
                   </span>
                 )}
                 {processed && (
                   <span className="inline-flex items-center gap-1 rounded-md bg-good/10 px-2 py-0.5 text-xs font-medium text-good">
-                    ✔ 承認・処理済み
+                    ✔ 確認・処理済み
                   </span>
                 )}
                 {reviewing && (
@@ -370,11 +369,11 @@ export function InboxDetail() {
         </div>
 
         <div className="flex flex-col gap-5 p-4 sm:p-5">
-          {/* レビュー待ち: ルールが検出した警告（承認前の確認ポイント） */}
+          {/* 要確認: ロジックの警告 or 確認の案内 */}
           {reviewing && (
             (item.attention ?? []).length > 0 ? (
               <div className="rounded-lg border border-warn/40 bg-amber-50 px-4 py-3">
-                <p className="mb-1 text-xs font-semibold text-amber-800">承認前の確認ポイント</p>
+                <p className="mb-1 text-xs font-semibold text-amber-800">目視確認のポイント</p>
                 <ul className="space-y-1">
                   {(item.attention ?? []).map((r, i) => (
                     <li key={i} className="flex items-start gap-1.5 text-sm text-amber-800">
@@ -387,31 +386,33 @@ export function InboxDetail() {
             ) : (
               <div className="flex items-start gap-2 rounded-lg border border-good/30 bg-good/5 px-4 py-3 text-sm text-ink">
                 <span aria-hidden className="shrink-0">✓</span>
-                <p>前処理（自動マスク {autoMaskCount}件・案件判定）に問題は見つかりませんでした。内容を確認して承認してください。</p>
+                <p>
+                  自動マスク {item.masks.length}件・案件判定済み。機密情報が残っていないか目視で確認し、問題なければAIに渡してください。
+                </p>
               </div>
             )
           )}
 
-          {/* 処理済み: 承認→AI解析の記録（HITLの監査ログ） */}
+          {/* 処理済み: 目視確認→AI解析の記録（監査ログ） */}
           {processed && (
             <div className="flex items-start gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-sm text-ink">
-              <span aria-hidden className="shrink-0">🔒</span>
+              <span aria-hidden className="shrink-0">🛡️</span>
               <div className="min-w-0 flex-1">
                 <p>
                   {item.processedAt && <span className="tabular-nums">{formatDateTime(item.processedAt)} </span>}
-                  に <span className="font-medium">{item.approvedBy ?? '担当者'}</span> が承認 → AI解析
-                  （自動マスク {autoMaskCount}件 →{' '}
-                  {item.resultActionId ? 'タスク生成' : item.analysisNote ?? 'タスクなし'}）。
+                  <span className="font-medium">{item.verifiedBy ?? '担当者'}</span> が目視確認
+                  （マスク {item.masks.length}件）→ AI解析 →{' '}
+                  {item.resultActionId ? 'タスク生成' : item.analysisNote ?? 'タスクなし'}。
                 </p>
               </div>
             </div>
           )}
 
-          {/* 待機中: イベント終了後にレビュー待ちへ */}
+          {/* 待機中: イベント終了後にゲートへ */}
           {waiting && (
             <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-ink">
               <span aria-hidden className="shrink-0">⏳</span>
-              <p>この予定はイベント終了後、議事録・メモがレビュー待ちに入ります。承認するとAIが解析します。</p>
+              <p>この予定はイベント終了後、議事録・メモが目視確認待ちに入ります。確認するとAIが解析します。</p>
             </div>
           )}
 
@@ -491,7 +492,7 @@ export function InboxDetail() {
           {processed ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-good">
-                {item.resultActionId ? '✔ 承認・タスク化済み — 「今日」に追加されています' : `✔ 承認・解析済み — ${item.analysisNote ?? 'タスクなし'}`}
+                {item.resultActionId ? '✔ タスク化済み — 「今日」に追加されています' : `✔ 解析済み — ${item.analysisNote ?? 'タスクなし'}`}
               </span>
               {item.resultActionId && (
                 <Button
@@ -528,17 +529,17 @@ export function InboxDetail() {
                     解析中…
                   </span>
                 ) : (
-                  '承認してAIに渡す ▶'
+                  '確認してAIに渡す ▶'
                 )}
               </Button>
             </div>
           ) : waiting ? (
-            <p className="text-xs text-ink-sub">イベント終了後にレビュー待ちへ入ります。今は操作不要です。</p>
+            <p className="text-xs text-ink-sub">イベント終了後に目視確認待ちへ入ります。今は操作不要です。</p>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-ink-sub">アーカイブ済み（AIに渡していません）</span>
               <Button variant="secondary" className="ml-auto" onClick={() => store.unarchiveInboxItem(item.id)}>
-                レビューに戻す
+                要確認に戻す
               </Button>
             </div>
           )}
@@ -548,10 +549,10 @@ export function InboxDetail() {
         open={showHandOffConfirm}
         title={
           !item.counterparty
-            ? 'プロジェクトが未選択ですが、承認してAIに渡しますか？'
-            : `未マスクの疑い（「${unresolvedSensitive.join('」「')}」）が残っていますが、承認してAIに渡しますか？`
+            ? 'プロジェクトが未選択ですが、確認済みとしてAIに渡しますか？'
+            : `未マスクの疑い（「${unresolvedSensitive.join('」「')}」）が残っています。マスクせずにAIに渡しますか？`
         }
-        confirmLabel="承認してAIに渡す"
+        confirmLabel="このままAIに渡す"
         onConfirm={() => { store.handOffToAi(item.id); setShowHandOffConfirm(false); }}
         onCancel={() => setShowHandOffConfirm(false)}
       />

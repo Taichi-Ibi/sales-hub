@@ -31,13 +31,13 @@ interface NavItem {
 export function Shell() {
   const { actions, inboxItems } = useStore();
   const location = useLocation();
-  // 受信箱バッジ = AI送信前レビュー（人の承認待ち）件数。処理済みは数えない。
-  const reviewCount = inboxItems.filter((i) => i.status === 'レビュー待ち').length;
+  // 受信箱バッジ = 目視確認待ち（要確認）件数。確認済みは数えない。
+  const reviewCount = inboxItems.filter((i) => i.status === '要確認').length;
   const todayCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
   const projectAlertCount = WIKI_PAGES.reduce((sum, p) => sum + p.alerts.length, 0);
 
   // New Version の構成: 今日（日次ビュー・ホーム）→ 案件（AIが維持する wiki）
-  // → 受信箱（AI送信前レビュー / HITL）→ 設定（スキーマ層）。
+  // → 受信箱（マスキング目視ゲート: 全件人が確認）→ 設定（スキーマ層）。
   const items: NavItem[] = [
     { to: '/', end: true, icon: '📋', label: '今日', count: todayCount },
     { to: '/projects', icon: '📚', label: '案件', count: projectAlertCount > 0 ? projectAlertCount : undefined },

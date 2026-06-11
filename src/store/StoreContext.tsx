@@ -41,15 +41,14 @@ interface StoreValue {
   unmask: (id: string, token: string) => void; // 復元: トークンを元の値に戻す（台帳は復元のみ）
   ignoreSuspected: (id: string, text: string) => void;
   dismissToast: (id: number) => void;
-  // 受信箱（AI送信前レビューキュー）。
-  // ローカル前処理（分かち書き・自動マスク・案件判定）までは自動だが、
-  // AIへの送信は全件、人の承認が必要（HITL）:
-  //   マスク補正 → 案件選択 → 承認してAIに渡す（handOffToAi）
+  // 受信箱（マスキング目視ゲート）。
+  // 機密情報がないことを保証できるのは人間のみ。ロジックの自動マスクは補助で、
+  // すべてのアイテムは人が目視確認・マスク補正・案件選択をしてからAIに渡す（handOffToAi）。
   getInboxItem: (id: string) => InboxItem | undefined;
   maskInboxToken: (id: string, text: string, type: MaskType, atIndex?: number) => void;
   unmaskInboxToken: (id: string, token: string, atIndex: number) => void;
   setInboxCounterparty: (id: string, counterparty: string) => void;
-  handOffToAi: (id: string) => void; // 承認してAIに渡す → 解析（シミュレート）→ 処理済み
+  handOffToAi: (id: string) => void; // 目視確認してAIに渡す → 解析（シミュレート）→ 処理済み
   archiveInboxItem: (id: string) => void; // AIに渡さない
   unarchiveInboxItem: (id: string) => void;
   setInboxMemo: (id: string, memo: string) => void;
@@ -182,7 +181,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patch],
   );
 
-  // ───────── 受信箱（AI送信前レビュー / HITL） ─────────
+  // ───────── 受信箱（マスキング目視ゲート） ─────────
 
   const getInboxItem = useCallback(
     (id: string) => inboxItems.find((i) => i.id === id),
@@ -252,7 +251,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...i,
           status: '処理済み',
           processedAt: NOW_ISO,
-          approvedBy: '山田 内勤',
+          verifiedBy: '山田 内勤',
           analysisNote: 'タスクなし',
           attention: undefined,
         }));
@@ -297,7 +296,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...i,
         status: '処理済み',
         processedAt: NOW_ISO,
-        approvedBy: '山田 内勤',
+        verifiedBy: '山田 内勤',
         resultActionId: actionId,
         attention: undefined,
       }));
@@ -320,7 +319,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patchInbox, addToast],
   );
 
-  // 人の承認: レビュー済みのアイテムをAIに渡す（解析シミュレート 1.5秒）。
+  // 目視確認の完了: 人がマスクを確認したアイテムをAIに渡す（解析シミュレート 1.5秒）。
   const handOffToAi = useCallback(
     (id: string) => {
       const target = inboxItems.find((i) => i.id === id);
@@ -344,7 +343,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const unarchiveInboxItem = useCallback(
     (id: string) => {
-      patchInbox(id, (i) => ({ ...i, status: 'レビュー待ち' }));
+      patchInbox(id, (i) => ({ ...i, status: '要確認' }));
     },
     [patchInbox],
   );

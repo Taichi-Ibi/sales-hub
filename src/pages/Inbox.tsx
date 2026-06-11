@@ -42,7 +42,7 @@ function isCurrentEvent(item: InboxItem): boolean {
   return NOW.getTime() >= start && NOW.getTime() < end;
 }
 
-/** AI送信前レビューのカード。ルールが検出した警告があれば前面に出す。 */
+/** 目視確認待ちカード。ロジックの警告（未マスクの疑い・案件不明）があれば前面に出す。 */
 function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => void }) {
   const navigate = useNavigate();
   const meta = SOURCE_META[item.source];
@@ -119,7 +119,7 @@ function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => voi
             ))}
             {!hasWarning && (
               <p className="mt-1 flex items-center gap-1 text-xs text-good">
-                <span aria-hidden>✓</span>前処理に問題なし — 確認して承認できます
+                <span aria-hidden>✓</span>自動マスク済み — 目視確認してAIに渡せます
               </p>
             )}
           </div>
@@ -220,9 +220,9 @@ function SectionHeader({ title, count, dot, note }: { title: string; count: numb
 }
 
 /**
- * 受信箱（AI送信前レビューキュー / HITL）。
- * ローカル前処理（自動マスク・案件判定）までは自動だが、AIへの送信は
- * 全件、人の承認が必要。ルールが検出した警告はレビューを速くするための補助。
+ * 受信箱（マスキング目視ゲート）。
+ * 機密情報がないことを保証できるのは人間のみ。すべてのアイテムは
+ * 人が目視確認してからAIに渡る。ロジックの自動マスクと警告は目視を速くする補助。
  */
 export function Inbox() {
   const { inboxItems, archiveInboxItem, unarchiveInboxItem } = useStore();
@@ -238,7 +238,7 @@ export function Inbox() {
     const byDate = (a: InboxItem, b: InboxItem) =>
       new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
     return {
-      reviewItems: filtered.filter((i) => i.status === 'レビュー待ち').sort(byDate),
+      reviewItems: filtered.filter((i) => i.status === '要確認').sort(byDate),
       waitingItems: filtered
         .filter((i) => i.status === '待機中')
         .sort((a, b) => new Date(a.eventAt ?? a.receivedAt).getTime() - new Date(b.eventAt ?? b.receivedAt).getTime()),
@@ -269,7 +269,7 @@ export function Inbox() {
               <div className="fixed inset-0 z-10" onClick={() => setShowInfo(false)} aria-hidden />
               <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-line bg-white p-3 shadow-md">
                 <p className="text-sm text-ink-sub">
-                  Slack・メール・予定はローカルで自動マスク・案件判定まで前処理されます。セキュリティポリシーにより、AIへの送信は全件、人の承認（HITL）が必要です。
+                  機密情報がないことを保証できるのは人だけです。ロジックが自動マスク・案件判定まで下ごしらえしたうえで、全件、人が目視確認してからAIに渡します。
                 </p>
               </div>
             </>
@@ -277,15 +277,15 @@ export function Inbox() {
         </div>
       </div>
 
-      {/* HITLゲートの状態。前処理は自動・AI送信は要承認 */}
+      {/* 目視ゲートの状態。自動マスクは補助、通過判定は常に人 */}
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-sub">
-        <span aria-hidden>🔒</span>
-        <span className="font-medium text-ink">AI送信は要承認（HITL）</span>
+        <span aria-hidden>🛡️</span>
+        <span className="font-medium text-ink">全件 目視確認制</span>
         <span aria-hidden>·</span>
-        <span>前処理は自動（ローカル）</span>
+        <span>未確認のデータはAIに渡りません</span>
         <span aria-hidden>·</span>
-        <span>今日 {processedToday}件承認</span>
-        <span className="ml-auto hidden tabular-nums sm:inline">次回バッチ {nextRunTime}（あと{minutesUntil}分）</span>
+        <span>今日 {processedToday}件確認済み</span>
+        <span className="ml-auto hidden tabular-nums sm:inline">次回解析バッチ {nextRunTime}（あと{minutesUntil}分）</span>
       </div>
 
       <div className="mb-3 flex items-center gap-3 overflow-x-auto text-sm">
@@ -300,10 +300,10 @@ export function Inbox() {
         ))}
       </div>
 
-      {/* AI送信前レビュー: 人が確認・承認してはじめてAIに渡る（HITL） */}
+      {/* 目視確認待ち: 全件、人が確認してからAIに渡る */}
       {reviewItems.length > 0 ? (
         <section>
-          <SectionHeader title="AI送信前レビュー" count={reviewItems.length} dot="bg-warn" note="承認するとAIが解析します" />
+          <SectionHeader title="目視確認待ち" count={reviewItems.length} dot="bg-warn" note="確認するとAIに渡せます" />
           <div className="flex flex-col gap-2">
             {reviewItems.map((i) => (
               <ReviewCard key={i.id} item={i} onArchive={() => archiveInboxItem(i.id)} />
@@ -313,16 +313,16 @@ export function Inbox() {
       ) : (
         <div className="rounded-lg border border-good/30 bg-good/5 px-4 py-5 text-center">
           <p className="text-base font-semibold text-ink">
-            <span aria-hidden>🎉 </span>レビュー待ちはありません
+            <span aria-hidden>🎉 </span>目視確認待ちはありません
           </p>
-          <p className="mt-1 text-sm text-ink-sub">受信したデータはすべて承認・処理済みです</p>
+          <p className="mt-1 text-sm text-ink-sub">受信したデータはすべて確認済みです</p>
         </div>
       )}
 
-      {/* 待機中: 予定・会議。終了後に議事録がレビュー待ちに入る */}
+      {/* 待機中: 予定・会議。終了後に議事録がゲートに入る */}
       {waitingItems.length > 0 && (
         <section>
-          <SectionHeader title="予定" count={waitingItems.length} dot="bg-accent" note="終了後に議事録がレビュー待ちに入ります" />
+          <SectionHeader title="予定" count={waitingItems.length} dot="bg-accent" note="終了後に議事録がゲートに入ります" />
           <div className="flex flex-col gap-1">
             {waitingItems.map((i) => (
               <WaitingRow key={i.id} item={i} />
@@ -331,7 +331,7 @@ export function Inbox() {
         </section>
       )}
 
-      {/* 処理ログ（承認→AI解析の記録） */}
+      {/* 処理ログ（ゲート通過→AI解析の記録） */}
       {processedItems.length > 0 && (
         <section>
           <div className="mb-2 mt-6 flex items-center gap-2">
@@ -378,8 +378,8 @@ export function Inbox() {
                     <button
                       onClick={() => unarchiveInboxItem(i.id)}
                       className="flex size-5 items-center justify-center rounded-full bg-surface text-xs text-ink-sub/60 hover:bg-white hover:text-ink"
-                      aria-label={`${i.title} をレビューに戻す`}
-                      title="レビューに戻す"
+                      aria-label={`${i.title} を要確認に戻す`}
+                      title="要確認に戻す"
                     >
                       ↩
                     </button>
