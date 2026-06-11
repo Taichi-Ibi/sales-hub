@@ -308,10 +308,9 @@ export const WIKI_PAGES: WikiPage[] = [
     updates: [
       { at: '6/10 06:05', kind: '整合性チェック', summary: 'アラート1件（資料送付の対応漏れ）' },
       {
-        at: '6/10 08:00',
+        at: '6/10 06:00',
         kind: '定期更新',
-        summary: 'Slack共有（商談リスト）を確認。状況に変更なし',
-        source: { label: 'Slack 6/10 #sales-general 進捗共有', inboxItemId: 'in05' },
+        summary: '先方社内検討会（6/12）前のリマインドを「直近の状況」に反映',
       },
       {
         at: '6/7 15:05',

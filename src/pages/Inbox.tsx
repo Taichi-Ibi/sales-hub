@@ -42,11 +42,12 @@ function isCurrentEvent(item: InboxItem): boolean {
   return NOW.getTime() >= start && NOW.getTime() < end;
 }
 
-/** 要レビューカード。AIが確信を持てなかった理由を前面に出す。 */
+/** AI送信前レビューのカード。ルールが検出した警告があれば前面に出す。 */
 function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => void }) {
   const navigate = useNavigate();
   const meta = SOURCE_META[item.source];
   const { label: elapsed } = elapsedSince(item.receivedAt);
+  const hasWarning = (item.attention ?? []).length > 0;
 
   const touchStartX = useRef(0);
   const [swipeDx, setSwipeDx] = useState(0);
@@ -90,10 +91,12 @@ function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => voi
       >
         <button
           onClick={() => navigate(`/inbox/${item.id}`)}
-          className="flex w-full items-start gap-3 rounded-lg border border-warn/40 bg-amber-50 px-4 py-3 text-left transition-all hover:brightness-95"
+          className={`flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-all hover:brightness-95 ${
+            hasWarning ? 'border-warn/40 bg-amber-50' : 'border-line bg-white'
+          }`}
           aria-label={`${meta.label} ${item.title} をレビューする`}
         >
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-lg" aria-hidden>
+          <span className={`grid size-9 shrink-0 place-items-center rounded-lg text-lg ${hasWarning ? 'bg-white' : 'bg-surface'}`} aria-hidden>
             {meta.icon}
           </span>
           <div className="min-w-0 flex-1">
@@ -108,12 +111,17 @@ function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => voi
                 <><span aria-hidden>·</span><span className="font-semibold text-ink">{item.counterparty}</span></>
               )}
             </p>
-            {(item.exceptionReasons ?? []).map((r, i) => (
+            {(item.attention ?? []).map((r, i) => (
               <p key={i} className="mt-1 flex items-start gap-1 text-xs font-medium text-amber-800">
                 <span aria-hidden className="shrink-0">⚠</span>
                 <span>{r}</span>
               </p>
             ))}
+            {!hasWarning && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-good">
+                <span aria-hidden>✓</span>前処理に問題なし — 確認して承認できます
+              </p>
+            )}
           </div>
           <span className="w-16 shrink-0 self-start text-right tabular-nums text-xs text-ink-sub">
             {elapsed}前
@@ -164,7 +172,7 @@ function WaitingRow({ item }: { item: InboxItem }) {
   );
 }
 
-/** 自動処理ログの1行。マスク数と解析結果（タスク化 / タスクなし）を出す。 */
+/** 処理ログの1行。承認→解析結果（タスク化 / タスクなし）を出す。 */
 function ProcessedRow({ item, actionButton }: { item: InboxItem; actionButton?: React.ReactNode }) {
   const navigate = useNavigate();
   const meta = SOURCE_META[item.source];
@@ -212,9 +220,9 @@ function SectionHeader({ title, count, dot, note }: { title: string; count: numb
 }
 
 /**
- * 受信箱（例外レビューキュー）。
- * Slack/メール/予定はAIが自動でマスキング→解析→タスク化する。
- * 人に届くのは「AIが確信を持てなかったもの」だけ。残りは自動処理ログとして見える。
+ * 受信箱（AI送信前レビューキュー / HITL）。
+ * ローカル前処理（自動マスク・案件判定）までは自動だが、AIへの送信は
+ * 全件、人の承認が必要。ルールが検出した警告はレビューを速くするための補助。
  */
 export function Inbox() {
   const { inboxItems, archiveInboxItem, unarchiveInboxItem } = useStore();
@@ -230,7 +238,7 @@ export function Inbox() {
     const byDate = (a: InboxItem, b: InboxItem) =>
       new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
     return {
-      reviewItems: filtered.filter((i) => i.status === '要レビュー').sort(byDate),
+      reviewItems: filtered.filter((i) => i.status === 'レビュー待ち').sort(byDate),
       waitingItems: filtered
         .filter((i) => i.status === '待機中')
         .sort((a, b) => new Date(a.eventAt ?? a.receivedAt).getTime() - new Date(b.eventAt ?? b.receivedAt).getTime()),
@@ -261,7 +269,7 @@ export function Inbox() {
               <div className="fixed inset-0 z-10" onClick={() => setShowInfo(false)} aria-hidden />
               <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-line bg-white p-3 shadow-md">
                 <p className="text-sm text-ink-sub">
-                  Slack・メール・予定はAIが自動でマスキング→解析→タスク化します。ここに届くのは、AIが確信を持てず確認が必要なものだけです。
+                  Slack・メール・予定はローカルで自動マスク・案件判定まで前処理されます。セキュリティポリシーにより、AIへの送信は全件、人の承認（HITL）が必要です。
                 </p>
               </div>
             </>
@@ -269,13 +277,15 @@ export function Inbox() {
         </div>
       </div>
 
-      {/* 自動処理の稼働状況 */}
+      {/* HITLゲートの状態。前処理は自動・AI送信は要承認 */}
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-sub">
-        <span aria-hidden>🤖</span>
-        <span className="font-medium text-ink">自動処理 稼働中</span>
+        <span aria-hidden>🔒</span>
+        <span className="font-medium text-ink">AI送信は要承認（HITL）</span>
         <span aria-hidden>·</span>
-        <span>今日 {processedToday}件処理</span>
-        <span className="ml-auto hidden tabular-nums sm:inline">次回 {nextRunTime}（あと{minutesUntil}分）</span>
+        <span>前処理は自動（ローカル）</span>
+        <span aria-hidden>·</span>
+        <span>今日 {processedToday}件承認</span>
+        <span className="ml-auto hidden tabular-nums sm:inline">次回バッチ {nextRunTime}（あと{minutesUntil}分）</span>
       </div>
 
       <div className="mb-3 flex items-center gap-3 overflow-x-auto text-sm">
@@ -290,10 +300,10 @@ export function Inbox() {
         ))}
       </div>
 
-      {/* 要レビュー: AIが確信を持てなかったもの。人が解決してAIに渡す */}
+      {/* AI送信前レビュー: 人が確認・承認してはじめてAIに渡る（HITL） */}
       {reviewItems.length > 0 ? (
         <section>
-          <SectionHeader title="要レビュー" count={reviewItems.length} dot="bg-warn" note="解決するとAIがタスク化します" />
+          <SectionHeader title="AI送信前レビュー" count={reviewItems.length} dot="bg-warn" note="承認するとAIが解析します" />
           <div className="flex flex-col gap-2">
             {reviewItems.map((i) => (
               <ReviewCard key={i.id} item={i} onArchive={() => archiveInboxItem(i.id)} />
@@ -305,14 +315,14 @@ export function Inbox() {
           <p className="text-base font-semibold text-ink">
             <span aria-hidden>🎉 </span>レビュー待ちはありません
           </p>
-          <p className="mt-1 text-sm text-ink-sub">受信したデータはすべてAIが自動処理済みです</p>
+          <p className="mt-1 text-sm text-ink-sub">受信したデータはすべて承認・処理済みです</p>
         </div>
       )}
 
-      {/* 待機中: 予定・会議。終了後にAIが議事録を解析する */}
+      {/* 待機中: 予定・会議。終了後に議事録がレビュー待ちに入る */}
       {waitingItems.length > 0 && (
         <section>
-          <SectionHeader title="予定" count={waitingItems.length} dot="bg-accent" note="終了後にAIが議事録を解析します" />
+          <SectionHeader title="予定" count={waitingItems.length} dot="bg-accent" note="終了後に議事録がレビュー待ちに入ります" />
           <div className="flex flex-col gap-1">
             {waitingItems.map((i) => (
               <WaitingRow key={i.id} item={i} />
@@ -321,7 +331,7 @@ export function Inbox() {
         </section>
       )}
 
-      {/* 自動処理ログ */}
+      {/* 処理ログ（承認→AI解析の記録） */}
       {processedItems.length > 0 && (
         <section>
           <div className="mb-2 mt-6 flex items-center gap-2">
@@ -331,7 +341,7 @@ export function Inbox() {
               className="flex items-center gap-2 text-sm font-bold tracking-wide text-ink"
             >
               <span aria-hidden className={`text-[10px] text-ink-sub transition-transform ${showProcessed ? 'rotate-90' : ''}`}>❯</span>
-              自動処理ログ
+              処理ログ
               <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-sub">
                 {processedItems.length}
               </span>

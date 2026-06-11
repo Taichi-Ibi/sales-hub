@@ -41,14 +41,15 @@ interface StoreValue {
   unmask: (id: string, token: string) => void; // 復元: トークンを元の値に戻す（台帳は復元のみ）
   ignoreSuspected: (id: string, text: string) => void;
   dismissToast: (id: number) => void;
-  // 受信箱（例外レビューキュー）。
-  // 自動処理はバックグラウンドの建て付けなので、人の操作は「例外の解決」だけ:
-  //   マスク補正 → 案件選択 → AIに渡す（handOffToAi）
+  // 受信箱（AI送信前レビューキュー）。
+  // ローカル前処理（分かち書き・自動マスク・案件判定）までは自動だが、
+  // AIへの送信は全件、人の承認が必要（HITL）:
+  //   マスク補正 → 案件選択 → 承認してAIに渡す（handOffToAi）
   getInboxItem: (id: string) => InboxItem | undefined;
   maskInboxToken: (id: string, text: string, type: MaskType, atIndex?: number) => void;
   unmaskInboxToken: (id: string, token: string, atIndex: number) => void;
   setInboxCounterparty: (id: string, counterparty: string) => void;
-  handOffToAi: (id: string) => void; // 例外を解決してAIに渡す → 解析（シミュレート）→ 処理済み
+  handOffToAi: (id: string) => void; // 承認してAIに渡す → 解析（シミュレート）→ 処理済み
   archiveInboxItem: (id: string) => void; // AIに渡さない
   unarchiveInboxItem: (id: string) => void;
   setInboxMemo: (id: string, memo: string) => void;
@@ -181,7 +182,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patch],
   );
 
-  // ───────── 受信箱（例外レビュー） ─────────
+  // ───────── 受信箱（AI送信前レビュー / HITL） ─────────
 
   const getInboxItem = useCallback(
     (id: string) => inboxItems.find((i) => i.id === id),
@@ -230,7 +231,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patchInbox],
   );
 
-  // 案件名を設定する（例外「案件不明」の解決）。
+  // 案件名を設定する（警告「案件不明」の解決）。
   const setInboxCounterparty = useCallback(
     (id: string, counterparty: string) => {
       patchInbox(id, (i) => ({ ...i, counterparty }));
@@ -251,8 +252,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...i,
           status: '処理済み',
           processedAt: NOW_ISO,
+          approvedBy: '山田 内勤',
           analysisNote: 'タスクなし',
-          exceptionReasons: undefined,
+          attention: undefined,
         }));
         return;
       }
@@ -295,8 +297,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...i,
         status: '処理済み',
         processedAt: NOW_ISO,
+        approvedBy: '山田 内勤',
         resultActionId: actionId,
-        exceptionReasons: undefined,
+        attention: undefined,
       }));
       if (counterparty) {
         setWikiAppends((prev) => ({
@@ -317,7 +320,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patchInbox, addToast],
   );
 
-  // 例外を解決してAIに渡す（解析シミュレート 1.5秒）。
+  // 人の承認: レビュー済みのアイテムをAIに渡す（解析シミュレート 1.5秒）。
   const handOffToAi = useCallback(
     (id: string) => {
       const target = inboxItems.find((i) => i.id === id);
@@ -341,7 +344,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const unarchiveInboxItem = useCallback(
     (id: string) => {
-      patchInbox(id, (i) => ({ ...i, status: '要レビュー' }));
+      patchInbox(id, (i) => ({ ...i, status: 'レビュー待ち' }));
     },
     [patchInbox],
   );

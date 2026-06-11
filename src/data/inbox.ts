@@ -2,10 +2,11 @@ import type { InboxItem, InboxSource } from '../types';
 
 // 受信箱のサンプルデータ（架空）。Slack / メール / 予定の原文が入る。
 //
-// New Version の流れ（AIが主語）:
-//   受信 → ルール・辞書で自動マスク → 毎時バッチで自動解析 → タスク化/タスクなし
-// 人に届くのは AI が確信を持てなかった「要レビュー」だけ。
-// 予定・会議は「待機中」とし、イベント終了後に議事録を解析する。
+// New Version の流れ（HITL: AI送信は全件人の承認が必要）:
+//   受信 → ローカル前処理（分かち書き・ルール/辞書マスク・案件自動判定）
+//   → 人のレビュー（マスク補正・案件選択）→「承認してAIに渡す」→ AI解析 → タスク化
+// ルールが検出した注意点（未マスクの疑い・案件不明）は attention で警告する。
+// 予定・会議は「待機中」とし、イベント終了後に議事録がレビュー待ちに入る。
 
 export const SOURCE_META: Record<InboxSource, { icon: string; label: string }> = {
   slack: { icon: '💬', label: 'Slack' },
@@ -14,7 +15,7 @@ export const SOURCE_META: Record<InboxSource, { icon: string; label: string }> =
 };
 
 export const SEED_INBOX: InboxItem[] = [
-  // ── 要レビュー①: 未マスクの疑い（氏名が辞書未登録のまま残っている）──
+  // ── レビュー待ち①: 警告あり — 未マスクの疑い（氏名が辞書未登録のまま残っている）──
   {
     id: 'in02',
     source: 'mail',
@@ -23,8 +24,8 @@ export const SEED_INBOX: InboxItem[] = [
     mailTo: '山田 内勤（当社）',
     receivedAt: '2026-06-09T17:20:00',
     body: 'お世話になっております。北斗電装の川島です。\n現行契約 CT-2024-118 の解約条項について、通知期間を90日から45日に短縮いただけないか、社内で要望が出ております。月額120万円の取引規模を踏まえ、ご検討いただけますと幸いです。\n6/13までにご回答いただけますでしょうか。\n川島 紗英（kawashima@hokuto-densou.co.jp / 03-5550-8821）',
-    status: '要レビュー',
-    exceptionReasons: [
+    status: 'レビュー待ち',
+    attention: [
       '未マスクの疑い: 「川島」が辞書に未登録のまま本文に残っています',
     ],
     counterparty: '北斗電装', // hokuto-densou.co.jp からドメイン自動判定
@@ -52,7 +53,7 @@ export const SEED_INBOX: InboxItem[] = [
     },
   },
 
-  // ── 要レビュー②: 案件を特定できない（「例の保守契約」では判断できない）──
+  // ── レビュー待ち②: 警告あり — 案件を特定できない（「例の保守契約」では判断できない）──
   {
     id: 'in10',
     source: 'slack',
@@ -60,11 +61,11 @@ export const SEED_INBOX: InboxItem[] = [
     sender: '駒田 健（FS）',
     receivedAt: '2026-06-10T09:40:00',
     body: '先ほど電話があり、例の保守契約更新の件で先方が回答の前倒しを希望しているとのことです。可能か確認して一次返信をお願いします。窓口の方の携帯は 090-1234-5678 です。',
-    status: '要レビュー',
-    exceptionReasons: [
+    status: 'レビュー待ち',
+    attention: [
       '案件を特定できませんでした（「例の保守契約」が複数の案件に該当する可能性）',
     ],
-    counterparty: '', // 人がプロジェクトを選んで解決する
+    counterparty: '', // 人がプロジェクトを選んで承認する
     masks: [
       { text: '090-1234-5678', type: '連絡先', token: '〔連絡先①〕', auto: true },
     ],
@@ -82,7 +83,7 @@ export const SEED_INBOX: InboxItem[] = [
     },
   },
 
-  // ── 処理済み: 自動マスク→自動解析→タスク化まで完了した例 ──
+  // ── 処理済み: 人が承認→AI解析→タスク化まで完了した例 ──
   {
     id: 'in01',
     source: 'slack',
@@ -92,6 +93,7 @@ export const SEED_INBOX: InboxItem[] = [
     body: '湊精機の三浦さんから保守契約の更新可否について連絡あり。年額360万円のままなら継続したい、6/12までに回答がほしいとのこと。対象は保守契約 HSK-2025-007。窓口は三浦さん（miura@minato-seiki.co.jp）です。一次返信お願いします。',
     status: '処理済み',
     processedAt: '2026-06-10T09:00:00',
+    approvedBy: '山田 内勤',
     counterparty: '湊精機', // 本文一致で自動判定
     masks: [
       { text: '三浦', type: '氏名', token: '〔氏名①〕', auto: true },
@@ -130,6 +132,7 @@ export const SEED_INBOX: InboxItem[] = [
     body: '■青葉化成 商談（6/9 14:00-14:45）\n出席: 青葉化成 大西部長、当社 駒田\n議題: 新ライン向け試作データ共有範囲の確認\n・新ラインの試作データ共有は秘密保持契約 NDA-2026-009 の範囲内で実施する方向。\n・大西部長より、共有範囲の確定を6/16までに文書で連絡してほしいと依頼あり。\n・見積りは初期費用80万円・月額15万円で口頭合意。正式見積は別途。',
     status: '処理済み',
     processedAt: '2026-06-10T06:00:00',
+    approvedBy: '山田 内勤',
     counterparty: '青葉化成', // 本文一致で自動判定
     masks: [
       { text: '大西', type: '氏名', token: '〔氏名①〕', auto: true },
@@ -163,6 +166,7 @@ export const SEED_INBOX: InboxItem[] = [
     body: 'お世話になっております。C製作所の鈴木です。\n前回と同数量で、お見積もりをお願いできますでしょうか。納期は2週間を希望します。6/11までに概算をいただけると助かります。\nC製作所 購買部 鈴木 健太',
     status: '処理済み',
     processedAt: '2026-06-10T06:00:00',
+    approvedBy: '山田 内勤',
     counterparty: 'C製作所', // メール: ドメイン自動判定
     masks: [{ text: '鈴木', type: '氏名', token: '〔氏名①〕', auto: true }],
     resultActionId: 'a04',
@@ -179,7 +183,7 @@ export const SEED_INBOX: InboxItem[] = [
       knownSensitive: ['鈴木'],
     },
   },
-  // 解析の結果「タスクなし」だった例。
+  // ── レビュー待ち③: 警告なし — 前処理に問題がなく、確認して承認するだけの例 ──
   {
     id: 'in05',
     source: 'slack',
@@ -187,9 +191,7 @@ export const SEED_INBOX: InboxItem[] = [
     sender: '田村 亮（FS）',
     receivedAt: '2026-06-10T07:15:00',
     body: '先週の商談リスト、Notion に上げました。特にアクション不要ですがご確認ください。',
-    status: '処理済み',
-    processedAt: '2026-06-10T08:00:00',
-    analysisNote: 'タスクなし（共有のみ）',
+    status: 'レビュー待ち',
     counterparty: 'G産業',
     masks: [],
     distilled: {
@@ -205,7 +207,7 @@ export const SEED_INBOX: InboxItem[] = [
     },
   },
 
-  // ── 待機中: 予定・会議。イベント終了後に議事録を解析する ──
+  // ── 待機中: 予定・会議。イベント終了後、議事録がレビュー待ちに入る ──
   {
     id: 'in08',
     source: 'schedule',
