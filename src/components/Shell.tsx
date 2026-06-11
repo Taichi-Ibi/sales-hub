@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { LEDGER_STATUSES, useStore } from '../store/StoreContext';
-import { PROJECTS } from '../data/projects';
+import { WIKI_PAGES } from '../data/wiki';
 import { Toaster } from './Toaster';
 
 /** ナビ件数バッジ。未読を示す赤バッジ（Slack 風）。選択中は反転。 */
@@ -31,23 +31,25 @@ interface NavItem {
 export function Shell() {
   const { actions, inboxItems } = useStore();
   const location = useLocation();
-  const inboxCount = inboxItems.filter((i) => !i.aiReady && i.status !== 'タスクあり' && i.status !== 'キャンセル').length;
-  const ledgerCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
-  const projectAlertCount = PROJECTS.reduce((sum, p) => sum + p.alertCount, 0);
+  // 受信箱バッジ = 人の判断待ち（要レビュー）件数。自動処理されたものは数えない。
+  const reviewCount = inboxItems.filter((i) => i.status === '要レビュー').length;
+  const todayCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
+  const projectAlertCount = WIKI_PAGES.reduce((sum, p) => sum + p.alerts.length, 0);
 
-  // 2画面構成: Inbox（入口）と台帳（要対応・依頼中・完了をタブで持つ作業場）。
+  // New Version の構成: 今日（日次ビュー・ホーム）→ 案件（AIが維持する wiki）
+  // → 受信箱（例外レビュー）→ 設定（スキーマ層）。
   const items: NavItem[] = [
-    { to: '/', end: true, icon: '📬', label: '受信箱', count: inboxCount },
-    { to: '/projects', icon: '🗂️', label: 'プロジェクト', count: projectAlertCount > 0 ? projectAlertCount : undefined },
-    { to: '/ledger', icon: '📋', label: 'タスク', count: ledgerCount },
+    { to: '/', end: true, icon: '📋', label: '今日', count: todayCount },
+    { to: '/projects', icon: '📚', label: '案件', count: projectAlertCount > 0 ? projectAlertCount : undefined },
+    { to: '/inbox', icon: '📬', label: '受信箱', count: reviewCount > 0 ? reviewCount : undefined },
     { to: '/settings', icon: '⚙️', label: '設定' },
   ];
 
-  // 上部バーに「今どこにいるか」を出す（詳細画面は台帳の下層として扱う）。
+  // 上部バーに「今どこにいるか」を出す（詳細画面は各一覧の下層として扱う）。
   const currentLabel = location.pathname.startsWith('/action')
     ? '詳細'
     : (items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
-        ?.label ?? '受信箱');
+        ?.label ?? '今日');
 
   return (
     <div className="flex h-screen flex-col">
@@ -58,7 +60,7 @@ export function Shell() {
             <rect width="28" height="28" rx="4" fill="#ffd742"/>
             <path d="M17 5 L8 17 L13 17 L10 23 L20 11 L15 11 Z" fill="#074194"/>
           </svg>
-          <span className="hidden sm:inline">Action Hub</span>
+          <span className="hidden sm:inline">Sales Hub</span>
         </Link>
         <span className="text-sm font-semibold text-white" aria-current="page">
           {currentLabel}

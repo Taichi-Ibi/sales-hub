@@ -220,6 +220,71 @@ export const SEED_ACTIONS: Action[] = [
     },
   },
 
+  // 自動処理パイプライン経由で今朝生成されたタスク（受信箱 in01 / in03 由来）。
+  {
+    id: 'a09',
+    category: '期限付き返信',
+    risk: '低',
+    title: '保守契約更新の条件に返信',
+    counterparty: '湊精機',
+    dueDate: '2026-06-12',
+    createdAt: '2026-06-10T09:00:00',
+    status: '未確認',
+    summary: '湊精機より保守契約（年額360万円）の更新可否の問い合わせ。6/12までに回答する。',
+    context: [
+      '先方は現行条件（年額360万円）のままの継続を希望',
+      '対象契約は 〔契約番号①〕',
+      '窓口は〔氏名①〕さん（〔連絡先①〕）',
+    ],
+    draft:
+      '〔氏名①〕様\nお世話になっております。保守契約（〔契約番号①〕）の更新条件について承知いたしました。年額360万円のまま継続の方向で社内確認のうえ、6/12までに正式にご回答いたします。',
+    maskedEntities: [
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '三浦', occurrences: 1 },
+      { token: '〔契約番号①〕', type: '契約番号', decryptedValue: 'HSK-2025-007', occurrences: 1 },
+      { token: '〔連絡先①〕', type: '連絡先', decryptedValue: 'miura@minato-seiki.co.jp', occurrences: 1 },
+    ],
+    suspectedUnmasked: [],
+    origin: {
+      source: 'slack',
+      title: '#sales-湊精機',
+      sender: '駒田 健（FS）',
+      receivedAt: '2026-06-10T08:40:00',
+      body: '湊精機の三浦さんから保守契約の更新可否について連絡あり。年額360万円のままなら継続したい、6/12までに回答がほしいとのこと。対象は保守契約 HSK-2025-007。窓口は三浦さん（miura@minato-seiki.co.jp）です。一次返信お願いします。',
+      inboxItemId: 'in01',
+    },
+  },
+  {
+    id: 'a10',
+    category: '法務',
+    risk: '高',
+    title: '試作データ共有範囲の確定を連絡',
+    counterparty: '青葉化成',
+    dueDate: '2026-06-16',
+    createdAt: '2026-06-10T06:00:00',
+    status: '未確認',
+    summary: '青葉化成との試作データ共有範囲を確定し、6/16までに文書で連絡する。NDAの範囲確認が必要。',
+    context: [
+      '共有は 〔契約番号①〕 の範囲内で実施予定',
+      '金額は初期費用80万円・月額15万円で口頭合意',
+      '法務への共有範囲の確認が必要',
+    ],
+    draft:
+      '〔氏名①〕様\nお世話になっております。先日の商談で承りました試作データの共有範囲につきまして、秘密保持契約（〔契約番号①〕）の範囲を確認のうえ、6/16までに文書でご連絡いたします。',
+    maskedEntities: [
+      { token: '〔氏名①〕', type: '氏名', decryptedValue: '大西', occurrences: 1 },
+      { token: '〔契約番号①〕', type: '契約番号', decryptedValue: 'NDA-2026-009', occurrences: 2 },
+    ],
+    suspectedUnmasked: [],
+    origin: {
+      source: 'schedule',
+      title: '青葉化成 商談（6/9 14:00）',
+      sender: 'Googleカレンダー',
+      receivedAt: '2026-06-09T15:00:00',
+      body: '■青葉化成 商談（6/9 14:00-14:45）\n出席: 青葉化成 大西部長、当社 駒田\n議題: 新ライン向け試作データ共有範囲の確認\n・新ラインの試作データ共有は秘密保持契約 NDA-2026-009 の範囲内で実施する方向。\n・大西部長より、共有範囲の確定を6/16までに文書で連絡してほしいと依頼あり。\n・見積りは初期費用80万円・月額15万円で口頭合意。正式見積は別途。',
+      inboxItemId: 'in03',
+    },
+  },
+
   // ───────── FS承認待ち（S4）: b01, b02 ─────────
   {
     id: 'b01',

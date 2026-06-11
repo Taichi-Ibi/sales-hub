@@ -10,27 +10,27 @@ import {
 import { ActionCard } from '../components/ActionCard';
 import { CategoryTag } from '../components/Badge';
 import { Button } from '../components/Button';
-import { dueBucket, type DueBucket } from '../lib/time';
+import { dueBucket, NOW, type DueBucket } from '../lib/time';
 
 const CATEGORIES: Category[] = ['法務', '契約', '期限付き返信', '対応漏れ'];
 
 type SortOrder = 'old' | 'new';
 
-// 台帳は1画面に集約し、タブで切り替える:
-//   要対応(todo)    = 未確認/対応中（自分が動かす）
-//   依頼中(waiting) = FS承認待ち/承認済み（他人待ち・送信可）
-//   完了(done)      = 送信済み/棄却（ログ）
+// 「今日」はナレッジベースに対する日次ビュー。タブで切り替える:
+//   やる(todo)    = 未確認/対応中（自分が動かす）
+//   待ち(waiting) = FS承認待ち/承認済み（他人待ち・送信可）
+//   済み(done)    = 送信済み/棄却（ログ）
 type TabKey = 'todo' | 'waiting' | 'done';
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'todo', label: '要対応' },
-  { key: 'waiting', label: '依頼中' },
-  { key: 'done', label: '完了' },
+  { key: 'todo', label: 'やる' },
+  { key: 'waiting', label: '待ち' },
+  { key: 'done', label: '済み' },
 ];
 
 /** タブをURLに持たせる（?tab=…）。詳細から戻ってもタブが保たれる。 */
 function tabPath(tab: TabKey): string {
-  return tab === 'todo' ? '/ledger' : `/ledger?tab=${tab}`;
+  return tab === 'todo' ? '/' : `/?tab=${tab}`;
 }
 
 function Select<T extends string>({
@@ -59,20 +59,6 @@ function Select<T extends string>({
         ))}
       </select>
     </label>
-  );
-}
-
-function Skeleton() {
-  return (
-    <div className="rounded-lg border border-line bg-white p-4">
-      <div className="flex items-center gap-3">
-        <div className="h-6 w-14 animate-pulse rounded-md bg-line" />
-        <div className="flex-1">
-          <div className="mb-2 h-4 w-24 animate-pulse rounded bg-line" />
-          <div className="h-4 w-3/5 animate-pulse rounded bg-line" />
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -109,9 +95,9 @@ function SectionHeader({
   );
 }
 
-/** 要対応タブ（旧S1）。今日・明日のフォーカスとトップ3の強調。 */
+/** やるタブ。今日・明日のフォーカスとトップ3の強調。 */
 function TodoTab() {
-  const { actions, ledgerMode } = useStore();
+  const { actions } = useStore();
   const [category, setCategory] = useState<Category | 'すべて'>('すべて');
   const [risk, setRisk] = useState<Risk | 'すべて'>('すべて');
   const [sort, setSort] = useState<SortOrder>('old');
@@ -148,8 +134,6 @@ function TodoTab() {
   }, [filtered]);
 
   const hasFilter = category !== 'すべて' || risk !== 'すべて';
-  // デモ用の空表示は、台帳が空でなくても確認できるようにする。
-  const showEmpty = ledgerMode === 'empty' || (ledgerMode === 'normal' && ledger.length === 0);
   const focusCount = groups.today.length + groups.tomorrow.length;
 
   /** フォーカス（今日 / 明日まで）の1セクションを描画。 */
@@ -161,7 +145,7 @@ function TodoTab() {
         <SectionHeader title={title} count={list.length} dot={dot} />
         <div className="flex flex-col gap-2">
           {list.map((a) => (
-            <ActionCard key={a.id} action={a} from="/ledger" priority={priorityRank.get(a.id)} />
+            <ActionCard key={a.id} action={a} from="/" priority={priorityRank.get(a.id)} />
           ))}
         </div>
       </section>
@@ -205,20 +189,14 @@ function TodoTab() {
       </div>
 
       {/* 本体 */}
-      {ledgerMode === 'loading' ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} />
-          ))}
-        </div>
-      ) : showEmpty ? (
+      {ledger.length === 0 ? (
         <div className="grid place-items-center rounded-lg border border-line bg-surface py-20 text-center">
-          <p className="text-lg font-semibold text-ink">未対応のアクションはありません</p>
-          <p className="mt-1 text-sm text-ink-sub">新しいアクションが届くとここに表示されます</p>
+          <p className="text-lg font-semibold text-ink">未対応のタスクはありません</p>
+          <p className="mt-1 text-sm text-ink-sub">AIが新しいタスクを抽出するとここに表示されます</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="grid place-items-center rounded-lg border border-line bg-surface py-16 text-center">
-          <p className="text-base font-medium text-ink">条件に合うアクションはありません</p>
+          <p className="text-base font-medium text-ink">条件に合うタスクはありません</p>
           <button
             onClick={() => {
               setCategory('すべて');
@@ -241,7 +219,7 @@ function TodoTab() {
               <p className="text-base font-semibold text-ink">
                 <span aria-hidden>🎉 </span>今日・明日までの締切はありません
               </p>
-              <p className="mt-1 text-sm text-ink-sub">差し迫ったアクションはなし。落ち着いて進められます。</p>
+              <p className="mt-1 text-sm text-ink-sub">差し迫ったタスクはなし。落ち着いて進められます。</p>
             </div>
           )}
 
@@ -268,7 +246,7 @@ function TodoTab() {
                     <ActionCard
                       key={a.id}
                       action={a}
-                      from="/ledger"
+                      from="/"
                       priority={priorityRank.get(a.id)}
                       muted={!priorityRank.has(a.id)}
                     />
@@ -287,7 +265,7 @@ function TodoTab() {
   );
 }
 
-/** 依頼中タブ（旧S4 FS承認待ち）。FS待ちと送信可能（承認済み）の案件。 */
+/** 待ちタブ。FS待ちと送信可能（承認済み）の案件。 */
 function WaitingTab() {
   const { actions, demoApproveByFS, send } = useStore();
 
@@ -300,8 +278,8 @@ function WaitingTab() {
     <>
       {list.length === 0 ? (
         <div className="grid place-items-center rounded-lg border border-line bg-surface py-20 text-center">
-          <p className="text-lg font-semibold text-ink">依頼中の案件はありません</p>
-          <p className="mt-1 text-sm text-ink-sub">高リスク案件をFSへ回すとここに表示されます</p>
+          <p className="text-lg font-semibold text-ink">他人待ちのタスクはありません</p>
+          <p className="mt-1 text-sm text-ink-sub">高リスクタスクをFSへ回すとここに表示されます</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -334,7 +312,7 @@ function WaitingTab() {
 
 type DoneFilter = 'すべて' | '送信済み' | '棄却';
 
-/** 完了タブ（旧S5 完了済み）。送信済み／棄却のログ。 */
+/** 済みタブ。送信済み／棄却のログ。 */
 function DoneTab() {
   const { actions } = useStore();
   const navigate = useNavigate();
@@ -400,12 +378,14 @@ function DoneTab() {
 }
 
 const TAB_DESCRIPTIONS: Record<TabKey, string> = {
-  todo: '今日・明日までに対応すべきことから。それ以降は下に格納しています。',
-  waiting: 'FSへ承認を依頼した案件。承認されるとここから送信できます。',
-  done: '送信済みと棄却のアクション履歴です。',
+  todo: 'AIが原文から抽出した「次の一手」。今日・明日までに対応すべきことから並びます。',
+  waiting: 'FSへ承認を依頼したタスク。承認されるとここから送信できます。',
+  done: '送信済みと棄却のタスク履歴です。',
 };
 
-/** アクション台帳（S1）。要対応・依頼中・完了の3タブを1画面に集約した作業場。 */
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+/** 「今日」（ホーム）。やる・待ち・済みの3タブを1画面に集約した作業場。 */
 export function Ledger() {
   const { actions } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -425,7 +405,10 @@ export function Ledger() {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="text-xl font-semibold text-ink">タスク</h1>
+        <h1 className="text-xl font-semibold text-ink">今日</h1>
+        <span className="text-sm tabular-nums text-ink-sub">
+          {NOW.getMonth() + 1}/{NOW.getDate()}（{WEEKDAYS[NOW.getDay()]}）
+        </span>
         <button
           onClick={() => setShowInfo((v) => !v)}
           aria-expanded={showInfo}
@@ -442,10 +425,10 @@ export function Ledger() {
         </div>
       )}
 
-      {/* タブ: 要対応（自分が動かす）/ 依頼中（他人待ち）/ 完了（ログ） */}
+      {/* タブ: やる（自分が動かす）/ 待ち（他人待ち）/ 済み（ログ） */}
       <div
         role="tablist"
-        aria-label="台帳の表示切替"
+        aria-label="今日の表示切替"
         className="mb-4 flex items-center gap-3 overflow-x-auto text-sm"
       >
         {TABS.map((t) => {

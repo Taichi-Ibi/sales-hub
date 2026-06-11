@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Action, MaskedEntity } from '../types';
 import { SOURCE_META } from '../data/inbox';
-import { findDeal, UPDATE_CYCLE } from '../data/deals';
+import { findWikiByCounterparty } from '../data/wiki';
 import { MASK_TYPE_MAP } from '../lib/maskTypes';
 
 /** "2026-06-05T09:00:00" → "6/5 09:00" */
@@ -90,14 +90,14 @@ function Disclosure({
 }
 
 /**
- * 経緯のドリルダウン（S2）。タスク実行者が判断に迷ったとき、
- * 1) そもそもの原文（Slack/メール/議事録）と 2) 案件プロパティ
- * （構造化情報＋定期更新される非構造化メモ）まで掘れるようにする。
+ * 経緯のドリルダウン。タスク実行者が判断に迷ったとき、
+ * 1) そもそもの原文（Slack/メール/議事録）と 2) 案件ページ（AIが維持する wiki）
+ * まで掘れるようにする。
  */
 export function ContextDrilldown({ action }: { action: Action }) {
   const navigate = useNavigate();
   const origin = action.origin;
-  const deal = findDeal(action.counterparty);
+  const wiki = findWikiByCounterparty(action.counterparty);
 
   return (
     <section>
@@ -140,16 +140,16 @@ export function ContextDrilldown({ action }: { action: Action }) {
           )}
         </Disclosure>
 
-        {/* 2) 案件プロパティ: 構造化情報 + 定期更新される非構造化メモ */}
+        {/* 2) 案件ページ: AIが維持する wiki の要約。詳細はページ本体へ */}
         <Disclosure
-          icon="📇"
-          title={`案件プロパティ — ${action.counterparty}`}
-          meta={deal ? `最終更新 ${fmtDateTime(deal.updatedAt)}` : undefined}
+          icon="📚"
+          title={`案件ページ — ${action.counterparty}`}
+          meta={wiki ? `最終更新 ${wiki.updatedAt.slice(5).replace('-', '/')} 06:00` : undefined}
         >
-          {deal ? (
+          {wiki ? (
             <>
               <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
-                {deal.fields.map((f) => (
+                {wiki.facts.map((f) => (
                   <div key={f.label} className="flex gap-2 text-sm">
                     <dt className="w-24 shrink-0 text-ink-sub">{f.label}</dt>
                     <dd className="min-w-0 flex-1 font-medium text-ink">{f.value}</dd>
@@ -157,23 +157,25 @@ export function ContextDrilldown({ action }: { action: Action }) {
                 ))}
               </dl>
               <h3 className="mb-1.5 mt-4 text-xs font-semibold text-ink-sub">
-                最近の動き（AIが自動追記）
+                直近の状況（AIが出典つきで維持）
               </h3>
               <ul className="flex flex-col gap-1.5">
-                {deal.notes.map((n, i) => (
+                {wiki.statements.map((s, i) => (
                   <li key={i} className="flex gap-2 text-sm">
-                    <span className="w-9 shrink-0 tabular-nums text-ink-sub">{n.date}</span>
-                    <span className="text-ink">{n.text}</span>
+                    <span className="text-ink-sub" aria-hidden>・</span>
+                    <span className="text-ink">{s.text}</span>
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 border-t border-line pt-2 text-xs text-ink-sub">
-                <span aria-hidden>🔄 </span>
-                {UPDATE_CYCLE}・最終更新 {fmtDateTime(deal.updatedAt)}
-              </p>
+              <button
+                onClick={() => navigate(`/projects/${wiki.id}`)}
+                className="mt-3 text-sm font-medium text-accent hover:underline"
+              >
+                案件ページを開く ❯
+              </button>
             </>
           ) : (
-            <p className="text-sm text-ink-sub">この取引先の案件プロパティは未登録です。</p>
+            <p className="text-sm text-ink-sub">この取引先の案件ページは未作成です。</p>
           )}
         </Disclosure>
       </div>
