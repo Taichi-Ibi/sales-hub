@@ -30,7 +30,7 @@ const TABS: { key: TabKey; label: string }[] = [
 
 /** タブをURLに持たせる（?tab=…）。詳細から戻ってもタブが保たれる。 */
 function tabPath(tab: TabKey): string {
-  return tab === 'todo' ? '/' : `/?tab=${tab}`;
+  return tab === 'todo' ? '/ledger' : `/ledger?tab=${tab}`;
 }
 
 function Select<T extends string>({
@@ -161,7 +161,7 @@ function TodoTab() {
         <SectionHeader title={title} count={list.length} dot={dot} />
         <div className="flex flex-col gap-2">
           {list.map((a) => (
-            <ActionCard key={a.id} action={a} from="/" priority={priorityRank.get(a.id)} />
+            <ActionCard key={a.id} action={a} from="/ledger" priority={priorityRank.get(a.id)} />
           ))}
         </div>
       </section>
@@ -272,7 +272,7 @@ function TodoTab() {
                     <ActionCard
                       key={a.id}
                       action={a}
-                      from="/"
+                      from="/ledger"
                       priority={priorityRank.get(a.id)}
                       muted={!priorityRank.has(a.id)}
                     />

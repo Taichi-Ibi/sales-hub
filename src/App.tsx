@@ -12,13 +12,13 @@ export default function App() {
     <StoreProvider>
       <Routes>
         <Route element={<Shell />}>
-          <Route path="/" element={<Ledger />} />
+          <Route path="/" element={<Inbox />} />
+          <Route path="/ledger" element={<Ledger />} />
           <Route path="/action/:id" element={<ActionDetail />} />
-          <Route path="/inbox" element={<Inbox />} />
           <Route path="/inbox/:id" element={<InboxDetail />} />
           {/* 旧URL互換: FS承認/完了済みは台帳のタブに統合した */}
-          <Route path="/approvals" element={<Navigate to="/?tab=waiting" replace />} />
-          <Route path="/archive" element={<Navigate to="/?tab=done" replace />} />
+          <Route path="/approvals" element={<Navigate to="/ledger?tab=waiting" replace />} />
+          <Route path="/archive" element={<Navigate to="/ledger?tab=done" replace />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

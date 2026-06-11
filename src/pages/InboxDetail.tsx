@@ -10,6 +10,19 @@ import { MASK_TYPES, MASK_TYPE_MAP } from '../lib/maskTypes';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
+function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+const EVENT_TYPE_LABEL: Record<NonNullable<InboxItem['eventType']>, string> = {
+  商談: '💼 商談',
+  会食: '🍽 会食',
+  移動: '🚅 移動',
+  社内MTG: '🏢 社内MTG',
+  その他: '📌 その他',
+};
+
 /**
  * 分かち書き済みの原文。トークンをタップして伏せる／チップを再タップして復元する。
  * 同一文字列の出現はすべて同じトークンに置き換わる。
@@ -176,7 +189,7 @@ function MaskTypeBar({
   );
 }
 
-const TOP_N = 10;
+const TOP_N = 5;
 
 function sortDealsByRecent(deals: Deal[]): Deal[] {
   const toNum = (d: string) => { const [m, day] = d.split('/').map(Number); return (m ?? 0) * 31 + (day ?? 0); };
@@ -188,25 +201,28 @@ function DealPicker({ value, onChange }: { value: string; onChange: (v: string) 
   const sorted = useMemo(() => sortDealsByRecent(DEALS), []);
   const top = sorted.slice(0, TOP_N);
   const more = sorted.slice(TOP_N);
-  const selectedInMore = more.some((d) => d.counterparty === value);
-  const showMore = expanded || selectedInMore;
+
+  // ドメイン判定された案件が Top5 外の場合は先頭に追加して常に表示する。
+  const detectedInMore = value ? more.find((d) => d.counterparty === value) : undefined;
+  const displayTop = detectedInMore ? [detectedInMore, ...top] : top;
+  const displayMore = detectedInMore ? more.filter((d) => d.counterparty !== value) : more;
 
   return (
     <div>
       <div className="flex flex-wrap gap-1.5">
-        {top.map((d) => (
+        {displayTop.map((d) => (
           <DealButton key={d.counterparty} deal={d} selected={value === d.counterparty} onSelect={onChange} />
         ))}
-        {showMore && more.map((d) => (
+        {expanded && displayMore.map((d) => (
           <DealButton key={d.counterparty} deal={d} selected={value === d.counterparty} onSelect={onChange} />
         ))}
       </div>
-      {more.length > 0 && !selectedInMore && (
+      {displayMore.length > 0 && (
         <button
           onClick={() => setExpanded((v) => !v)}
           className="mt-2 text-xs text-ink-sub hover:text-accent"
         >
-          {expanded ? '▲ 閉じる' : `▼ もっと見る（${more.length}件）`}
+          {expanded ? '▲ 閉じる' : `▼ もっと見る（${displayMore.length}件）`}
         </button>
       )}
     </div>
@@ -276,7 +292,7 @@ export function InboxDetail() {
         ❮ 受信箱へ戻る
       </button>
 
-      <div className="overflow-hidden rounded-xl border border-line bg-white">
+      <div className="overflow-hidden bg-white">
         {/* ヘッダー */}
         <div className="border-b border-line p-4 sm:p-5">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-ink-sub">
@@ -288,8 +304,53 @@ export function InboxDetail() {
             <span aria-hidden>・</span>
             <span className="tabular-nums">{elapsed}前</span>
           </div>
+          {/* 予定メタ情報 */}
+          {(item.eventType || item.eventAt || item.participants || item.location) && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              {item.eventType && (
+                <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-ink">
+                  {EVENT_TYPE_LABEL[item.eventType]}
+                </span>
+              )}
+              {item.eventAt && (
+                <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs tabular-nums text-ink">
+                  🕐 {formatEventTime(item.eventAt)}{item.eventEnd ? `–${formatEventTime(item.eventEnd).split(' ')[1]}` : ''}
+                </span>
+              )}
+              {item.participants && item.participants.length > 0 && (
+                <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-ink">
+                  👥 {item.participants.join('、')}
+                </span>
+              )}
+              {item.location && (
+                <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-ink">
+                  📍 {item.location}
+                </span>
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold text-ink">{item.title}</h1>
+            {masking && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowMaskHelp((v) => !v)}
+                  className="inline-flex size-5 items-center justify-center rounded-full border border-line bg-white text-xs text-ink-sub/70 hover:text-ink-sub"
+                  aria-label="マスキングの操作方法を表示"
+                  aria-expanded={showMaskHelp}
+                >
+                  i
+                </button>
+                {showMaskHelp && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowMaskHelp(false)} aria-hidden />
+                    <div className="absolute left-0 top-7 z-20 w-64 rounded-lg border border-line bg-white p-3 shadow-md">
+                      <p className="text-sm text-ink-sub">語をタップして伏せる／チップをタップで1件復元</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             {item.aiReady && (
               <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
                 ✨ AI Ready
@@ -326,7 +387,7 @@ export function InboxDetail() {
                   return (
                     <MaskTypeBar
                       onPick={(type) => {
-                        store.maskInboxToken(item.id, text, type);
+                        store.maskInboxToken(item.id, text, type, selectedRange.start);
                         setSelectedRange(null);
                       }}
                       onCancel={() => setSelectedRange(null)}
@@ -337,28 +398,6 @@ export function InboxDetail() {
                     />
                   );
                 })()}
-                {masking && (
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <button
-                      onClick={() => setShowMaskHelp((v) => !v)}
-                      title="操作方法"
-                      className="inline-flex size-5 items-center justify-center rounded-full border border-line bg-white text-xs text-ink-sub/70 hover:text-ink-sub"
-                    >
-                      i
-                    </button>
-                    {showMaskHelp && (
-                      <p className="text-xs text-ink-sub">語をタップして伏せる／チップをタップで1件復元</p>
-                    )}
-                    {item.masks.length > 0 && (
-                      <button
-                        onClick={() => store.unmaskAllInboxTokens(item.id)}
-                        className="ml-auto text-xs text-ink-sub hover:text-danger"
-                      >
-                        全解除
-                      </button>
-                    )}
-                  </div>
-                )}
               </>
             )}
           </section>
@@ -368,11 +407,6 @@ export function InboxDetail() {
             <section>
               <div className="mb-1.5 flex items-center gap-2">
                 <h2 className="text-sm font-medium text-ink">案件名</h2>
-                {item.source === 'mail' && item.counterparty && !item.aiReady && (
-                  <span className="rounded border border-line bg-surface px-1.5 py-0.5 text-xs text-ink-sub">
-                    ドメイン判定
-                  </span>
-                )}
               </div>
               {item.aiReady ? (
                 <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink">
@@ -384,11 +418,6 @@ export function InboxDetail() {
                     value={item.counterparty}
                     onChange={(v) => store.setInboxCounterparty(item.id, v)}
                   />
-                  {!item.counterparty && (
-                    <p className="mt-1.5 text-xs text-ink-sub">
-                      AIは案件ごとに時系列でデータを解析します。紐付ける案件を選択してください。
-                    </p>
-                  )}
                 </>
               )}
             </section>

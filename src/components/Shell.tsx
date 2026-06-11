@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { LEDGER_STATUSES, useStore } from '../store/StoreContext';
 import { Toaster } from './Toaster';
 
@@ -30,13 +30,13 @@ interface NavItem {
 export function Shell() {
   const { actions, inboxItems } = useStore();
   const location = useLocation();
-  const inboxCount = inboxItems.filter((i) => !i.aiReady && i.status !== 'タスクあり').length;
+  const inboxCount = inboxItems.filter((i) => !i.aiReady && i.status !== 'タスクあり' && i.status !== 'キャンセル').length;
   const ledgerCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
 
   // 2画面構成: Inbox（入口）と台帳（要対応・依頼中・完了をタブで持つ作業場）。
   const items: NavItem[] = [
-    { to: '/inbox', icon: '📨', label: '受信箱', count: inboxCount },
-    { to: '/', end: true, icon: '📥', label: 'タスク', count: ledgerCount },
+    { to: '/', end: true, icon: '📨', label: '受信箱', count: inboxCount },
+    { to: '/ledger', icon: '📥', label: 'タスク', count: ledgerCount },
     { to: '/settings', icon: '⚙', label: '設定' },
   ];
 
@@ -44,19 +44,19 @@ export function Shell() {
   const currentLabel = location.pathname.startsWith('/action')
     ? '詳細'
     : (items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
-        ?.label ?? 'タスク');
+        ?.label ?? '受信箱');
 
   return (
     <div className="flex h-full min-h-screen flex-col">
       {/* 上部バー（高さ56px）。Brand Blue のクロム（DESIGN.md §4 Navigation）。 */}
       <header className="flex h-14 shrink-0 items-center gap-3 bg-nav-bar px-4 text-white sm:gap-4 sm:px-5">
-        <div className="flex items-center gap-2 font-semibold">
+        <Link to="/" className="flex items-center gap-2 font-semibold hover:opacity-80">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true" className="shrink-0">
             <rect width="28" height="28" rx="4" fill="#ffd742"/>
             <path d="M17 5 L8 17 L13 17 L10 23 L20 11 L15 11 Z" fill="#074194"/>
           </svg>
           <span className="hidden sm:inline">Action Hub</span>
-        </div>
+        </Link>
         {/* 現在地（パンくず）。どのタブにいるか常に明示。 */}
         <span aria-hidden className="text-white/40">
           /

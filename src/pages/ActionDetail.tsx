@@ -22,7 +22,7 @@ export function ActionDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
+  const from = (location.state as { from?: string } | null)?.from ?? '/ledger';
 
   const store = useStore();
   const action = store.getAction(id);
@@ -42,7 +42,7 @@ export function ActionDetail() {
       <div className="py-20 text-center text-ink-sub">
         アクションが見つかりません。
         <div className="mt-2">
-          <Button variant="link" onClick={() => navigate('/')}>
+          <Button variant="link" onClick={() => navigate('/ledger')}>
             台帳へ戻る
           </Button>
         </div>
@@ -94,7 +94,7 @@ export function ActionDetail() {
             variant="primary"
             onClick={() => {
               store.approveAndSend(action.id);
-              navigate('/');
+              navigate(from);
             }}
           >
             承認して送信 ▶
@@ -115,7 +115,7 @@ export function ActionDetail() {
             variant="primary"
             onClick={() => {
               store.handToFS(action.id);
-              navigate('/?tab=waiting');
+              navigate('/ledger?tab=waiting');
             }}
           >
             FS承認へ回す ▶
@@ -261,7 +261,7 @@ export function ActionDetail() {
         onConfirm={() => {
           setConfirmOpen(false);
           store.reject(action.id);
-          navigate('/');
+          navigate(from);
         }}
         onCancel={() => setConfirmOpen(false)}
       />

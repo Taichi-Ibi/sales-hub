@@ -19,6 +19,8 @@ export type LedgerMode = 'normal' | 'empty' | 'loading';
 export interface Toast {
   id: number;
   message: string;
+  actionId?: string;
+  actionTitle?: string;
 }
 
 interface StoreValue {
@@ -42,13 +44,14 @@ interface StoreValue {
   // Inbox: 分かち書き(CPUシミュレート) → タップでマスキング → 案件選択 → AI Ready → バッチ解析 → タスク化
   getInboxItem: (id: string) => InboxItem | undefined;
   finishTokenize: (id: string) => void; // 分かち書き完了 → マスキング中
-  maskInboxToken: (id: string, text: string, type: MaskType) => void;
+  maskInboxToken: (id: string, text: string, type: MaskType, atIndex?: number) => void;
   unmaskInboxToken: (id: string, token: string, atIndex: number) => void;
   unmaskAllInboxTokens: (id: string) => void;
   setInboxCounterparty: (id: string, counterparty: string) => void; // 案件名を設定
   markAiReady: (id: string) => void; // AI Readyにする（マスク・案件選択が前提。解析は行わない）
   runAiAnalysis: () => void; // バッチ解析: aiReady かつ未タスク化のアイテムを一括処理
   runSingleAnalysis: (id: string) => void; // 単件解析: 指定アイテムのみ即時処理
+  cancelInboxItem: (id: string) => void; // AI Readyにせずキャンセル
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -79,9 +82,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [patch],
   );
 
-  const addToast = useCallback((message: string) => {
+  const addToast = useCallback((message: string, extra?: { actionId?: string; actionTitle?: string }) => {
     const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message }]);
+    setToasts((prev) => [...prev, { id, message, ...extra }]);
     window.setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 2500);
@@ -210,10 +213,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   // タップされたトークン文字列を伏せる。同一文字列の出現はすべて同じトークンになる。
+  // atIndex が指定された場合: 既存マスクのその位置の除外を解除して再マスクする（復元後の再マスク用）。
   const maskInboxToken = useCallback(
-    (id: string, text: string, type: MaskType) => {
+    (id: string, text: string, type: MaskType, atIndex?: number) => {
       patchInbox(id, (i) => {
-        if (i.masks.some((m) => m.text === text)) return i;
+        const existing = i.masks.find((m) => m.text === text);
+        if (existing) {
+          if (atIndex !== undefined && (existing.excludedIndices ?? []).includes(atIndex)) {
+            return {
+              ...i,
+              masks: i.masks.map((m) =>
+                m.text === text
+                  ? { ...m, excludedIndices: (m.excludedIndices ?? []).filter((ex) => ex !== atIndex) }
+                  : m,
+              ),
+            };
+          }
+          return i;
+        }
         const n = i.masks.filter((m) => m.type === type).length + 1;
         const token = `〔${type}${circled(n)}〕`;
         return { ...i, masks: [...i.masks, { text, type, token, excludedIndices: [] }] };
@@ -306,8 +323,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       setActions((prev) => [action, ...prev]);
       patchInbox(id, (i) => ({ ...i, status: 'タスクあり', aiReady: true, resultActionId: actionId }));
+      addToast('タスク化しました', { actionId, actionTitle: seed.title });
     },
-    [patchInbox],
+    [patchInbox, addToast],
   );
 
   // 単件解析: 指定アイテムのみ即時処理（詳細画面の「今すぐ解析」用）。
@@ -319,10 +337,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       window.setTimeout(() => {
         distillOne(id, inboxItems);
         setAnalysisRunning(false);
-        addToast(target.distilled.draft ? 'タスクを生成しました' : '解析完了（タスクなし）');
+        if (!target.distilled.draft) addToast('解析完了（タスクなし）');
       }, 1500);
     },
     [inboxItems, distillOne, addToast],
+  );
+
+  // キャンセル: AI Readyにせず除外する。
+  const cancelInboxItem = useCallback(
+    (id: string) => {
+      patchInbox(id, (i) => ({ ...i, status: 'キャンセル' }));
+    },
+    [patchInbox],
   );
 
   // バッチ解析: aiReady かつ未タスク化のアイテムをまとめて処理（1時間ごと自動 or 手動）。
@@ -371,6 +397,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       markAiReady,
       runAiAnalysis,
       runSingleAnalysis,
+      cancelInboxItem,
     }),
     [
       actions,
@@ -398,6 +425,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       markAiReady,
       runAiAnalysis,
       runSingleAnalysis,
+      cancelInboxItem,
     ],
   );
 

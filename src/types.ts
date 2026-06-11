@@ -18,13 +18,13 @@ export interface MaskedEntity {
 }
 
 // ───────── Inbox（IS向け受信箱） ─────────
-// Slack/メール/議事録の原文が入り、分かち書き(CPU)→人手マスキング→AIタスク化 と進む。
+// Slack/メール/予定の原文が入り、分かち書き(CPU)→人手マスキング→AIタスク化 と進む。
 // マスキングは Inbox 内の原文に対して行い、台帳側では復元のみを行う。
 
-export type InboxSource = 'slack' | 'mail' | 'minutes';
+export type InboxSource = 'slack' | 'mail' | 'schedule';
 
 // 分かち書き・AI解析の実行中はページ側の一時状態で表現し、status には持たない。
-export type InboxStatus = '未処理' | 'マスキング中' | 'タスクあり';
+export type InboxStatus = '未処理' | 'マスキング中' | 'タスクあり' | 'キャンセル';
 
 export interface InboxMask {
   text: string; // 分かち書きトークンの文字列。同一文字列は一括で同じトークンに置換
@@ -56,11 +56,19 @@ export interface InboxItem {
   body: string; // 原文
   status: InboxStatus;
   aiReady: boolean; // AI が安全に読める状態（マスク済み・案件選択済み）か。タスク化とは独立
-  counterparty: string; // 案件名。メール: ドメインから自動判定。Slack/議事録: 手動選択
+  counterparty: string; // 案件名。メール: ドメインから自動判定。Slack/予定: 手動選択
   tokens?: string[]; // 分かち書き結果（CPU実行のシミュレート完了後にセット）
   masks: InboxMask[];
   resultActionId?: string; // タスク化で生成された Action
   distilled: DistilledSeed;
+  // 予定・会議専用メタ情報（任意）
+  eventAt?: string; // イベント開始日時 "2026-06-11T19:00:00"
+  eventEnd?: string; // イベント終了日時（任意）
+  participants?: string[]; // 参加者名
+  location?: string; // 場所・会場
+  eventType?: '商談' | '会食' | '移動' | '社内MTG' | 'その他';
+  // メール専用（任意）
+  mailTo?: string; // 受信者（宛先）
 }
 
 // タスクの出どころ（経緯ドリルダウン用）。原文の抜粋を Action 自身が持ち、
