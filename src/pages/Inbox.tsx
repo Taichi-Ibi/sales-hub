@@ -48,23 +48,80 @@ function timeUntil(iso: string): string {
   return `${Math.round(diff / 86400000)}日後`;
 }
 
-function Row({
+/**
+ * アーカイブ・AI Ready 用コンパクト1行表示。
+ * actionButton があれば右上に絶対配置で表示。
+ */
+function CompactRow({
   item,
-  onCancel,
-  isFuture = false,
+  actionButton,
+  muted = false,
 }: {
   item: InboxItem;
-  onCancel: () => void;
-  isFuture?: boolean;
+  actionButton?: React.ReactNode;
+  muted?: boolean;
 }) {
+  const navigate = useNavigate();
+  const meta = SOURCE_META[item.source];
+  const { label: elapsed } = elapsedSince(item.receivedAt);
+  return (
+    <div className="group relative">
+      <button
+        onClick={() => navigate(`/inbox/${item.id}`)}
+        className={`flex w-full items-center gap-2 rounded-lg border border-line bg-white px-4 py-2 text-left transition-all hover:bg-surface ${muted ? 'opacity-40 hover:opacity-70' : ''}`}
+        aria-label={`${meta.label} ${item.title} を開く`}
+      >
+        <span className="shrink-0 text-base" aria-hidden>{meta.icon}</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-ink">
+          {item.title}
+          {item.memo && <span className="ml-1.5 text-ink-sub/60">📝</span>}
+        </span>
+        {item.counterparty && (
+          <span className="shrink-0 text-xs font-semibold text-ink">{item.counterparty}</span>
+        )}
+        <span className="w-16 shrink-0 text-right tabular-nums text-xs text-ink-sub">
+          {item.eventAt ? formatEventTime(item.eventAt) : `${elapsed}前`}
+        </span>
+      </button>
+      {actionButton && (
+        <div className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+          {actionButton}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 未来の予定用コンパクト1行表示。グレー・薄め。 */
+function FutureRow({ item, onCancel: _onCancel }: { item: InboxItem; onCancel: () => void }) {
+  const navigate = useNavigate();
+  const meta = SOURCE_META[item.source];
+  return (
+    <button
+      onClick={() => navigate(`/inbox/${item.id}`)}
+      className="flex w-full items-center gap-2 rounded-lg border border-line/50 bg-surface/50 px-4 py-2 text-left opacity-60 transition-all hover:opacity-100"
+      aria-label={`${meta.label} ${item.title} を開く`}
+    >
+      <span className="shrink-0 text-base" aria-hidden>{meta.icon}</span>
+      <span className="min-w-0 flex-1 truncate text-sm text-ink-sub">
+        {item.eventType && <span className="mr-1 text-ink-sub/70">{EVENT_TYPE_LABEL[item.eventType]}</span>}
+        {item.title}
+      </span>
+      <span className="w-16 shrink-0 text-right tabular-nums text-xs font-semibold text-accent">
+        {item.eventAt ? timeUntil(item.eventAt) : ''}
+      </span>
+    </button>
+  );
+}
+
+function Row({ item, onCancel }: { item: InboxItem; onCancel: () => void }) {
   const navigate = useNavigate();
   const meta = SOURCE_META[item.source];
   const done = item.status === 'タスクあり';
   const { label: elapsed } = elapsedSince(item.receivedAt);
   const cancelable = item.status === '未処理';
   const isCurrent = isCurrentEvent(item);
-
-  const cardBg = isCurrent ? 'bg-good/25 border-good/60' : 'bg-white border-line';
+  const cardBg = isCurrent ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-line';
 
   const touchStartX = useRef(0);
   const [swipeDx, setSwipeDx] = useState(0);
@@ -110,7 +167,7 @@ function Row({
       >
         <button
           onClick={() => navigate(`/inbox/${item.id}`)}
-          className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all hover:brightness-95 ${cardBg} ${done ? 'opacity-40' : item.aiReady ? 'opacity-65 hover:opacity-100' : ''} ${isFuture ? 'opacity-45' : ''}`}
+          className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all hover:brightness-95 ${cardBg} ${done ? 'opacity-40' : item.aiReady ? 'opacity-65 hover:opacity-100' : ''}`}
           aria-label={`${meta.label} ${item.title} を開く`}
         >
           <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface text-lg" aria-hidden>
@@ -121,25 +178,13 @@ function Row({
             <div className="flex items-center gap-1.5">
               <p className={`truncate text-[15px] font-bold text-ink ${done ? 'font-medium' : ''}`}>
                 {item.title}
+                {item.memo && <span className="ml-1.5 text-sm font-normal text-ink-sub/60">📝</span>}
               </p>
               {isCurrent && (
                 <span className="shrink-0 rounded bg-good px-1.5 py-0.5 text-[11px] font-semibold text-white">
                   進行中
                 </span>
               )}
-              <span className="ml-auto shrink-0">
-                {item.eventAt && !isCurrent && new Date(item.eventAt).getTime() > NOW.getTime() ? (
-                  <span className="tabular-nums text-sm font-semibold text-accent">
-                    {timeUntil(item.eventAt)}
-                  </span>
-                ) : item.eventAt ? (
-                  <span className="tabular-nums text-sm font-semibold text-ink">
-                    {formatEventTime(item.eventAt)}{item.eventEnd ? `–${formatEventTime(item.eventEnd).split(' ')[1]}` : ''}
-                  </span>
-                ) : (
-                  <span className="tabular-nums text-xs text-ink-sub">{elapsed}前</span>
-                )}
-              </span>
             </div>
             {/* サブ行 */}
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-ink-sub">
@@ -165,19 +210,26 @@ function Row({
                 {item.location ? <span>📍 {item.location}</span> : null}
               </p>
             )}
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-            {item.aiReady && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
-                ✨ AI Ready
-              </span>
+            {/* バッジ（time の前に置いて右端を time のみにする）*/}
+            {(item.aiReady || done) && (
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {item.aiReady && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
+                    ✨ AI Ready
+                  </span>
+                )}
+                {done && <span className="text-xs font-medium text-good">✔ {item.status}</span>}
+              </div>
             )}
-            {done && <span className="text-xs font-medium text-good">✔ {item.status}</span>}
-            {/* モバイル用フリックヒント */}
-            {cancelable && !isFuture && (
-              <span className="text-[10px] text-ink-sub/30 md:hidden" aria-hidden>‹</span>
-            )}
           </div>
+          {/* 時刻（固定幅・最後のflex子でFutureRowと右端を揃える）*/}
+          <span className="w-16 shrink-0 self-start text-right tabular-nums text-xs text-ink-sub">
+            {item.eventAt && isCurrent
+              ? `${formatEventTime(item.eventAt)}–${item.eventEnd ? formatEventTime(item.eventEnd).split(' ')[1] : ''}`
+              : item.eventAt
+                ? formatEventTime(item.eventAt)
+                : `${elapsed}前`}
+          </span>
         </button>
       </div>
 
@@ -198,7 +250,7 @@ function Row({
 
 /** Inbox（IS向け受信箱）。Slack/メール/予定の原文がここに集まる。 */
 export function Inbox() {
-  const { inboxItems, analysisRunning, runAiAnalysis, cancelInboxItem } = useStore();
+  const { inboxItems, analysisRunning, runAiAnalysis, cancelInboxItem, unarchiveInboxItem } = useStore();
   const [filter, setFilter] = useState<Filter>('すべて');
   const [showAiReady, setShowAiReady] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
@@ -294,11 +346,11 @@ export function Inbox() {
             )}
           </Button>
         </div>
-        {/* 解析待ちアイテム（トグル展開）*/}
+        {/* 解析待ちアイテム（トグル展開）— 1行表示 */}
         {showAiReady && pendingItems.length > 0 && (
-          <div className="flex flex-col gap-1.5 border-t border-gold/40 px-3 pb-3 pt-2">
+          <div className="flex flex-col gap-1 border-t border-gold/40 px-3 pb-3 pt-2">
             {pendingItems.map((i) => (
-              <Row key={i.id} item={i} onCancel={() => cancelInboxItem(i.id)} />
+              <CompactRow key={i.id} item={i} />
             ))}
           </div>
         )}
@@ -316,7 +368,31 @@ export function Inbox() {
         ))}
       </div>
 
-      {regularItems.length === 0 && !nextFuture ? (
+      {/* 未来の予定（コンパクト1行・グレー）— 進行中より上 */}
+      {(nextFuture || furtherFuture.length > 0) && (
+        <div className="mb-2 flex flex-col gap-1">
+          {nextFuture && (
+            <FutureRow key={nextFuture.id} item={nextFuture} onCancel={() => cancelInboxItem(nextFuture.id)} />
+          )}
+          {furtherFuture.length > 0 && (
+            <>
+              <button
+                onClick={() => setShowFuture((v) => !v)}
+                className="flex w-full items-center gap-1.5 px-1 text-xs text-ink-sub/50 transition-colors hover:text-ink-sub"
+                aria-expanded={showFuture}
+              >
+                <span aria-hidden className={`text-[10px] transition-transform ${showFuture ? 'rotate-90' : ''}`}>❯</span>
+                それ以降 {furtherFuture.length}件
+              </button>
+              {showFuture && furtherFuture.map((i) => (
+                <FutureRow key={i.id} item={i} onCancel={() => cancelInboxItem(i.id)} />
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {regularItems.length === 0 ? (
         <div className="grid place-items-center rounded-lg border border-line bg-surface py-20 text-center">
           <p className="text-lg font-semibold text-ink">受信した原文はありません</p>
           <p className="mt-1 text-sm text-ink-sub">Slack・メール・予定が届くとここに表示されます</p>
@@ -326,26 +402,6 @@ export function Inbox() {
           {regularItems.map((i) => (
             <Row key={i.id} item={i} onCancel={() => cancelInboxItem(i.id)} />
           ))}
-          {/* 次の未来の予定 */}
-          {nextFuture && (
-            <Row key={nextFuture.id} item={nextFuture} onCancel={() => cancelInboxItem(nextFuture.id)} />
-          )}
-          {/* それ以降の予定トグル */}
-          {furtherFuture.length > 0 && (
-            <>
-              <button
-                onClick={() => setShowFuture((v) => !v)}
-                className="mt-0.5 flex w-full items-center gap-1.5 text-xs text-ink-sub/60 transition-colors hover:text-ink-sub"
-                aria-expanded={showFuture}
-              >
-                <span aria-hidden className={`text-[10px] transition-transform ${showFuture ? 'rotate-90' : ''}`}>❯</span>
-                それ以降の予定 {furtherFuture.length}件
-              </button>
-              {showFuture && furtherFuture.map((i) => (
-                <Row key={i.id} item={i} onCancel={() => cancelInboxItem(i.id)} isFuture />
-              ))}
-            </>
-          )}
         </div>
       )}
 
@@ -361,9 +417,23 @@ export function Inbox() {
             アーカイブ {cancelledItems.length}件
           </button>
           {showCancelled && (
-            <div className="mt-2 flex flex-col gap-2 opacity-50">
+            <div className="mt-2 flex flex-col gap-1">
               {cancelledItems.map((i) => (
-                <Row key={i.id} item={i} onCancel={() => {}} />
+                <CompactRow
+                  key={i.id}
+                  item={i}
+                  muted
+                  actionButton={
+                    <button
+                      onClick={() => unarchiveInboxItem(i.id)}
+                      className="flex size-5 items-center justify-center rounded-full bg-surface text-xs text-ink-sub/60 hover:bg-white hover:text-ink"
+                      aria-label={`${i.title} を受信箱に戻す`}
+                      title="受信箱に戻す"
+                    >
+                      ↩
+                    </button>
+                  }
+                />
               ))}
             </div>
           )}

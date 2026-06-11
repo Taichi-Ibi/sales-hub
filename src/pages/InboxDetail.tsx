@@ -15,12 +15,12 @@ function formatEventTime(iso: string): string {
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-const EVENT_TYPE_LABEL: Record<NonNullable<InboxItem['eventType']>, string> = {
-  商談: '💼 商談',
-  会食: '🍽 会食',
-  移動: '🚅 移動',
-  社内MTG: '🏢 社内MTG',
-  その他: '📌 その他',
+const EVENT_TYPE_ICON: Record<NonNullable<InboxItem['eventType']>, string> = {
+  商談: '💼',
+  会食: '🍽',
+  移動: '🚅',
+  社内MTG: '🏢',
+  その他: '📌',
 };
 
 /**
@@ -254,6 +254,7 @@ export function InboxDetail() {
   const [selectedRange, setSelectedRange] = useState<{ start: number; end: number } | null>(null);
   const [showMaskHelp, setShowMaskHelp] = useState(false);
   const [showAiReadyConfirm, setShowAiReadyConfirm] = useState(false);
+  const [showMemo, setShowMemo] = useState(false);
 
   // 未処理の原文を開いたら分かち書きを実行（シミュレート。約1秒）。
   const needsTokenize = !!item && !item.tokens;
@@ -295,67 +296,67 @@ export function InboxDetail() {
       <div className="overflow-hidden bg-white">
         {/* ヘッダー */}
         <div className="border-b border-line p-4 sm:p-5">
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-ink-sub">
-            <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-0.5 font-medium text-ink">
-              <span aria-hidden>{meta.icon}</span>
-              {meta.label}
-            </span>
-            <span>{item.sender}</span>
-            <span aria-hidden>・</span>
-            <span className="tabular-nums">{elapsed}前</span>
-          </div>
-          {/* 予定メタ情報 */}
-          {(item.eventType || item.eventAt || item.participants || item.location) && (
-            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-              {item.eventType && (
-                <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-ink">
-                  {EVENT_TYPE_LABEL[item.eventType]}
-                </span>
-              )}
-              {item.eventAt && (
-                <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs tabular-nums text-ink">
-                  🕐 {formatEventTime(item.eventAt)}{item.eventEnd ? `–${formatEventTime(item.eventEnd).split(' ')[1]}` : ''}
-                </span>
-              )}
-              {item.participants && item.participants.length > 0 && (
-                <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-ink">
-                  👥 {item.participants.join('、')}
-                </span>
-              )}
-              {item.location && (
-                <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-ink">
-                  📍 {item.location}
-                </span>
-              )}
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold text-ink">{item.title}</h1>
-            {masking && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowMaskHelp((v) => !v)}
-                  className="inline-flex size-5 items-center justify-center rounded-full border border-line bg-white text-xs text-ink-sub/70 hover:text-ink-sub"
-                  aria-label="マスキングの操作方法を表示"
-                  aria-expanded={showMaskHelp}
-                >
-                  i
-                </button>
-                {showMaskHelp && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowMaskHelp(false)} aria-hidden />
-                    <div className="absolute left-0 top-7 z-20 w-64 rounded-lg border border-line bg-white p-3 shadow-md">
-                      <p className="text-sm text-ink-sub">語をタップして伏せる／チップをタップで1件復元</p>
-                    </div>
-                  </>
+          {/* タイトル行: [ソースアイコン] [タイトル] [badges] + 時刻右寄せ */}
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 shrink-0 text-xl" aria-hidden>{meta.icon}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold text-ink">{item.title}</h1>
+                {masking && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMaskHelp((v) => !v)}
+                      className="inline-flex size-5 items-center justify-center rounded-full border border-line bg-white text-xs text-ink-sub/70 hover:text-ink-sub"
+                      aria-label="マスキングの操作方法を表示"
+                      aria-expanded={showMaskHelp}
+                    >
+                      i
+                    </button>
+                    {showMaskHelp && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowMaskHelp(false)} aria-hidden />
+                        <div className="absolute left-0 top-7 z-20 w-64 rounded-lg border border-line bg-white p-3 shadow-md">
+                          <p className="text-sm text-ink-sub">語をタップして伏せる／チップをタップで1件復元</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {item.aiReady && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
+                    ✨ AI Ready
+                  </span>
                 )}
               </div>
-            )}
-            {item.aiReady && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
-                ✨ AI Ready
-              </span>
-            )}
+              {/* タイトル下のメタ情報（受信箱と同じ） */}
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-ink-sub">
+                {item.eventType && <span>{EVENT_TYPE_ICON[item.eventType]} {item.eventType}</span>}
+                {item.eventAt && <span className="tabular-nums text-ink-sub/60">{elapsed}前</span>}
+                {item.source === 'mail' && (
+                  <>
+                    <span>From: {item.sender}</span>
+                    {item.mailTo && <><span aria-hidden>/</span><span>To: {item.mailTo}</span></>}
+                  </>
+                )}
+                {item.source === 'slack' && item.sender && <span>{item.sender}</span>}
+                {item.counterparty && (
+                  <><span aria-hidden>·</span><span className="font-semibold text-ink">{item.counterparty}</span></>
+                )}
+              </p>
+              {(!!item.participants?.length || item.location) && (
+                <p className="mt-0.5 truncate text-xs text-ink-sub/70">
+                  {!!item.participants?.length && <span>👥 {item.participants.join('、')}</span>}
+                  {!!item.participants?.length && item.location && <span aria-hidden>　</span>}
+                  {item.location && <span>📍 {item.location}</span>}
+                </p>
+              )}
+            </div>
+            {/* 時刻（タイトル右・マスト表示）*/}
+            <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">
+              {item.eventAt
+                ? `${formatEventTime(item.eventAt)}${item.eventEnd ? `–${formatEventTime(item.eventEnd).split(' ')[1]}` : ''}`
+                : elapsed + '前'}
+            </span>
           </div>
         </div>
 
@@ -399,6 +400,29 @@ export function InboxDetail() {
                   );
                 })()}
               </>
+            )}
+          </section>
+
+          {/* メモ（トグル） */}
+          <section>
+            <button
+              onClick={() => setShowMemo((v) => { if (!v && item.memo) return true; return !v; })}
+              className="flex items-center gap-1.5 text-sm text-ink-sub hover:text-ink"
+              aria-expanded={showMemo || !!item.memo}
+            >
+              <span aria-hidden className={`text-[10px] transition-transform ${showMemo || item.memo ? 'rotate-90' : ''}`}>❯</span>
+              メモ
+              {item.memo && <span className="text-xs text-ink-sub/60">📝 あり</span>}
+            </button>
+            {(showMemo || !!item.memo) && (
+              <textarea
+                value={item.memo ?? ''}
+                onChange={(e) => store.setInboxMemo(item.id, e.target.value)}
+                onFocus={() => setShowMemo(true)}
+                placeholder="メモを入力..."
+                rows={3}
+                className="mt-2 w-full resize-none rounded-lg border border-line bg-surface p-3 text-sm text-ink outline-none focus:border-accent"
+              />
             )}
           </section>
 

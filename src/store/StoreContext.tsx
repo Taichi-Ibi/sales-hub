@@ -51,7 +51,9 @@ interface StoreValue {
   markAiReady: (id: string) => void; // AI Readyにする（マスク・案件選択が前提。解析は行わない）
   runAiAnalysis: () => void; // バッチ解析: aiReady かつ未タスク化のアイテムを一括処理
   runSingleAnalysis: (id: string) => void; // 単件解析: 指定アイテムのみ即時処理
-  cancelInboxItem: (id: string) => void; // AI Readyにせずキャンセル
+  cancelInboxItem: (id: string) => void; // アーカイブ（AIに渡さない）
+  unarchiveInboxItem: (id: string) => void; // アーカイブを戻す
+  setInboxMemo: (id: string, memo: string) => void; // メモを保存
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -343,10 +345,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [inboxItems, distillOne, addToast],
   );
 
-  // キャンセル: AI Readyにせず除外する。
   const cancelInboxItem = useCallback(
     (id: string) => {
       patchInbox(id, (i) => ({ ...i, status: 'キャンセル' }));
+    },
+    [patchInbox],
+  );
+
+  const unarchiveInboxItem = useCallback(
+    (id: string) => {
+      patchInbox(id, (i) => ({ ...i, status: '未処理', aiReady: false }));
+    },
+    [patchInbox],
+  );
+
+  const setInboxMemo = useCallback(
+    (id: string, memo: string) => {
+      patchInbox(id, (i) => ({ ...i, memo }));
     },
     [patchInbox],
   );
@@ -398,6 +413,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       runAiAnalysis,
       runSingleAnalysis,
       cancelInboxItem,
+      unarchiveInboxItem,
+      setInboxMemo,
     }),
     [
       actions,
@@ -426,6 +443,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       runAiAnalysis,
       runSingleAnalysis,
       cancelInboxItem,
+      unarchiveInboxItem,
+      setInboxMemo,
     ],
   );
 

@@ -69,6 +69,8 @@ export interface InboxItem {
   eventType?: '商談' | '会食' | '移動' | '社内MTG' | 'その他';
   // メール専用（任意）
   mailTo?: string; // 受信者（宛先）
+  // ユーザーメモ（任意）
+  memo?: string;
 }
 
 // タスクの出どころ（経緯ドリルダウン用）。原文の抜粋を Action 自身が持ち、
