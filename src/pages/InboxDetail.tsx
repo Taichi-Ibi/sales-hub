@@ -183,9 +183,7 @@ export function InboxDetail() {
             <div key={i} className="ambox ambox-warning">⚠ {r}</div>
           ))
         ) : (
-          <div className="ambox ambox-success">
-            ✓ 自動マスク {item.masks.length}件・記事判定済み。機密情報が残っていないか査読し、問題なければAIに渡してください。
-          </div>
+          <div className="ambox ambox-success">✓ 自動マスク {item.masks.length}件・記事判定済み</div>
         ))}
       {processed && (
         <div className="ambox ambox-success">
@@ -209,9 +207,7 @@ export function InboxDetail() {
 
       <h2 className="wiki-h2">原文</h2>
       {reviewing && (
-        <p className="my-1 text-xs text-ink-sub">
-          語をクリックして伏せる／〔トークン〕をクリックで1件復元。同一の語は一括で同じトークンになります。
-        </p>
+        <p className="my-1 text-xs text-ink-sub">語をクリックして伏せる／〔トークン〕をクリックで復元。</p>
       )}
       <TokenizedBody
         item={item}

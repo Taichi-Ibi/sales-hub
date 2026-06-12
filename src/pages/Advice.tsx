@@ -25,10 +25,6 @@ export function Advice() {
   return (
     <div>
       <h1 className="wiki-h1">特別:助言</h1>
-      <p className="text-[13px] text-ink-sub">
-        商談Wikiのウォッチリストです。記事の直近2スナップショットの差分から生成された変更の通知と提案が並びます。
-        すべての指摘に出典（痕跡）がつき、未読は<b>太字</b>で表示されます。
-      </p>
 
       <p className="mt-2 border-b border-line-light pb-1 text-[13px]">
         {tab === 'daily' ? <b>今日の助言</b> : <a onClick={() => setParams({}, { replace: true })}>今日の助言</a>}
@@ -50,20 +46,14 @@ export function Advice() {
                 <a onClick={() => navigate(`/advice/${a.id}`)} className={unread ? 'font-bold' : ''}>
                   {a.title}
                 </a>
-                <span className="text-xs text-ink-sub">
-                  　{counterparty}　·　{a.kind}　·　優先度 {a.priority}　·　生成 {a.generatedAt}
-                  {unread && '　·　未読'}
-                </span>
+                <span className="text-xs text-ink-sub">　{counterparty}　·　{a.kind}　·　{a.generatedAt}</span>
               </li>
             );
           })}
         </ul>
       ) : (
         <div className="mt-2">
-          <p className="text-xs text-ink-sub">
-            {WEEKLY_REPORT.weekOf}　·　生成 {WEEKLY_REPORT.generatedAt}　·　reports/weekly/2026-W24.md　·
-            個人ではなく構造に宛てる（個人名ベースの帰責なし）
-          </p>
+          <p className="text-xs text-ink-sub">{WEEKLY_REPORT.weekOf}　·　生成 {WEEKLY_REPORT.generatedAt}</p>
           <MarkdownView markdown={WEEKLY_REPORT.markdown} />
           <References markdown={WEEKLY_REPORT.markdown} />
         </div>

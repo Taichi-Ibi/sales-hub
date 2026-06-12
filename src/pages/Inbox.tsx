@@ -23,21 +23,14 @@ function ReviewRow({ item, onArchive }: { item: InboxItem; onArchive: () => void
   const navigate = useNavigate();
   const meta = SOURCE_META[item.source];
   const { label: elapsed } = elapsedSince(item.receivedAt);
-  const warnings = item.attention ?? [];
   return (
     <li className="my-1.5">
       （<a onClick={() => navigate(`/inbox/${item.id}`)}>査読</a> | <a onClick={onArchive}>アーカイブ</a>）
       　{meta.label}　<a onClick={() => navigate(`/inbox/${item.id}`)} className="font-bold">{item.title}</a>
       <span className="text-xs text-ink-sub">
         　{item.sender && `${item.sender}　·　`}
-        {item.counterparty || '案件未確定'}　·　{elapsed}前
+        {item.counterparty || '記事未選択'}　·　{elapsed}前
       </span>
-      {warnings.map((r, i) => (
-        <div key={i} className="ambox ambox-warning my-1">⚠ {r}</div>
-      ))}
-      {warnings.length === 0 && (
-        <div className="text-xs text-ink-sub">自動マスク済み — 目視確認してAIに渡せます</div>
-      )}
     </li>
   );
 }
@@ -70,10 +63,7 @@ export function Inbox() {
   return (
     <div>
       <h1 className="wiki-h1">特別:受信箱</h1>
-      <p className="text-[13px] text-ink-sub">
-        記事への更新候補（痕跡）の巡回ページです。<b>全件、人が査読（目視確認）してからAIに渡ります</b>
-        — 機密情報がないことを保証できるのは人間のみ。未確認のデータはAIに渡りません。
-      </p>
+      <p className="text-[13px] text-ink-sub">全件、人が査読してからAIに渡ります。</p>
 
       <p className="mt-2 border-b border-line-light pb-1 text-[13px]">
         表示:{' '}
@@ -99,6 +89,7 @@ export function Inbox() {
       {processedItems.length > 0 && (
         <>
           <h2 className="wiki-h2">処理記録（{processedItems.length}）</h2>
+          <div className="overflow-x-auto">
           <table className="wikitable">
             <thead>
               <tr>
@@ -121,6 +112,7 @@ export function Inbox() {
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
 

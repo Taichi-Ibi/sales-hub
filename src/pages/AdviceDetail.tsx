@@ -60,7 +60,6 @@ function TalkSection({ advice, entities }: { advice: DealAdvice; entities: Maske
       {thinking && <p className="text-[13px] text-ink-sub">Wikiと痕跡を読んでいます…</p>}
       {remaining.length > 0 && (
         <p className="text-[13px]">
-          よくある質問:{' '}
           {remaining.map((item, i) => (
             <span key={item.q}>
               {i > 0 && ' | '}
@@ -107,16 +106,8 @@ function RelayDraftSection({
       <div className="border border-line-light bg-surface px-3 py-2">
         <p className="my-0 whitespace-pre-wrap">{renderInline(draft.body, entities)}</p>
       </div>
-      <p className="my-1 text-xs text-ink-sub">
-        根拠:{' '}
-        {draft.evidence.map((id, i) => (
-          <span key={id}>
-            {i > 0 && '、'}
-            <TraceLink traceId={id} />
-          </span>
-        ))}
-        　·　自動送信はされません。コピーして{draft.recipient}へ伝達してください。
-        <button className="btn ml-2" onClick={() => copyRelay(advice, draft)}>
+      <p className="my-1">
+        <button className="btn" onClick={() => copyRelay(advice, draft)}>
           {copied ? '再コピーする' : 'コピーする'}
         </button>
       </p>
@@ -178,18 +169,7 @@ export function AdviceDetail() {
             </td>
           </tr>
           <tr><th>種別</th><td>{advice.kind}</td></tr>
-          <tr><th>優先度</th><td>{advice.priority}</td></tr>
           <tr><th>生成</th><td className="tabular-nums">{advice.generatedAt}</td></tr>
-          <tr>
-            <th>入力</th>
-            <td>
-              {advice.inputs.map((input) => (
-                <div key={input}>
-                  <code className="text-[11px]">{input}</code>
-                </div>
-              ))}
-            </td>
-          </tr>
         </tbody>
       </table>
 
@@ -209,11 +189,10 @@ export function AdviceDetail() {
           ))}
         </section>
 
+        {dealRelayLogs.length > 0 && (
         <section>
-          <h2 className="wiki-h2">この記事の伝達記録</h2>
-          {dealRelayLogs.length === 0 ? (
-            <p className="text-[13px] text-ink-sub">まだ伝達していません。コピーすると記録されます。</p>
-          ) : (
+          <h2 className="wiki-h2">伝達記録</h2>
+          <div className="overflow-x-auto">
             <table className="wikitable">
               <thead>
                 <tr>
@@ -234,11 +213,9 @@ export function AdviceDetail() {
                 ))}
               </tbody>
             </table>
-          )}
-          <p className="mt-1 text-xs text-ink-sub">
-            伝達記録は痕跡（traces）互換の形式で保存され、将来①集約の入力として還流します。
-          </p>
+          </div>
         </section>
+        )}
       </div>
     </div>
   );
