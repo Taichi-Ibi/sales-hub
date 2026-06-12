@@ -43,7 +43,7 @@ export function Shell() {
       <header className="flex items-baseline gap-4 border-b border-line bg-page px-4 py-2 sm:px-6">
         <Link to="/wiki" className="text-ink no-underline hover:no-underline">
           <span className="font-serif text-xl">Sales Hub</span>
-          <span className="ml-2 text-xs text-ink-sub">営業Wiki — 誰も入力しない百科事典</span>
+          <span className="ml-2 text-xs text-ink-sub">営業Wiki</span>
         </Link>
         <div className="ml-auto flex items-baseline gap-4">
           <input
@@ -66,8 +66,6 @@ export function Shell() {
         <nav className="hidden w-44 shrink-0 flex-col gap-1 px-4 py-4 text-[13px] md:flex" aria-label="メインナビゲーション">
           <p className="text-xs text-ink-sub">ナビゲーション</p>
           {items.map(renderItem)}
-          <p className="mt-4 text-xs text-ink-sub">ヘルプ</p>
-          <span className="text-ink-sub">痕跡は昇り、助言は降りる</span>
         </nav>
 
         {/* コンテンツ（記事領域。左罫で区切る） */}

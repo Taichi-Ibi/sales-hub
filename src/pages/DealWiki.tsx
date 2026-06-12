@@ -97,7 +97,7 @@ export function DealWiki() {
             {t}
           </a>
         ))}
-        <span className="ml-auto pb-1 text-ink-sub">wiki/{dealId}/{snapshot.date}.md（読み取り専用）</span>
+        <span className="ml-auto pb-1 text-ink-sub">読み取り専用</span>
       </div>
 
       <h1 className="wiki-h1 mt-3">
@@ -119,7 +119,6 @@ export function DealWiki() {
             )}
           </span>
         ))}
-        　·　AIが維持（毎朝6:00スナップショット生成）
       </p>
 
       {tab === '本文' && (
@@ -166,17 +165,13 @@ export function DealWiki() {
       )}
 
       {tab === '前日比' && prev && (
-        <div className="mt-3">
-          <p className="mb-2 text-[13px] text-ink-sub">
-            {shortDate(prev.date)}版と{shortDate(snapshot.date)}版の差分（ヨミ）。③助言はこの差分を入力に生成されます。
-          </p>
+        <div className="mt-3 overflow-x-auto">
           <MetaDiff prev={prev} cur={snapshot} />
         </div>
       )}
 
       {tab === '履歴' && (
-        <div className="mt-3">
-          <p className="mb-2 text-[13px] text-ink-sub">AIによるこの記事の維持の記録（取込・定期更新・整合性チェック）。</p>
+        <div className="mt-3 overflow-x-auto">
           <UpdateTimeline updates={updates} />
         </div>
       )}
