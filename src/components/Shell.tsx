@@ -1,6 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LEDGER_STATUSES, useStore } from '../store/StoreContext';
-import { WIKI_PAGES } from '../data/wiki';
+import { useStore } from '../store/StoreContext';
 import { Toaster } from './Toaster';
 
 /** ナビ件数バッジ。未読を示す赤バッジ（Slack 風）。選択中は反転。 */
@@ -29,35 +28,26 @@ interface NavItem {
 }
 
 export function Shell() {
-  const { actions, inboxItems, decisions, digestViewed } = useStore();
+  const { inboxItems, allAdvice, adviceReadIds } = useStore();
   const location = useLocation();
   // 受信箱バッジ = 目視確認待ち（要確認）件数。確認済みは数えない。
   const reviewCount = inboxItems.filter((i) => i.status === '要確認').length;
-  const todayCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
-  // ナレッジバッジ = wiki アラート + 判断待ち（提案中）の意思決定。
-  const knowledgeCount =
-    WIKI_PAGES.reduce((sum, p) => sum + p.alerts.length, 0) +
-    decisions.filter((d) => d.status === '提案中').length;
+  // 助言バッジ = 未読の助言件数。
+  const adviceCount = allAdvice.filter((a) => !adviceReadIds.has(a.id)).length;
 
-  // OODA を一周する構成: 今日（Act・ホーム）→ ダイジェスト（朝の Observe→Act 一覧）
-  // → ナレッジ（Orient: AIが維持する wiki）→ 受信箱（Observe 入口の目視ゲート）→ 設定。
+  // 逆V字を一周する構成: 受信箱（昇り: ②加工の目視ゲート）→ Wiki（頂点: 唯一の事実）
+  // → 助言（降り: ③④）→ 設定。
   const items: NavItem[] = [
-    { to: '/', end: true, icon: '📋', label: '今日', count: todayCount },
-    { to: '/digest', icon: '🌅', label: 'ダイジェスト', count: digestViewed ? undefined : 1 },
-    { to: '/wiki', icon: '📚', label: 'ナレッジ', count: knowledgeCount > 0 ? knowledgeCount : undefined },
     { to: '/inbox', icon: '📬', label: '受信箱', count: reviewCount > 0 ? reviewCount : undefined },
+    { to: '/wiki', icon: '📖', label: 'Wiki' },
+    { to: '/advice', icon: '💡', label: '助言', count: adviceCount > 0 ? adviceCount : undefined },
     { to: '/settings', icon: '⚙️', label: '設定' },
   ];
 
   // 上部バーに「今どこにいるか」を出す（詳細画面は各一覧の下層として扱う）。
-  const currentLabel = location.pathname.startsWith('/action')
-    ? '詳細'
-    : location.pathname.startsWith('/projects') ||
-        location.pathname.startsWith('/meetings') ||
-        location.pathname.startsWith('/decisions')
-      ? 'ナレッジ'
-      : (items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
-          ?.label ?? '今日');
+  const currentLabel =
+    items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
+      ?.label ?? '受信箱';
 
   return (
     <div className="flex h-screen flex-col">

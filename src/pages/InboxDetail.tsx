@@ -4,29 +4,17 @@ import type { InboxItem, MaskType } from '../types';
 import { useStore } from '../store/StoreContext';
 import { SOURCE_META } from '../data/inbox';
 import { DEALS, type Deal } from '../data/deals';
+import { findDealByCounterparty } from '../data/snapshots';
 import { elapsedSince } from '../lib/time';
 import { isMaskable } from '../lib/tokenize';
 import { MASK_TYPES, MASK_TYPE_MAP } from '../lib/maskTypes';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
-function formatEventTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
-
-const EVENT_TYPE_ICON: Record<NonNullable<InboxItem['eventType']>, string> = {
-  商談: '💼',
-  会食: '🍽',
-  移動: '🚅',
-  社内MTG: '🏢',
-  その他: '📌',
-};
 
 /**
  * 分かち書き済みの原文。トークンをタップして伏せる／チップを再タップして復元する。
@@ -253,8 +241,7 @@ function DealButton({ deal, selected, onSelect }: { deal: Deal; selected: boolea
 /**
  * 受信箱の詳細。状態によって役割が変わる:
  *   要確認   : 目視確認（マスク補正・案件選択）→「確認してAIに渡す」
- *   処理済み : 目視確認→AI解析の記録の確認（読み取り専用・監査ログ）
- *   待機中   : 予定の確認（イベント終了後、議事録がゲートに入る）
+ *   処理済み : 目視確認→AI解析→Wiki取込の記録の確認（読み取り専用・監査ログ）
  */
 export function InboxDetail() {
   const { id = '' } = useParams();
@@ -284,11 +271,11 @@ export function InboxDetail() {
   const { label: elapsed } = elapsedSince(item.receivedAt);
   const reviewing = item.status === '要確認';
   const processed = item.status === '処理済み';
-  const waiting = item.status === '待機中';
   // 未マスクの疑い（knownSensitive のうちまだマスクされていない語）が残っているか。
-  const unresolvedSensitive = item.distilled.knownSensitive.filter(
+  const unresolvedSensitive = item.knownSensitive.filter(
     (s) => item.body.includes(s) && !item.masks.some((m) => m.text === s),
   );
+  const dealId = findDealByCounterparty(item.counterparty)?.id;
 
   return (
     <div>
@@ -339,7 +326,6 @@ export function InboxDetail() {
                 )}
               </div>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-ink-sub">
-                {item.eventType && <span>{EVENT_TYPE_ICON[item.eventType]} {item.eventType}</span>}
                 {item.source === 'mail' && (
                   <>
                     <span>From: {item.sender}</span>
@@ -351,19 +337,10 @@ export function InboxDetail() {
                   <><span aria-hidden>·</span><span className="font-semibold text-ink">{item.counterparty}</span></>
                 )}
               </p>
-              {(!!item.participants?.length || item.location) && (
-                <p className="mt-0.5 truncate text-xs text-ink-sub/70">
-                  {!!item.participants?.length && <span>👥 {item.participants.join('、')}</span>}
-                  {!!item.participants?.length && item.location && <span aria-hidden>　</span>}
-                  {item.location && <span>📍 {item.location}</span>}
-                </p>
-              )}
             </div>
             {/* 時刻（タイトル右・マスト表示）*/}
             <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">
-              {item.eventAt
-                ? `${formatEventTime(item.eventAt)}${item.eventEnd ? `–${formatEventTime(item.eventEnd).split(' ')[1]}` : ''}`
-                : elapsed + '前'}
+              {elapsed}前
             </span>
           </div>
         </div>
@@ -393,7 +370,7 @@ export function InboxDetail() {
             )
           )}
 
-          {/* 処理済み: 目視確認→AI解析の記録（監査ログ） */}
+          {/* 処理済み: 目視確認→AI解析→Wiki取込の記録（監査ログ） */}
           {processed && (
             <div className="flex items-start gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-sm text-ink">
               <span aria-hidden className="shrink-0">🛡️</span>
@@ -401,33 +378,14 @@ export function InboxDetail() {
                 <p>
                   {item.processedAt && <span className="tabular-nums">{formatDateTime(item.processedAt)} </span>}
                   <span className="font-medium">{item.verifiedBy ?? '担当者'}</span> が目視確認
-                  （マスク {item.masks.length}件）→ AI解析 →{' '}
-                  {item.resultActionId ? 'タスク生成' : item.analysisNote ?? 'タスクなし'}。
+                  （マスク {item.masks.length}件）→ AI解析 → {item.analysisNote ?? 'Wiki更新なし'}。
                 </p>
-                {item.source === 'schedule' && item.eventAt && (
+                {dealId && (
                   <button
-                    onClick={() => navigate(`/meetings/${item.id}`)}
+                    onClick={() => navigate(`/wiki/${dealId}`)}
                     className="mt-1.5 text-sm font-medium text-accent hover:underline"
                   >
-                    会議ページ（フォローアップ）を開く ❯
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 待機中: イベント終了後にゲートへ */}
-          {waiting && (
-            <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-ink">
-              <span aria-hidden className="shrink-0">⏳</span>
-              <div className="min-w-0 flex-1">
-                <p>この予定はイベント終了後、議事録・メモが目視確認待ちに入ります。確認するとAIが解析します。</p>
-                {item.eventAt && (
-                  <button
-                    onClick={() => navigate(`/meetings/${item.id}`)}
-                    className="mt-1.5 text-sm font-medium text-accent hover:underline"
-                  >
-                    会議ページ（事前ブリーフ）を開く ❯
+                    商談Wikiを開く ❯
                   </button>
                 )}
               </div>
@@ -486,23 +444,21 @@ export function InboxDetail() {
           </section>
 
           {/* プロジェクト（レビュー中は選択可能） */}
-          {!waiting && (
-            <section>
-              <div className="mb-1.5 flex items-center gap-2">
-                <h2 className="text-sm font-medium text-ink">プロジェクト</h2>
+          <section>
+            <div className="mb-1.5 flex items-center gap-2">
+              <h2 className="text-sm font-medium text-ink">プロジェクト</h2>
+            </div>
+            {reviewing ? (
+              <DealPicker
+                value={item.counterparty}
+                onChange={(v) => store.setInboxCounterparty(item.id, v)}
+              />
+            ) : (
+              <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink">
+                🏢 {item.counterparty || '—'}
               </div>
-              {reviewing ? (
-                <DealPicker
-                  value={item.counterparty}
-                  onChange={(v) => store.setInboxCounterparty(item.id, v)}
-                />
-              ) : (
-                <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink">
-                  🏢 {item.counterparty || '—'}
-                </div>
-              )}
-            </section>
-          )}
+            )}
+          </section>
         </div>
 
         {/* フッター: 状態に応じた操作 */}
@@ -510,17 +466,15 @@ export function InboxDetail() {
           {processed ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-good">
-                {item.resultActionId ? '✔ タスク化済み — 「今日」に追加されています' : `✔ 解析済み — ${item.analysisNote ?? 'タスクなし'}`}
+                ✔ 取込済み — {item.analysisNote ?? 'Wiki更新なし'}
               </span>
-              {item.resultActionId && (
+              {dealId && (
                 <Button
                   variant="primary"
                   className="ml-auto"
-                  onClick={() =>
-                    navigate(`/action/${item.resultActionId}`, { state: { from: '/inbox' } })
-                  }
+                  onClick={() => navigate(`/wiki/${dealId}`)}
                 >
-                  タスクで開く ▶
+                  商談Wikiで開く ▶
                 </Button>
               )}
             </div>
@@ -551,8 +505,6 @@ export function InboxDetail() {
                 )}
               </Button>
             </div>
-          ) : waiting ? (
-            <p className="text-xs text-ink-sub">イベント終了後に目視確認待ちへ入ります。今は操作不要です。</p>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-ink-sub">アーカイブ済み（AIに渡していません）</span>

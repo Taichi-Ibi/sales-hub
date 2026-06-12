@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import type { SourceRef, WikiUpdate } from '../data/wiki';
-import type { DecisionStatus } from '../data/decisions';
+import { findTrace } from '../data/traces';
 
-// wiki 層（案件・顧客・人物・シグナル・意思決定・会議ブリーフ）で共有する表示部品。
-// ProjectDetail から抽出。全記述に出典（SourceChip）を付ける建て付けを支える。
+// wiki 層（商談Wiki・助言・伝達）で共有する表示部品。
+// 全記述に出典（SourceChip / TraceChip）を付ける建て付けを支える。
 
 export function Field({ label, value }: { label: string; value: string | null }) {
   return (
@@ -21,7 +21,7 @@ export function SourceChip({ source }: { source: SourceRef }) {
     'inline-flex max-w-full items-center gap-1 rounded border border-line bg-white px-1.5 py-0.5 text-[11px] text-ink-sub';
   if (!source.inboxItemId) {
     return (
-      <span className={cls} title="原文は保持期間を過ぎています">
+      <span className={cls} title="加工済み痕跡（原文は保持期間を過ぎています）">
         <span aria-hidden>📎</span>
         <span className="min-w-0 truncate">{source.label}</span>
       </span>
@@ -40,11 +40,23 @@ export function SourceChip({ source }: { source: SourceRef }) {
   );
 }
 
+/** 痕跡チップ。trace id（[tr:xxx] / evidence）を解決して根拠リンクとして表示する。 */
+export function TraceChip({ traceId }: { traceId: string }) {
+  const trace = findTrace(traceId);
+  if (!trace) {
+    return (
+      <span className="inline-flex items-center rounded border border-line bg-white px-1.5 py-0.5 text-[11px] text-ink-sub/60">
+        📎 {traceId}
+      </span>
+    );
+  }
+  return <SourceChip source={{ label: trace.label, inboxItemId: trace.inboxItemId }} />;
+}
+
 export const UPDATE_KIND_META: Record<WikiUpdate['kind'], { icon: string; cls: string }> = {
   取込: { icon: '📥', cls: 'bg-accent-soft text-accent' },
   定期更新: { icon: '🔄', cls: 'bg-surface text-ink-sub' },
   整合性チェック: { icon: '🩺', cls: 'bg-good/10 text-good' },
-  意思決定: { icon: '⚖️', cls: 'bg-accent-soft text-accent' },
 };
 
 /** 更新履歴のタイムライン。AIがこのページを維持していることを可視化する。 */
@@ -71,22 +83,5 @@ export function UpdateTimeline({ updates }: { updates: WikiUpdate[] }) {
         );
       })}
     </ul>
-  );
-}
-
-const DECISION_STATUS_CLASS: Record<DecisionStatus, string> = {
-  提案中: 'bg-warn/10 text-warn',
-  決定済み: 'bg-good/10 text-good',
-  撤回: 'bg-surface text-ink-sub',
-};
-
-/** 意思決定のステータスピル。提案中=黄 / 決定済み=緑 / 撤回=グレー。 */
-export function DecisionStatusPill({ status }: { status: DecisionStatus }) {
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-semibold ${DECISION_STATUS_CLASS[status]}`}
-    >
-      {status}
-    </span>
   );
 }

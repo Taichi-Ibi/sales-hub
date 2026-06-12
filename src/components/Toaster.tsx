@@ -18,15 +18,15 @@ export function Toaster() {
           style={{ animation: 'toast-in 150ms ease-out' }}
         >
           <span className="min-w-0 flex-1">{t.message}</span>
-          {t.actionId && (
+          {t.adviceId && (
             <button
               onClick={() => {
                 dismissToast(t.id);
-                navigate(`/action/${t.actionId}`, { state: { from: '/' } });
+                navigate(`/advice/${t.adviceId}`);
               }}
               className="shrink-0 whitespace-nowrap text-xs font-normal text-white/70 underline hover:text-white"
             >
-              {t.actionTitle ? `${t.actionTitle} →` : '開く →'}
+              助言を見る →
             </button>
           )}
         </div>

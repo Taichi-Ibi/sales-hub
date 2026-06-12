@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { InboxItem, InboxSource } from '../types';
 import { useStore } from '../store/StoreContext';
 import { SOURCE_META } from '../data/inbox';
-import { elapsedSince, NOW } from '../lib/time';
+import { elapsedSince } from '../lib/time';
 
 const SWIPE_CANCEL_WIDTH = 96;
 const SWIPE_CANCEL_THRESHOLD = 60;
@@ -14,32 +14,11 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'すべて', label: 'すべて' },
   { value: 'slack', label: `${SOURCE_META.slack.icon} Slack` },
   { value: 'mail', label: `${SOURCE_META.mail.icon} メール` },
-  { value: 'schedule', label: `${SOURCE_META.schedule.icon} カレンダー` },
 ];
-
-const EVENT_TYPE_LABEL: Record<NonNullable<InboxItem['eventType']>, string> = {
-  商談: '💼 商談',
-  会食: '🍽 会食',
-  移動: '🚅 移動',
-  社内MTG: '🏢 社内MTG',
-  その他: '📌 その他',
-};
-
-function formatEventTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-function isCurrentEvent(item: InboxItem): boolean {
-  if (!item.eventAt) return false;
-  const start = new Date(item.eventAt).getTime();
-  const end = item.eventEnd ? new Date(item.eventEnd).getTime() : start + 3600_000;
-  return NOW.getTime() >= start && NOW.getTime() < end;
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 /** 目視確認待ちカード。ロジックの警告（未マスクの疑い・案件不明）があれば前面に出す。 */
@@ -76,8 +55,8 @@ function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => voi
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Swipe-reveal: アーカイブ（モバイルのみ）*/}
-      <div className="absolute inset-y-0 right-0 flex w-24 items-center justify-center rounded-r-lg bg-ink/70 md:hidden">
+      {/* Swipe-reveal: アーカイブ（モバイルのみ）。半透明カードに透けないようスワイプ中のみ描画 */}
+      <div className={`absolute inset-y-0 right-0 w-24 items-center justify-center rounded-r-lg bg-ink/70 md:hidden ${swipeDx < 0 ? 'flex' : 'hidden'}`}>
         <span className={`text-xs font-semibold text-white transition-opacity duration-100 ${showArchiveLabel ? 'opacity-100' : 'opacity-0'}`}>
           アーカイブ
         </span>
@@ -142,40 +121,12 @@ function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => voi
   );
 }
 
-/** 待機中の予定。進行中は緑、未来はグレー。終了後にAIが解析する。 */
-function WaitingRow({ item }: { item: InboxItem }) {
-  const navigate = useNavigate();
-  const meta = SOURCE_META[item.source];
-  const current = isCurrentEvent(item);
-  return (
-    <button
-      onClick={() => navigate(`/inbox/${item.id}`)}
-      className={`flex w-full items-center gap-2 rounded-lg border px-4 py-2 text-left transition-all ${
-        current
-          ? 'border-good/30 bg-good/10 hover:brightness-95'
-          : 'border-line/50 bg-surface/50 opacity-70 hover:opacity-100'
-      }`}
-      aria-label={`${meta.label} ${item.title} を開く`}
-    >
-      <span className="shrink-0 text-base" aria-hidden>{meta.icon}</span>
-      <span className={`min-w-0 flex-1 truncate text-sm ${current ? 'font-semibold text-ink' : 'text-ink-sub'}`}>
-        {item.eventType && <span className="mr-1 text-ink-sub/70">{EVENT_TYPE_LABEL[item.eventType]}</span>}
-        {item.title}
-      </span>
-      {current && (
-        <span className="shrink-0 rounded bg-good px-1.5 py-0.5 text-[11px] font-semibold text-white">進行中</span>
-      )}
-      <span className="w-20 shrink-0 text-right tabular-nums text-xs text-ink-sub">
-        {item.eventAt ? formatEventTime(item.eventAt) : ''}
-      </span>
-    </button>
-  );
-}
-
-/** 処理ログの1行。承認→解析結果（タスク化 / タスクなし）を出す。 */
+/** 処理ログの1行。目視確認→AI解析→Wiki取込の結果を出す。 */
 function ProcessedRow({ item, actionButton }: { item: InboxItem; actionButton?: React.ReactNode }) {
   const navigate = useNavigate();
   const meta = SOURCE_META[item.source];
+  const note = item.analysisNote ?? 'Wiki更新なし';
+  const noUpdate = note.includes('Wiki更新な');
   return (
     <div className="group relative">
       <button
@@ -191,10 +142,12 @@ function ProcessedRow({ item, actionButton }: { item: InboxItem; actionButton?: 
         {item.counterparty && (
           <span className="hidden shrink-0 text-xs font-semibold text-ink sm:inline">{item.counterparty}</span>
         )}
-        <span className={`shrink-0 text-xs font-medium ${item.resultActionId ? 'text-good' : 'text-ink-sub/70'}`}>
-          {item.resultActionId ? '✔ タスク化' : `– ${item.analysisNote ?? 'タスクなし'}`}
-        </span>
-        <span className="w-12 shrink-0 text-right tabular-nums text-xs text-ink-sub">
+        {item.status === '処理済み' && (
+          <span className={`shrink-0 text-xs font-medium ${noUpdate ? 'text-ink-sub/70' : 'text-good'}`}>
+            {noUpdate ? `– ${note}` : `✔ ${note}`}
+          </span>
+        )}
+        <span className="w-20 shrink-0 text-right tabular-nums text-xs text-ink-sub">
           {item.processedAt ? formatTime(item.processedAt) : ''}
         </span>
       </button>
@@ -218,9 +171,9 @@ function SectionHeader({ title, count }: { title: string; count: number }) {
 }
 
 /**
- * 受信箱（マスキング目視ゲート）。
+ * 受信箱（②加工 / マスキング目視ゲート）。逆V字の「昇り」。
  * 機密情報がないことを保証できるのは人間のみ。すべてのアイテムは
- * 人が目視確認してからAIに渡る。ロジックの自動マスクと警告は目視を速くする補助。
+ * 人が目視確認してからAIに渡り、痕跡として商談Wikiに取り込まれる。
  */
 export function Inbox() {
   const { inboxItems, archiveInboxItem, unarchiveInboxItem } = useStore();
@@ -228,15 +181,12 @@ export function Inbox() {
   const [showProcessed, setShowProcessed] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
 
-  const { reviewItems, waitingItems, processedItems, archivedItems } = useMemo(() => {
+  const { reviewItems, processedItems, archivedItems } = useMemo(() => {
     const filtered = inboxItems.filter((i) => filter === 'すべて' || i.source === filter);
     const byDate = (a: InboxItem, b: InboxItem) =>
       new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
     return {
       reviewItems: filtered.filter((i) => i.status === '要確認').sort(byDate),
-      waitingItems: filtered
-        .filter((i) => i.status === '待機中')
-        .sort((a, b) => new Date(a.eventAt ?? a.receivedAt).getTime() - new Date(b.eventAt ?? b.receivedAt).getTime()),
       processedItems: filtered
         .filter((i) => i.status === '処理済み')
         .sort((a, b) => new Date(b.processedAt ?? b.receivedAt).getTime() - new Date(a.processedAt ?? a.receivedAt).getTime()),
@@ -284,19 +234,7 @@ export function Inbox() {
         </p>
       )}
 
-      {/* 待機中: 予定・会議。終了後に議事録がゲートに入る */}
-      {waitingItems.length > 0 && (
-        <section>
-          <SectionHeader title="予定（カレンダー）" count={waitingItems.length} />
-          <div className="flex flex-col gap-1">
-            {waitingItems.map((i) => (
-              <WaitingRow key={i.id} item={i} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 処理ログ（ゲート通過→AI解析の記録） */}
+      {/* 処理ログ（ゲート通過→AI解析→Wiki取込の記録） */}
       {processedItems.length > 0 && (
         <section>
           <div className="mb-2 mt-6 flex items-center gap-2">

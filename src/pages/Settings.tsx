@@ -6,7 +6,7 @@ const SETTINGS_ITEMS = [
   {
     to: '/settings/deals',
     label: 'プロジェクト',
-    description: '受信箱・タスクで使う取引先・プロジェクトの名称を管理します。',
+    description: '受信箱・商談Wikiで使う取引先・プロジェクトの名称を管理します。',
     count: DEALS.length,
   },
   {
