@@ -5,10 +5,14 @@ import type { SourceRef } from './wiki';
 // 生成対象は前日6:00〜当日6:00に目視ゲートを通過した原文と wiki（すべて出典つき）。
 // 生成時刻（6:00）より後に届いたものはページ側で「生成後の新着」としてライブ算出する。
 
+// repId（team.ts の担当）でタグ付けすると「自分」ダイジェストでその担当に絞れる。
+// 未指定の項目は組織横断として全視点に表示される。
+
 export interface DigestObserveItem {
   source: InboxSource;
   text: string;
   ref?: SourceRef;
+  repId?: string;
 }
 
 export interface DigestOrientItem {
@@ -16,11 +20,13 @@ export interface DigestOrientItem {
   gap?: boolean; // 認識ギャップ（⚠表示）
   refs: SourceRef[];
   link?: { label: string; to: string }; // 関連ページ（シグナル・案件など）
+  repId?: string;
 }
 
 export interface DigestDecideItem {
   decisionId: string; // decisions.ts の id（詳細はストアから引く）
   note: string;
+  repId?: string;
 }
 
 export interface DigestActItem {
@@ -28,6 +34,7 @@ export interface DigestActItem {
   meetingId?: string; // 会議ページへのリンク（受信箱の予定 id）
   suggestion: string; // actionId が無い場合の提案文（ある場合は補足）
   due?: string; // "2026-06-11"
+  repId?: string;
 }
 
 export interface DailyDigest {
@@ -49,11 +56,19 @@ export const DAILY_DIGEST: DailyDigest = {
       source: 'mail',
       text: '北斗電装から解約条項（通知期間90日→45日）の見直し依頼。回答期限は6/13。',
       ref: { label: 'メール 6/9「解約条項の見直しのお願い」', inboxItemId: 'in02' },
+      repId: 'rep-miyoshi',
     },
     {
       source: 'schedule',
       text: '青葉化成 商談（6/9）の議事録を取込。試作データ共有はNDA範囲内で実施する方向で合意。',
       ref: { label: '議事録 6/9 青葉化成 商談', inboxItemId: 'in03' },
+      repId: 'rep-komada',
+    },
+    {
+      source: 'slack',
+      text: 'A社から共同開発NDAの先方ひな形を受領。法務確認を依頼済みだが対応中のまま。',
+      ref: { label: 'Slack 6/7「#sales-a社」' },
+      repId: 'rep-miyoshi',
     },
     {
       source: 'mail',
@@ -79,32 +94,37 @@ export const DAILY_DIGEST: DailyDigest = {
         { label: 'メール 6/5「解約条項の見直しのご相談」' },
       ],
       link: { label: 'シグナル: 解約条項の短縮要望', to: '/wiki/signal/sg1' },
+      repId: 'rep-miyoshi',
     },
     {
       gap: true,
       text: 'D工業: 7月上旬キックオフの前提となるNDA合意が未了のまま、法務確認の期限が明日（6/11）に迫っている。先方は合意済みの認識で準備を進めている可能性。',
       refs: [{ label: '議事録 6/6 D工業 共同開発定例' }],
       link: { label: '案件: D工業', to: '/projects/p2' },
+      repId: 'rep-komada',
     },
     {
       text: '青葉化成: 見積（初期80万円・月額15万円）が口頭合意のまま未書面化。NDA締結（6/16期限の範囲連絡）と並行して書面化が必要。',
       refs: [{ label: '議事録 6/9 青葉化成 商談', inboxItemId: 'in03' }],
       link: { label: '案件: 青葉化成', to: '/projects/p5' },
+      repId: 'rep-komada',
     },
   ],
   decide: [
-    { decisionId: 'd1', note: '回答期限6/13。今日10:30の定例で先方の感触を確認できる。' },
-    { decisionId: 'd2', note: '法務確認（期限6/11）の結果が前提。6/16のWEB会議までに方針確定。' },
-    { decisionId: 'd3', note: '60日案への先方回答待ち。返信タスクはFS承認待ち。' },
+    { decisionId: 'd1', note: '回答期限6/13。今日10:30の定例で先方の感触を確認できる。', repId: 'rep-miyoshi' },
+    { decisionId: 'd2', note: '法務確認（期限6/11）の結果が前提。6/16のWEB会議までに方針確定。', repId: 'rep-komada' },
+    { decisionId: 'd3', note: '60日案への先方回答待ち。返信タスクはFS承認待ち。', repId: 'rep-miyoshi' },
   ],
   act: [
     {
       meetingId: 'in11',
       suggestion: '10:30 北斗電装 オンライン定例 — 事前ブリーフで経緯と論点を確認',
+      repId: 'rep-miyoshi',
     },
-    { actionId: 'a02', suggestion: '機密保持の範囲を法務へ確認', due: '2026-06-11' },
+    { actionId: 'a02', suggestion: '機密保持の範囲を法務へ確認', due: '2026-06-11', repId: 'rep-komada' },
+    { actionId: 'a03', suggestion: 'NDAの先方ひな形を法務へ連絡', due: '2026-06-11', repId: 'rep-miyoshi' },
     { actionId: 'a04', suggestion: '見積もり依頼に返信', due: '2026-06-11' },
-    { actionId: 'a05', suggestion: '先週の資料送付がまだ未対応', due: '2026-06-10' },
+    { actionId: 'a05', suggestion: '先週の資料送付がまだ未対応', due: '2026-06-10', repId: 'rep-komada' },
     {
       suggestion: '明日のK電機 会食（6/11 19:00）に向けて、社内営業会議で事前準備を確認',
     },

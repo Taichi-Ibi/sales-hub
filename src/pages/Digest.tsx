@@ -1,7 +1,10 @@
 import { useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DAILY_DIGEST } from '../data/digest';
+import { TEAM_DIGEST } from '../data/teamDigest';
 import { SOURCE_META } from '../data/inbox';
+import { SIGNAL_KIND_META, findSignalPage } from '../data/signals';
+import { TEAM_MEMBERS, findTeamMember, makeRepScope } from '../data/team';
 import { LEDGER_STATUSES, useStore } from '../store/StoreContext';
 import { DecisionStatusPill, SourceChip } from '../components/WikiParts';
 import { NOW, elapsedSince, shortDate } from '../lib/time';
@@ -10,10 +13,20 @@ import { NOW, elapsedSince, shortDate } from '../lib/time';
 // OODA（観測→状況認識→意思決定→実行）の順に、毎朝6:00時点の組織の変化を提示する。
 // 生成後に届いた原文は「生成後の新着」としてライブ算出し、目視ゲートへ誘導する
 // （目視確認＝Observe の入口。確認前の内容はダイジェストにも載らない）。
+//
+// タブは2つ:
+//   自分（self） = 現視点（担当）にスコープした個人の朝刊。
+//   チーム（team） = 組織の神経系。昨日チーム全体で動いた／止まった／詰まったを横断表示。
 
 const GENERATED_AT_ISO = '2026-06-10T06:00:00';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+type TabKey = 'self' | 'team';
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'self', label: '自分' },
+  { key: 'team', label: 'チーム' },
+];
 
 /** OODAセクションの見出し（日本語＋英語ラベル＋件数）。 */
 function OodaHeader({ title, en, count }: { title: string; en: string; count: number }) {
@@ -27,14 +40,34 @@ function OodaHeader({ title, en, count }: { title: string; en: string; count: nu
   );
 }
 
-export function Digest() {
+/** 関連ページへのチップ（状況認識・チームダイジェストで共用）。 */
+function LinkChip({ to, label }: { to: string; label: string }) {
   const navigate = useNavigate();
-  const { actions, inboxItems, decisions, markDigestViewed } = useStore();
+  return (
+    <button
+      onClick={() => navigate(to, { state: { from: '/digest' } })}
+      className="inline-flex items-center gap-1 rounded border border-accent/40 bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent transition-colors hover:border-accent"
+    >
+      {label} ❯
+    </button>
+  );
+}
 
-  // 一度開いたらナビバッジを消す。
-  useEffect(() => {
-    markDigestViewed();
-  }, [markDigestViewed]);
+/** 自分ダイジェスト: 現視点にスコープした個人のOODA朝刊。 */
+function SelfDigest() {
+  const navigate = useNavigate();
+  const { actions, inboxItems, decisions, currentRepId } = useStore();
+
+  // 視点フィルタ: repId 未指定（組織横断）は常に表示。verifier(山田)は全件表示。
+  const member = findTeamMember(currentRepId);
+  const visible = useMemo(() => {
+    return (repId?: string) => !repId || member?.isVerifier || repId === currentRepId;
+  }, [member, currentRepId]);
+  const repScope = useMemo(() => makeRepScope(currentRepId), [currentRepId]);
+
+  const observe = DAILY_DIGEST.observe.filter((o) => visible(o.repId));
+  const orient = DAILY_DIGEST.orient.filter((o) => visible(o.repId));
+  const act = DAILY_DIGEST.act.filter((a) => visible(a.repId));
 
   // 生成後（6:00以降）に届いた目視確認待ち。ダイジェストには載らず、ゲートへ誘導する。
   const newSinceGenerated = useMemo(
@@ -42,28 +75,25 @@ export function Digest() {
     [inboxItems],
   );
 
-  // 忘れかけているもの: 72時間以上動いていない未完了タスクを再浮上させる。
+  // 忘れかけているもの: 72時間以上動いていない未完了タスクを再浮上させる（現視点にスコープ）。
   const stale = useMemo(
     () =>
       actions.filter(
-        (a) => LEDGER_STATUSES.includes(a.status) && elapsedSince(a.createdAt).level === 'danger',
+        (a) =>
+          LEDGER_STATUSES.includes(a.status) &&
+          elapsedSince(a.createdAt).level === 'danger' &&
+          repScope(a.counterparty),
       ),
-    [actions],
+    [actions, repScope],
   );
 
   const decideItems = DAILY_DIGEST.decide
+    .filter((item) => visible(item.repId))
     .map((item) => ({ item, decision: decisions.find((d) => d.id === item.decisionId) }))
     .filter((x) => x.decision !== undefined);
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="text-xl font-semibold text-ink">デイリーダイジェスト</h1>
-        <span className="text-sm tabular-nums text-ink-sub">
-          {NOW.getMonth() + 1}/{NOW.getDate()}（{WEEKDAYS[NOW.getDay()]}）
-        </span>
-      </div>
-
       {/* ヘッドライン */}
       <div className="mb-2 rounded-lg border border-line bg-accent-soft px-4 py-3">
         <p className="text-sm font-medium leading-relaxed text-ink">{DAILY_DIGEST.headline}</p>
@@ -71,9 +101,9 @@ export function Digest() {
 
       {/* 観測 Observe */}
       <section>
-        <OodaHeader title="観測" en="Observe" count={DAILY_DIGEST.observe.length} />
+        <OodaHeader title="観測" en="Observe" count={observe.length} />
         <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
-          {DAILY_DIGEST.observe.map((o, i) => {
+          {observe.map((o, i) => {
             const meta = SOURCE_META[o.source];
             return (
               <li key={i} className="flex items-start gap-3 px-4 py-3">
@@ -111,9 +141,9 @@ export function Digest() {
 
       {/* 状況認識 Orient */}
       <section>
-        <OodaHeader title="状況認識" en="Orient" count={DAILY_DIGEST.orient.length} />
+        <OodaHeader title="状況認識" en="Orient" count={orient.length} />
         <ul className="flex flex-col gap-2">
-          {DAILY_DIGEST.orient.map((o, i) => (
+          {orient.map((o, i) => (
             <li
               key={i}
               className={`rounded-lg border px-4 py-3 ${o.gap ? 'border-warn/30 bg-warn/10' : 'border-line bg-white'}`}
@@ -126,14 +156,7 @@ export function Digest() {
                 {o.refs.map((r, j) => (
                   <SourceChip key={j} source={r} />
                 ))}
-                {o.link && (
-                  <button
-                    onClick={() => navigate(o.link!.to)}
-                    className="inline-flex items-center gap-1 rounded border border-accent/40 bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent transition-colors hover:border-accent"
-                  >
-                    {o.link.label} ❯
-                  </button>
-                )}
+                {o.link && <LinkChip to={o.link.to} label={o.link.label} />}
               </div>
             </li>
           ))}
@@ -171,9 +194,9 @@ export function Digest() {
 
       {/* 実行 Act */}
       <section>
-        <OodaHeader title="実行" en="Act" count={DAILY_DIGEST.act.length} />
+        <OodaHeader title="実行" en="Act" count={act.length} />
         <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
-          {DAILY_DIGEST.act.map((a, i) => {
+          {act.map((a, i) => {
             if (a.actionId) {
               const action = actions.find((x) => x.id === a.actionId);
               if (!action) return null;
@@ -246,6 +269,208 @@ export function Digest() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+/** 担当（メンバー）の小見出し。 */
+function MemberHeader({ repId }: { repId: string }) {
+  const m = findTeamMember(repId);
+  return (
+    <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-xs font-semibold text-ink-sub first:mt-0">
+      <span aria-hidden>👤</span>
+      {m?.name ?? repId}
+      {m?.role && <span className="font-medium text-ink-sub/80">· {m.role}</span>}
+    </p>
+  );
+}
+
+/**
+ * チームダイジェスト（組織の神経系）。視点とは独立に組織全体を映す。
+ * 動いた／停滞はメンバー別、詰まりは横断シグナル、意思決定は owner ごとに表示する。
+ */
+function TeamDigest() {
+  const navigate = useNavigate();
+  const { decisions } = useStore();
+
+  // 動いた・停滞をメンバー順にグルーピング（該当のあるメンバーのみ表示）。
+  const movedByRep = TEAM_MEMBERS.map((m) => ({
+    member: m,
+    items: TEAM_DIGEST.moved.filter((it) => it.repId === m.id),
+  })).filter((g) => g.items.length > 0);
+  const stalledByRep = TEAM_MEMBERS.map((m) => ({
+    member: m,
+    items: TEAM_DIGEST.stalled.filter((it) => it.repId === m.id),
+  })).filter((g) => g.items.length > 0);
+
+  const decisionItems = TEAM_DIGEST.decisions
+    .map((d) => ({ d, decision: decisions.find((x) => x.id === d.decisionId) }))
+    .filter((x) => x.decision !== undefined);
+
+  return (
+    <div>
+      {/* ヘッドライン */}
+      <div className="mb-2 rounded-lg border border-line bg-accent-soft px-4 py-3">
+        <p className="text-sm font-medium leading-relaxed text-ink">{TEAM_DIGEST.headline}</p>
+      </div>
+
+      {/* 動いた */}
+      <section>
+        <OodaHeader title="動いた" en="Moved" count={TEAM_DIGEST.moved.length} />
+        <div className="overflow-hidden rounded-lg border border-line bg-white px-4 py-3">
+          {movedByRep.map(({ member, items }) => (
+            <div key={member.id}>
+              <MemberHeader repId={member.id} />
+              <ul className="flex flex-col gap-2">
+                {items.map((it, i) => (
+                  <li key={i} className="text-sm leading-relaxed text-ink">
+                    {it.text}
+                    <span className="ml-1.5 inline-flex flex-wrap items-center gap-1.5 align-middle">
+                      {it.ref && <SourceChip source={it.ref} />}
+                      {it.link && <LinkChip to={it.link.to} label={it.link.label} />}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 停滞 */}
+      <section>
+        <OodaHeader title="停滞" en="Stalled" count={TEAM_DIGEST.stalled.length} />
+        <div className="overflow-hidden rounded-lg border border-danger/30 bg-danger/5 px-4 py-3">
+          {stalledByRep.map(({ member, items }) => (
+            <div key={member.id}>
+              <MemberHeader repId={member.id} />
+              <ul className="flex flex-col gap-2">
+                {items.map((it, i) => (
+                  <li key={i} className="text-sm leading-relaxed text-ink">
+                    {it.elapsedLabel && (
+                      <span className="mr-1.5 rounded bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger">
+                        ⏱ {it.elapsedLabel}
+                      </span>
+                    )}
+                    {it.text}
+                    <span className="ml-1.5 inline-flex flex-wrap items-center gap-1.5 align-middle">
+                      {it.ref && <SourceChip source={it.ref} />}
+                      {it.link && <LinkChip to={it.link.to} label={it.link.label} />}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 詰まり（横断シグナル） */}
+      <section>
+        <OodaHeader title="詰まり" en="Stuck" count={TEAM_DIGEST.stuck.length} />
+        <ul className="flex flex-col gap-2">
+          {TEAM_DIGEST.stuck.map((s) => {
+            const signal = findSignalPage(s.signalId);
+            const meta = signal ? SIGNAL_KIND_META[signal.kind] : undefined;
+            return (
+              <li key={s.signalId}>
+                <button
+                  onClick={() => navigate(`/wiki/signal/${s.signalId}`, { state: { from: '/digest' } })}
+                  className="flex w-full items-start gap-3 rounded-lg border border-line bg-white px-4 py-3 text-left hover:bg-surface"
+                >
+                  <span aria-hidden className="shrink-0 text-base">{meta?.icon ?? '🚧'}</span>
+                  <div className="min-w-0 flex-1">
+                    {signal && (
+                      <p className="text-sm font-medium text-ink">
+                        {signal.kind}　·　{signal.title}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-xs text-ink-sub">{s.text}</p>
+                  </div>
+                  <span aria-hidden className="shrink-0 text-xs text-ink-sub">❯</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* チームの意思決定 */}
+      <section>
+        <OodaHeader title="チームの意思決定" en="Decide" count={decisionItems.length} />
+        <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
+          {decisionItems.map(({ d, decision }) => (
+            <li key={d.decisionId}>
+              <button
+                onClick={() => navigate(`/decisions/${decision!.id}`, { state: { from: '/digest' } })}
+                className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-surface"
+              >
+                <span aria-hidden className="shrink-0 text-base">⚖️</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink">{decision!.title}</p>
+                  <p className="mt-0.5 text-xs text-ink-sub">
+                    {findTeamMember(d.repId)?.name ?? decision!.owner}　·　{decision!.counterparty}　·　{d.note}
+                  </p>
+                </div>
+                <DecisionStatusPill status={decision!.status} />
+                {decision!.deadline && decision!.status === '提案中' && (
+                  <span className="hidden shrink-0 text-xs font-medium text-warn sm:inline">
+                    期限 {shortDate(decision!.deadline)}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+export function Digest() {
+  const { markDigestViewed } = useStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: TabKey = searchParams.get('tab') === 'team' ? 'team' : 'self';
+
+  // 一度開いたらナビバッジを消す。
+  useEffect(() => {
+    markDigestViewed();
+  }, [markDigestViewed]);
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h1 className="text-xl font-semibold text-ink">デイリーダイジェスト</h1>
+        <span className="text-sm tabular-nums text-ink-sub">
+          {NOW.getMonth() + 1}/{NOW.getDate()}（{WEEKDAYS[NOW.getDay()]}）
+        </span>
+      </div>
+
+      {/* タブ: 自分（個人の朝刊）/ チーム（組織の神経系） */}
+      <div
+        role="tablist"
+        aria-label="ダイジェストの表示切替"
+        className="mb-4 flex items-center gap-3 overflow-x-auto text-sm"
+      >
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setSearchParams(t.key === 'self' ? {} : { tab: t.key }, { replace: true })}
+              className={`whitespace-nowrap transition-colors ${
+                active ? 'font-medium text-ink' : 'text-ink-sub hover:text-ink'
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === 'self' ? <SelfDigest /> : <TeamDigest />}
     </div>
   );
 }

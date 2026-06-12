@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { LEDGER_STATUSES, useStore } from '../store/StoreContext';
 import { WIKI_PAGES } from '../data/wiki';
+import { TEAM_MEMBERS, makeRepScope } from '../data/team';
 import { Toaster } from './Toaster';
 
 /** ナビ件数バッジ。未読を示す赤バッジ（Slack 風）。選択中は反転。 */
@@ -29,11 +30,15 @@ interface NavItem {
 }
 
 export function Shell() {
-  const { actions, inboxItems, decisions, digestViewed } = useStore();
+  const { actions, inboxItems, decisions, digestViewed, currentRepId, setCurrentRep } = useStore();
   const location = useLocation();
-  // 受信箱バッジ = 目視確認待ち（要確認）件数。確認済みは数えない。
+  // 受信箱バッジ = 目視確認待ち（要確認）件数。目視ゲートは横断的な共有責務なので視点で絞らない。
   const reviewCount = inboxItems.filter((i) => i.status === '要確認').length;
-  const todayCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
+  // 今日バッジ = 現視点（担当）でスコープ。山田（verifier）選択時は全件。
+  const repScope = makeRepScope(currentRepId);
+  const todayCount = actions.filter(
+    (a) => LEDGER_STATUSES.includes(a.status) && repScope(a.counterparty),
+  ).length;
   // ナレッジバッジ = wiki アラート + 判断待ち（提案中）の意思決定。
   const knowledgeCount =
     WIKI_PAGES.reduce((sum, p) => sum + p.alerts.length, 0) +
@@ -84,10 +89,22 @@ export function Shell() {
               className="w-40 bg-transparent text-white outline-none placeholder:text-white/60"
             />
           </label>
-          <div className="flex items-center gap-2 text-sm">
+          {/* 視点切り替え（誰として見るか）。見た目だけの "view as"。 */}
+          <label className="flex items-center gap-1.5 text-sm">
             <span aria-hidden>👤</span>
-            <span className="hidden sm:inline">山田 内勤</span>
-          </div>
+            <select
+              aria-label="視点を切り替え（誰として見るか）"
+              value={currentRepId}
+              onChange={(e) => setCurrentRep(e.target.value)}
+              className="rounded-lg bg-white/15 px-2.5 py-1 text-white outline-none focus:bg-white/25"
+            >
+              {TEAM_MEMBERS.map((m) => (
+                <option key={m.id} value={m.id} className="text-ink">
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </header>
 

@@ -64,6 +64,9 @@ interface StoreValue {
   // ダイジェストの未閲覧バッジ。
   digestViewed: boolean;
   markDigestViewed: () => void;
+  // 視点切り替え（誰として見るか）。本物の認証ではなく、見た目だけの "view as"。
+  currentRepId: string;
+  setCurrentRep: (repId: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -96,6 +99,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })),
   );
   const [digestViewed, setDigestViewed] = useState(false);
+  // 既定は山田 内勤（現状の固定ユーザー）。verifier なのでスコープは全件＝現状維持。
+  const [currentRepId, setCurrentRepId] = useState('rep-yamada');
 
   const patch = useCallback((id: string, fn: (a: Action) => Action) => {
     setActions((prev) => prev.map((a) => (a.id === id ? fn(a) : a)));
@@ -445,6 +450,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDigestViewed(true);
   }, []);
 
+  const setCurrentRep = useCallback((repId: string) => setCurrentRepId(repId), []);
+
   const value = useMemo<StoreValue>(
     () => ({
       actions,
@@ -477,6 +484,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recordDecision,
       digestViewed,
       markDigestViewed,
+      currentRepId,
+      setCurrentRep,
     }),
     [
       actions,
@@ -509,6 +518,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recordDecision,
       digestViewed,
       markDigestViewed,
+      currentRepId,
+      setCurrentRep,
     ],
   );
 
