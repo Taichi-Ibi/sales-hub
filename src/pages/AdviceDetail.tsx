@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ADVICE_KIND_META, PRIORITY_META, adviceToMarkdown, type DealAdvice, type RelayDraft } from '../data/advice';
+import type { DealAdvice, RelayDraft } from '../data/advice';
 import { findDealEntry } from '../data/snapshots';
 import { QA_FALLBACK } from '../data/wiki';
 import { useStore } from '../store/StoreContext';
 import { Button } from '../components/Button';
 import { MarkdownView, renderInline } from '../components/MarkdownView';
-import { TraceChip } from '../components/WikiParts';
+import { Field, TraceChip } from '../components/WikiParts';
 import type { MaskedEntity } from '../types';
 
 interface ChatMessage {
@@ -177,7 +177,6 @@ export function AdviceDetail() {
 
   const entry = findDealEntry(advice.dealId);
   const entities = entry?.entities ?? [];
-  const kind = ADVICE_KIND_META[advice.kind];
   const dealRelayLogs = relayLogs.filter((l) => l.dealId === advice.dealId);
 
   return (
@@ -190,42 +189,44 @@ export function AdviceDetail() {
       </button>
 
       <div className="mb-4">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${PRIORITY_META[advice.priority].cls}`}>
-            優先度 {advice.priority}
-          </span>
-          <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${kind.cls}`}>
-            <span aria-hidden>{kind.icon}</span> {advice.kind}
-          </span>
-        </div>
-        <h1 className="mt-1.5 text-xl font-semibold text-ink">{advice.title}</h1>
-        <p className="mt-1 text-xs text-ink-sub">
-          {entry && (
-            <button onClick={() => navigate(`/wiki/${entry.id}`)} className="font-medium text-accent hover:underline">
-              📖 {entry.counterparty} のWikiを開く ❯
-            </button>
-          )}
-        </p>
+        <h1 className="text-xl font-semibold text-ink">{advice.title}</h1>
+        <p className="mt-0.5 text-xs text-ink-sub/70">advice/{advice.dealId}/{advice.date}.md</p>
       </div>
 
       <div className="flex flex-col gap-6 bg-white p-4 sm:p-5">
-        {/* ③の本文（advice/{deal_id}/{date}.md）。Wikiと同じく Markdown をレンダリングするだけ。
-            事実セクションの全行に根拠リンク（出典のない行はバリデーションで弾かれる） */}
+        {/* frontmatter（最低限のメタ。監査・透明性: いつ・どの入力から生成されたか） */}
         <section>
-          <p className="mb-2 text-xs text-ink-sub/70">advice/{advice.dealId}/{advice.date}.md</p>
-          <MarkdownView markdown={adviceToMarkdown(advice)} entities={entities} />
-        </section>
-
-        {/* 生成メタ（監査・透明性: いつ・どの入力から生成されたか） */}
-        <section className="rounded-lg border border-line/60 px-4 py-3">
-          <p className="text-[11px] text-ink-sub">
-            🤖 生成 {advice.generatedAt}　·　入力:{' '}
+          <dl className="grid grid-cols-2 gap-4 rounded-lg border border-line bg-surface px-4 py-3 sm:grid-cols-4">
+            <Field
+              label="案件"
+              value={entry ? entry.counterparty : advice.dealId}
+            />
+            <Field label="種別" value={advice.kind} />
+            <Field label="優先度" value={advice.priority} />
+            <Field label="生成" value={advice.generatedAt} />
+          </dl>
+          <p className="mt-2 text-[11px] text-ink-sub">
+            入力:{' '}
             {advice.inputs.map((input, i) => (
-              <code key={i} className="mx-0.5 rounded bg-surface px-1 py-0.5 text-[10px] text-ink-sub">
+              <code key={i} className="mx-0.5 rounded bg-surface px-1 py-0.5 text-[10px]">
                 {input}
               </code>
             ))}
+            {entry && (
+              <button
+                onClick={() => navigate(`/wiki/${entry.id}`)}
+                className="ml-2 font-medium text-accent hover:underline"
+              >
+                📖 Wikiを開く ❯
+              </button>
+            )}
           </p>
+        </section>
+
+        {/* ③の本文。Wikiと同じく Markdown をレンダリングするだけ。
+            事実セクションの全行に根拠リンク（出典のない行はバリデーションで弾かれる） */}
+        <section>
+          <MarkdownView markdown={advice.markdown} entities={entities} />
         </section>
 
         {/* ④対話ビュー */}

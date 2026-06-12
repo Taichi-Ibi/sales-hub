@@ -67,7 +67,7 @@ src/
   data/inbox.ts          # ①②: 受信箱のサンプルデータ（原文・自動マスク・警告・取込シード）
   data/traces.ts         # 痕跡（加工済みデータの台帳）。根拠リンクの参照先。relay も還流する
   data/snapshots.ts      # 頂点: 商談Wikiの日次スナップショット（frontmatter＋Markdown、4案件×2日）
-  data/advice.ts         # ③: 助言シード・実行時助言・週次レポート・validateAdvice（根拠必須の保証）
+  data/advice.ts         # ③: 助言（frontmatter＋Markdown）・週次レポート・validateAdvice（根拠必須の保証）
   data/deals.ts          # スキーマ層: 案件台帳（設定・案件ピッカーで使用）
   data/wiki.ts           # wiki層の共通型（SourceRef / WikiUpdate）＋ QA_FALLBACK
   types.ts               # ドメイン型（InboxItem / IngestSeed / MaskedEntity / RelayLogEntry）
@@ -88,8 +88,8 @@ src/
     WikiList.tsx         # 商談Wiki一覧（/wiki。4案件のヨミ＋前日比インジケータ）
     DealWiki.tsx         # 商談Wikiページ（/wiki/:dealId。日付タブ・前日比diff・Markdown・更新履歴）
     Advice.tsx           # 助言（/advice。?tab=daily|weekly。当日助言＋週次ヘルスレポート）
-    AdviceDetail.tsx     # 助言詳細（/advice/:id。助言Markdownのレンダリング＋④チャット・伝達ドラフト・伝達ログ）
-    Settings.tsx         # 設定（スキーマ層: 案件登録・ドメイン紐付け・マスキング辞書）
+    AdviceDetail.tsx     # 助言詳細（/advice/:id。frontmatter＋Markdownレンダリング＋④チャット・伝達・伝達ログ）
+    Settings.tsx         # 設定（ブランクのプレースホルダ）
 ```
 
 ### ナビゲーション（4項目・逆V字順）
@@ -97,7 +97,7 @@ src/
 1. **受信箱** `/inbox` — ②加工のマスキング目視ゲート（全件人が確認）。バッジ=目視確認待ち件数
 2. **Wiki** `/wiki` — 商談Wiki（頂点）。読み取り専用レンダリング。バッジなし
 3. **助言** `/advice` — ③④の降り。バッジ=未読助言件数（詳細を開くと既読）
-4. **設定** — 自動処理の精度を上げるスキーマ層（案件・ドメイン・マスキング辞書）
+4. **設定** — ブランクのプレースホルダ（モックでは中身なし）
 
 旧URL（`/digest` `/projects/*` `/action/*` 等）は catch-all で `/inbox` へ。
 
@@ -112,9 +112,10 @@ src/
   1. `wikiAppends[dealId]` に「取込」更新を追記（`DealWiki` が静的 `updates` とマージ表示）
   2. `snapshotPatches[dealId]` で当日スナップショットに行追加・ヨミ変化（「今日の取込」ハイライト）
   3. `IngestSeed.adviceId` があれば `RUNTIME_ADVICE` から実行時助言を生成（助言バッジ+1・トースト）
-- 助言（DealAdvice）: `facts`（全行 evidence 必須）/ `recommendations` / `confidenceNote` を分離して保持し、
-  表示は `adviceToMarkdown` で組み立てた Markdown のレンダリングのみ（Wikiと同じ思想で薄く作る）。
-  `generatedAt`・`inputs` で生成の透明性を示す。`validateAdvice` がモジュール評価時に根拠必須を保証
+- 助言（DealAdvice）: Wikiと同じく**最低限の frontmatter ＋ Markdown 本文**のみ
+  （事実/解釈/確信度はセクションで分離）。週次レポートも同様に Markdown のみ。
+  `generatedAt`・`inputs` で生成の透明性を示す。`validateAdvice` が事実セクションの
+  全行に [tr:xxx] があることをモジュール評価時に保証
 - 伝達（④）: `copyRelay` がクリップボードへ復元済み本文を書き、`relayLogs` に
   `tr-relay-N`（traces 互換id）で記録する。送信ボタンは存在しない（コピーのみ）
 - デモループ: in02（北斗電装・未マスク警告）を目視確認→AIに渡す → Wiki更新（確度60→40）

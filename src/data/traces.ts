@@ -15,13 +15,6 @@ export interface Trace {
   excerpt?: string; // 痕跡の抜粋（マスク済み）
 }
 
-export const TRACE_SOURCE_META: Record<TraceSource, { icon: string; label: string }> = {
-  mail: { icon: '✉️', label: 'メール' },
-  slack: { icon: '💬', label: 'Slack' },
-  minutes: { icon: '📝', label: '議事録' },
-  relay: { icon: '📣', label: '伝達ログ' },
-};
-
 export const TRACES: Trace[] = [
   // ── B商事（年間売買契約 更新交渉）──
   {

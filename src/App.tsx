@@ -8,9 +8,6 @@ import { DealWiki } from './pages/DealWiki';
 import { Advice } from './pages/Advice';
 import { AdviceDetail } from './pages/AdviceDetail';
 import { Settings } from './pages/Settings';
-import { SettingsDeals } from './pages/SettingsDeals';
-import { SettingsDomains } from './pages/SettingsDomains';
-import { SettingsMasking } from './pages/SettingsMasking';
 
 export default function App() {
   return (
@@ -26,9 +23,6 @@ export default function App() {
           <Route path="/advice" element={<Advice />} />
           <Route path="/advice/:id" element={<AdviceDetail />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/deals" element={<SettingsDeals />} />
-          <Route path="/settings/domains" element={<SettingsDomains />} />
-          <Route path="/settings/masking" element={<SettingsMasking />} />
           {/* 旧URL（/digest /projects /action 等）はすべて受信箱へ */}
           <Route path="*" element={<Navigate to="/inbox" replace />} />
         </Route>

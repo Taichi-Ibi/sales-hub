@@ -6,7 +6,7 @@ import { applySnapshotPatch } from '../lib/snapshot';
 import { shortDate } from '../lib/time';
 import { Button } from '../components/Button';
 import { MarkdownView } from '../components/MarkdownView';
-import { Field, TraceChip, UpdateTimeline } from '../components/WikiParts';
+import { Field, UpdateTimeline } from '../components/WikiParts';
 import { PhasePill } from './WikiList';
 
 const META_LABELS: { key: keyof Pick<SnapshotMeta, 'phase' | 'confidence' | 'amount' | 'expected_close'>; label: string }[] = [
@@ -142,18 +142,12 @@ export function DealWiki() {
         {/* frontmatter（ヨミの最小セット） */}
         <section>
           <h2 className="mb-3 text-sm font-semibold text-ink">◆ ヨミ（frontmatter）</h2>
-          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-4 rounded-lg border border-line bg-surface px-4 py-3 sm:grid-cols-4">
             <Field label="フェーズ" value={snapshot.meta.phase} />
             <Field label="確度" value={`${snapshot.meta.confidence}%`} />
             <Field label="金額" value={snapshot.meta.amount} />
             <Field label="クローズ予定" value={snapshot.meta.expected_close} />
           </dl>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-line/60 pt-2">
-            <span className="text-[11px] text-ink-sub">根拠（evidence）:</span>
-            {snapshot.meta.evidence.map((id) => (
-              <TraceChip key={id} traceId={id} />
-            ))}
-          </div>
         </section>
 
         {/* 本文（Markdownレンダリングのみ。各記述に根拠リンク） */}

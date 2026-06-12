@@ -15,8 +15,6 @@ export interface Deal {
   updatedAt: string; // "2026-06-10T06:00:00"
 }
 
-export const UPDATE_CYCLE = '毎朝6:00にCRM・メール・議事録から自動更新（モック）';
-
 export const DEALS: Deal[] = [
   {
     counterparty: 'B商事',
@@ -80,7 +78,3 @@ export const DEALS: Deal[] = [
     updatedAt: '2026-06-10T06:00:00',
   },
 ];
-
-export function findDeal(counterparty: string): Deal | undefined {
-  return DEALS.find((d) => d.counterparty === counterparty);
-}

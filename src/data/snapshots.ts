@@ -9,8 +9,6 @@ import type { MaskedEntity } from '../types';
 
 export type DealPhase = 'リード' | 'アポ' | '商談' | '提案' | '契約' | '受注' | '失注';
 
-export const PHASE_ORDER: DealPhase[] = ['リード', 'アポ', '商談', '提案', '契約', '受注'];
-
 /** スナップショットの frontmatter（消費者起点で逆算した最小セット）。 */
 export interface SnapshotMeta {
   deal_id: string;

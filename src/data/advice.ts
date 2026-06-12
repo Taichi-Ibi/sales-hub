@@ -1,21 +1,16 @@
 // ③助言（Advice Engine）。直近2スナップショットの diff と痕跡を入力に、
 // 毎朝6:00に生成される建て付け（モックでは静的データ＋取込時の実行時生成）。
+// 実体は Wiki と同じく「最低限の frontmatter ＋ Markdown」で、UIはレンダリングのみ。
 //
 // 設計原則:
-//   - 根拠必須: 「何が変わったか（事実）」の各行には必ず痕跡への参照を添える。
-//     根拠を示せない行は出力しない（validateAdvice がモジュール評価時に保証）
-//   - 事実と解釈の分離: facts（事実）と recommendations（解釈）をデータ構造上も混ぜない
+//   - 根拠必須: 「何が変わったか（事実）」の各行には必ず痕跡への参照 [tr:xxx] を添える。
+//     根拠のない行は出力しない（validateAdvice がモジュール評価時に保証）
+//   - 事実と解釈の分離: 事実/解釈/確信度をセクションで分ける
 //   - 伝達は人を介す: relayDrafts はドラフトまで。コピーは人の明示的な操作
 //   - アラートは個人ではなく構造に宛てる: 週次レポートは流入・滞留の構造指標のみ
 
 export type AdviceKind = '契約フェーズ入り' | 'ヨミ変化' | '滞留';
 export type AdvicePriority = '高' | '中' | '低';
-
-/** 事実の1行。evidence（traces のid）が1件以上必須。 */
-export interface FactLine {
-  text: string;
-  evidence: string[];
-}
 
 export type RelayRecipient = '法務' | '経理' | '営業チーム';
 
@@ -33,29 +28,29 @@ export interface AdviceQA {
   evidence: string[];
 }
 
+/** 助言。frontmatter（メタ）＋ Markdown 本文の最小構成。 */
 export interface DealAdvice {
+  // ── frontmatter ──
   id: string;
   dealId: string;
   date: string; // "2026-06-10"
   kind: AdviceKind;
   priority: AdvicePriority;
   title: string;
-  facts: FactLine[]; // 何が変わったか（事実）。全行に根拠必須
-  recommendations: string[]; // 推奨アクション（解釈）
-  confidenceNote: string; // 確信度と留保
   generatedAt: string; // 監査・透明性: いつ生成されたか "6/10 06:00"
   inputs: string[]; // 監査・透明性: どの入力から（snapshot id / trace id）
+  // ── 本文（## 何が変わったか（事実）/ ## 推奨アクション（解釈）/ ## 確信度と留保）──
+  markdown: string;
+  // ── ④対話と伝達 ──
   relayDrafts: RelayDraft[];
-  chatQa: AdviceQA[]; // ④対話ビューの想定問答
+  chatQa: AdviceQA[];
 }
 
-/** 週次パイプライン健全性レポート。構造指標のみで、個人名を主語にした帰責表現は含めない。 */
+/** 週次パイプライン健全性レポート。こちらも frontmatter＋Markdown のみ。 */
 export interface WeeklyReport {
   weekOf: string; // "2026-W24（6/8〜6/14）"
   generatedAt: string;
-  inflow: { source: string; count: number; delta: string }[]; // 痕跡の流入
-  phaseDwell: { phase: string; count: number; avgDays: number; note?: string }[];
-  notes: FactLine[]; // 構造への所見（根拠つき）
+  markdown: string;
 }
 
 // ── 当日（6/10 06:00 生成）の助言。優先度順 ──
@@ -68,22 +63,19 @@ export const SEED_ADVICE: DealAdvice[] = [
     kind: '契約フェーズ入り',
     priority: '高',
     title: 'B商事が契約フェーズ入り — 法務レビュー依頼を',
-    facts: [
-      {
-        text: 'phase: 提案 → 契約。6/9に先方より更新条件（下期1割増・価格据え置き）の承諾連絡を受領。',
-        evidence: ['tr-b2'],
-      },
-      { text: 'confidence: 60% → 75%。amount: 2,400万円/年 → 2,640万円/年。', evidence: ['tr-b2'] },
-      { text: '契約書ドラフトの準備段階に入り、6/17打ち合わせは条文の最終確認の場に変更。', evidence: ['tr-b2'] },
-    ],
-    recommendations: [
-      '法務へ契約書レビュー依頼を出す（期日目安: 6/17の最終確認に間に合うよう 6/13 まで）。',
-      '下期1割増の供給可否について、納期・在庫の裏取りを並行して進める。',
-    ],
-    confidenceNote:
-      'この推定の確信度: 高。判断根拠: フェーズ遷移の根拠が先方からの承諾メール（一次情報）であり、解釈の余地が小さいため。',
     generatedAt: '6/10 06:00',
     inputs: ['d-bshoji/2026-06-09', 'd-bshoji/2026-06-10', 'tr-b2'],
+    markdown: `## 何が変わったか（事実）
+- phase: 提案 → 契約。6/9に先方より更新条件（下期1割増・価格据え置き）の承諾連絡を受領。 [tr:tr-b2]
+- confidence: 60% → 75%。amount: 2,400万円/年 → 2,640万円/年。 [tr:tr-b2]
+- 契約書ドラフトの準備段階に入り、6/17打ち合わせは条文の最終確認の場に変更。 [tr:tr-b2]
+
+## 推奨アクション（解釈）
+- 法務へ契約書レビュー依頼を出す（期日目安: 6/17の最終確認に間に合うよう 6/13 まで）。
+- 下期1割増の供給可否について、納期・在庫の裏取りを並行して進める。
+
+## 確信度と留保
+- この推定の確信度: 高。判断根拠: フェーズ遷移の根拠が先方からの承諾メール（一次情報）であり、解釈の余地が小さいため。`,
     relayDrafts: [
       {
         id: 'rd-b1-legal',
@@ -125,21 +117,18 @@ export const SEED_ADVICE: DealAdvice[] = [
     kind: 'ヨミ変化',
     priority: '中',
     title: '湊精機の確度が70%→85%に上昇 — 回答期限は6/12',
-    facts: [
-      {
-        text: 'confidence: 70% → 85%。先方が現行条件（年額360万円）での更新希望を明示した。',
-        evidence: ['tr-m1'],
-      },
-      { text: 'expected_close: 2026-06-12（回答期限）。期限まで残り2日。', evidence: ['tr-m1'] },
-    ],
-    recommendations: [
-      '現行条件のままの更新で社内稟議を起票し、6/12までに正式回答する。',
-      '経理へ更新後の請求条件（年額360万円・継続）を事前連携しておく。',
-    ],
-    confidenceNote:
-      'この推定の確信度: 高。判断根拠: 先方窓口からの直接の連絡で更新希望が明示されており、過去の満足度情報とも整合するため。',
     generatedAt: '6/10 06:00',
     inputs: ['d-minato/2026-06-09', 'd-minato/2026-06-10', 'tr-m1'],
+    markdown: `## 何が変わったか（事実）
+- confidence: 70% → 85%。先方が現行条件（年額360万円）での更新希望を明示した。 [tr:tr-m1]
+- expected_close: 2026-06-12（回答期限）。期限まで残り2日。 [tr:tr-m1]
+
+## 推奨アクション（解釈）
+- 現行条件のままの更新で社内稟議を起票し、6/12までに正式回答する。
+- 経理へ更新後の請求条件（年額360万円・継続）を事前連携しておく。
+
+## 確信度と留保
+- この推定の確信度: 高。判断根拠: 先方窓口からの直接の連絡で更新希望が明示されており、過去の満足度情報とも整合するため。`,
     relayDrafts: [
       {
         id: 'rd-m1-acct',
@@ -169,21 +158,18 @@ export const SEED_ADVICE: DealAdvice[] = [
     kind: '滞留',
     priority: '低',
     title: 'G産業が商談フェーズで14日間滞留 — 6/12検討会が分岐点',
-    facts: [
-      { text: 'phase: 商談 のまま14日間変化なし（5/27の初回商談以降）。', evidence: ['tr-g1'] },
-      {
-        text: '約束済みの製品資料送付が未対応のまま、6/12の先方社内検討会が迫っている。',
-        evidence: ['tr-g2'],
-      },
-    ],
-    recommendations: [
-      '6/12の先方社内検討会前に製品資料を送付する（本日中が目安）。',
-      '送付後、検討会の結果を確認するフォローの場を設定する。',
-    ],
-    confidenceNote:
-      'この推定の確信度: 中。判断根拠: 滞留はスナップショットの機械的な比較によるもので、先方側の検討状況など外部要因は痕跡から確認できていないため。',
     generatedAt: '6/10 06:00',
     inputs: ['d-gsangyo/2026-06-09', 'd-gsangyo/2026-06-10', 'tr-g1', 'tr-g2'],
+    markdown: `## 何が変わったか（事実）
+- phase: 商談 のまま14日間変化なし（5/27の初回商談以降）。 [tr:tr-g1]
+- 約束済みの製品資料送付が未対応のまま、6/12の先方社内検討会が迫っている。 [tr:tr-g2]
+
+## 推奨アクション（解釈）
+- 6/12の先方社内検討会前に製品資料を送付する（本日中が目安）。
+- 送付後、検討会の結果を確認するフォローの場を設定する。
+
+## 確信度と留保
+- この推定の確信度: 中。判断根拠: 滞留はスナップショットの機械的な比較によるもので、先方側の検討状況など外部要因は痕跡から確認できていないため。`,
     relayDrafts: [
       {
         id: 'rd-g1-sales',
@@ -209,7 +195,7 @@ export const SEED_ADVICE: DealAdvice[] = [
 ];
 
 // ── 実行時の助言シード。受信箱アイテムが目視ゲートを通過（取込）すると生成される。
-//    キーは InboxItem.id。マスクトークンの適用は取込時に行う（StoreContext）。──
+//    キーは InboxItem.id。──
 
 export const RUNTIME_ADVICE: Record<string, Omit<DealAdvice, 'generatedAt'>> = {
   in02: {
@@ -219,21 +205,18 @@ export const RUNTIME_ADVICE: Record<string, Omit<DealAdvice, 'generatedAt'>> = {
     kind: 'ヨミ変化',
     priority: '高',
     title: '北斗電装の確度が60%→40%に低下 — 解約示唆への回答が6/13期限',
-    facts: [
-      {
-        text: '6/9受領メールで解約通知期間の短縮要望（90日→45日）を正式に受領。条件次第では解約を示唆。',
-        evidence: ['tr-h2'],
-      },
-      { text: 'confidence: 60% → 40%。回答期限は6/13（残り3日）。', evidence: ['tr-h2'] },
-      { text: '調達部門の不満は6/5時点から兆候があった。', evidence: ['tr-h1'] },
-    ],
-    recommendations: [
-      '60日前後の折衷案を軸に、6/13までの回答方針を営業チームで確定する。',
-      '通知期間短縮の契約リスク（最低ライン）について法務の見解を取る。',
-    ],
-    confidenceNote:
-      'この推定の確信度: 中。判断根拠: 解約示唆は先方メールの記述に基づくが、実際の解約意向の強さは痕跡からは確定できないため。',
     inputs: ['d-hokuto/2026-06-09', 'd-hokuto/2026-06-10', 'tr-h2', 'tr-h1'],
+    markdown: `## 何が変わったか（事実）
+- 6/9受領メールで解約通知期間の短縮要望（90日→45日）を正式に受領。条件次第では解約を示唆。 [tr:tr-h2]
+- confidence: 60% → 40%。回答期限は6/13（残り3日）。 [tr:tr-h2]
+- 調達部門の不満は6/5時点から兆候があった。 [tr:tr-h1]
+
+## 推奨アクション（解釈）
+- 60日前後の折衷案を軸に、6/13までの回答方針を営業チームで確定する。
+- 通知期間短縮の契約リスク（最低ライン）について法務の見解を取る。
+
+## 確信度と留保
+- この推定の確信度: 中。判断根拠: 解約示唆は先方メールの記述に基づくが、実際の解約意向の強さは痕跡からは確定できないため。`,
     relayDrafts: [
       {
         id: 'rd-h2-sales',
@@ -270,14 +253,16 @@ export const RUNTIME_ADVICE: Record<string, Omit<DealAdvice, 'generatedAt'>> = {
     kind: 'ヨミ変化',
     priority: '中',
     title: '湊精機が回答の前倒しを希望 — expected_close が実質前倒し',
-    facts: [
-      { text: '先方が保守契約更新の回答前倒しを希望しているとの連絡を取込。', evidence: ['tr-h3'] },
-      { text: '既存の回答期限は6/12。前倒し対応には本日中の社内稟議が必要になる。', evidence: ['tr-m1'] },
-    ],
-    recommendations: ['稟議の起票を本日中に前倒しし、明日中の一次回答を目指す。'],
-    confidenceNote:
-      'この推定の確信度: 中。判断根拠: 前倒し希望は電話の又聞き（Slack経由）であり、先方の正式な依頼文書はまだないため。',
     inputs: ['d-minato/2026-06-10', 'tr-h3', 'tr-m1'],
+    markdown: `## 何が変わったか（事実）
+- 先方が保守契約更新の回答前倒しを希望しているとの連絡を取込。 [tr:tr-h3]
+- 既存の回答期限は6/12。前倒し対応には本日中の社内稟議が必要になる。 [tr:tr-m1]
+
+## 推奨アクション（解釈）
+- 稟議の起票を本日中に前倒しし、明日中の一次回答を目指す。
+
+## 確信度と留保
+- この推定の確信度: 中。判断根拠: 前倒し希望は電話の又聞き（Slack経由）であり、先方の正式な依頼文書はまだないため。`,
     relayDrafts: [
       {
         id: 'rd-m2-acct',
@@ -302,39 +287,34 @@ export const RUNTIME_ADVICE: Record<string, Omit<DealAdvice, 'generatedAt'>> = {
 export const WEEKLY_REPORT: WeeklyReport = {
   weekOf: '2026-W24（6/8〜6/14・集計中）',
   generatedAt: '6/10 06:00',
-  inflow: [
-    { source: 'メール', count: 5, delta: '前週比 +1' },
-    { source: 'Slack', count: 7, delta: '前週比 ±0' },
-    { source: '議事録', count: 3, delta: '前週比 −1' },
-  ],
-  phaseDwell: [
-    { phase: '商談', count: 1, avgDays: 14, note: '14日以上の滞留が1件（資料送付の未対応が要因）' },
-    { phase: '提案', count: 0, avgDays: 0 },
-    { phase: '契約', count: 3, avgDays: 6 },
-  ],
-  notes: [
-    {
-      text: '商談フェーズの滞留1件は、送付物の準備工程がボトルネック。送付物のテンプレート整備で構造的に短縮できる可能性がある。',
-      evidence: ['tr-g2'],
-    },
-    {
-      text: '契約フェーズへの流入が増加（今週+1）。法務レビューの依頼が集中する見込みのため、依頼の早出しが有効。',
-      evidence: ['tr-b2'],
-    },
-  ],
+  markdown: `## 痕跡の流入
+- メール: 5件（前週比 +1）
+- Slack: 7件（前週比 ±0）
+- 議事録: 3件（前週比 −1）
+
+## フェーズ別の滞留
+- 商談: 1件・平均14日 — 14日以上の滞留が1件（資料送付の未対応が要因）
+- 提案: 0件
+- 契約: 3件・平均6日
+
+## 構造への所見（根拠つき）
+- 商談フェーズの滞留1件は、送付物の準備工程がボトルネック。送付物のテンプレート整備で構造的に短縮できる可能性がある。 [tr:tr-g2]
+- 契約フェーズへの流入が増加（今週+1）。法務レビューの依頼が集中する見込みのため、依頼の早出しが有効。 [tr:tr-b2]`,
 };
 
 /**
- * 根拠必須のバリデーション。「何が変わったか（事実）」に根拠リンクのない行が
- * あれば throw する（受け入れ基準: 推測の記述はバリデーションで弾かれる）。
+ * 根拠必須のバリデーション。「何が変わったか（事実）」セクションに根拠リンク
+ * [tr:xxx] のない行があれば throw する（受け入れ基準: 推測の記述はバリデーションで弾かれる）。
  * モジュール評価時に実行され、シードデータの整合性をビルド/起動時に保証する。
  */
-export function validateAdvice(list: { id: string; facts: FactLine[]; title: string }[]): void {
+export function validateAdvice(list: { id: string; markdown: string }[]): void {
   for (const advice of list) {
-    for (const fact of advice.facts) {
-      if (fact.evidence.length === 0) {
+    let inFacts = false;
+    for (const line of advice.markdown.split('\n')) {
+      if (line.startsWith('## ')) inFacts = line.includes('何が変わったか') || line.includes('所見');
+      if (inFacts && line.startsWith('- ') && !line.includes('[tr:')) {
         throw new Error(
-          `[advice validation] 根拠のない事実行は出力できません: ${advice.id}「${fact.text}」`,
+          `[advice validation] 根拠のない事実行は出力できません: ${advice.id}「${line.slice(2)}」`,
         );
       }
     }
@@ -343,27 +323,7 @@ export function validateAdvice(list: { id: string; facts: FactLine[]; title: str
 
 validateAdvice(SEED_ADVICE);
 validateAdvice(Object.values(RUNTIME_ADVICE));
-validateAdvice([{ id: 'weekly', title: '週次レポート', facts: WEEKLY_REPORT.notes }]);
-
-/**
- * 助言を Markdown（advice/{deal_id}/{date}.md 相当）に組み立てる。
- * Wikiと同じ思想で、③の表示は「Markdownをレンダリングするだけ」。
- * 事実行の根拠は [tr:xxx] 記法で行末に付け、表示層で痕跡チップに変換される。
- */
-export function adviceToMarkdown(advice: DealAdvice): string {
-  const facts = advice.facts
-    .map((f) => `- ${f.text}${f.evidence.map((e) => ` [tr:${e}]`).join('')}`)
-    .join('\n');
-  const recs = advice.recommendations.map((r) => `- ${r}`).join('\n');
-  return `## 何が変わったか（事実）
-${facts}
-
-## 推奨アクション（解釈）
-${recs}
-
-## 確信度と留保
-- ${advice.confidenceNote}`;
-}
+validateAdvice([{ id: 'weekly', markdown: WEEKLY_REPORT.markdown }]);
 
 export const ADVICE_KIND_META: Record<AdviceKind, { icon: string; cls: string }> = {
   契約フェーズ入り: { icon: '📑', cls: 'bg-accent-soft text-accent' },
