@@ -1,177 +1,82 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LEDGER_STATUSES, useStore } from '../store/StoreContext';
-import { WIKI_PAGES } from '../data/wiki';
+import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useStore } from '../store/StoreContext';
 import { Toaster } from './Toaster';
-
-/** ナビ件数バッジ。未読を示す赤バッジ（Slack 風）。選択中は反転。 */
-function NavBadge({ count, active }: { count: number; active: boolean }) {
-  return (
-    <span
-      className={`ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold tabular-nums ${
-        active ? 'bg-white/25 text-white' : 'bg-nav-badge text-white'
-      }`}
-    >
-      {count}
-    </span>
-  );
-}
-
-const navBase =
-  'relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors';
 
 interface NavItem {
   to: string;
-  end?: boolean;
-  icon: string;
   label: string;
-  /** バッジに出す件数（任意）。 */
+  /** 件数（素のテキスト「（3）」で出す）。 */
   count?: number;
 }
 
+/**
+ * Wikipedia 風の共通シェル。白いヘッダー＋左サイドバー（テキストリンクの列）。
+ * 商談Wikiが「記事」、受信箱・助言・設定は「特別ページ」。
+ * 装飾（色付きナビ・バッジ・下部タブ）は使わない（DESIGN.md §4 廃止リスト）。
+ */
 export function Shell() {
-  const { actions, inboxItems, decisions, digestViewed } = useStore();
-  const location = useLocation();
-  // 受信箱バッジ = 目視確認待ち（要確認）件数。確認済みは数えない。
+  const { inboxItems, allAdvice, adviceReadIds } = useStore();
   const reviewCount = inboxItems.filter((i) => i.status === '要確認').length;
-  const todayCount = actions.filter((a) => LEDGER_STATUSES.includes(a.status)).length;
-  // ナレッジバッジ = wiki アラート + 判断待ち（提案中）の意思決定。
-  const knowledgeCount =
-    WIKI_PAGES.reduce((sum, p) => sum + p.alerts.length, 0) +
-    decisions.filter((d) => d.status === '提案中').length;
+  const adviceCount = allAdvice.filter((a) => !adviceReadIds.has(a.id)).length;
 
-  // OODA を一周する構成: 今日（Act・ホーム）→ ダイジェスト（朝の Observe→Act 一覧）
-  // → ナレッジ（Orient: AIが維持する wiki）→ 受信箱（Observe 入口の目視ゲート）→ 設定。
+  // 逆V字を一周する並び: メインページ（Wiki・頂点）→ 受信箱（昇り）→ 助言（降り）→ 設定。
   const items: NavItem[] = [
-    { to: '/', end: true, icon: '📋', label: '今日', count: todayCount },
-    { to: '/digest', icon: '🌅', label: 'ダイジェスト', count: digestViewed ? undefined : 1 },
-    { to: '/wiki', icon: '📚', label: 'ナレッジ', count: knowledgeCount > 0 ? knowledgeCount : undefined },
-    { to: '/inbox', icon: '📬', label: '受信箱', count: reviewCount > 0 ? reviewCount : undefined },
-    { to: '/settings', icon: '⚙️', label: '設定' },
+    { to: '/wiki', label: 'メインページ' },
+    { to: '/inbox', label: '特別:受信箱', count: reviewCount },
+    { to: '/advice', label: '特別:助言', count: adviceCount },
+    { to: '/settings', label: '特別:設定' },
   ];
 
-  // 上部バーに「今どこにいるか」を出す（詳細画面は各一覧の下層として扱う）。
-  const currentLabel = location.pathname.startsWith('/action')
-    ? '詳細'
-    : location.pathname.startsWith('/projects') ||
-        location.pathname.startsWith('/meetings') ||
-        location.pathname.startsWith('/decisions')
-      ? 'ナレッジ'
-      : (items.find((it) => (it.end ? location.pathname === it.to : location.pathname.startsWith(it.to)))
-          ?.label ?? '今日');
+  const navLink = ({ isActive }: { isActive: boolean }) =>
+    isActive ? 'font-bold text-ink no-underline' : '';
+
+  const renderItem = (it: NavItem) => (
+    <NavLink key={it.to} to={it.to} className={navLink}>
+      {it.label}
+      {it.count !== undefined && it.count > 0 && <span className="text-ink"> ({it.count})</span>}
+    </NavLink>
+  );
 
   return (
-    <div className="flex h-screen flex-col">
-      {/* 上部バー（高さ56px）。Brand Blue のクロム（DESIGN.md §4 Navigation）。 */}
-      <header className="flex h-14 shrink-0 items-center gap-3 bg-nav-bar px-4 text-white sm:gap-4 sm:px-5">
-        <Link to="/" className="flex items-center gap-2 font-semibold hover:opacity-80">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true" className="shrink-0">
-            <rect width="28" height="28" rx="4" fill="var(--color-gold)"/>
-            <path d="M17 5 L8 17 L13 17 L10 23 L20 11 L15 11 Z" fill="var(--color-accent)"/>
-          </svg>
-          <span className="hidden sm:inline">Sales Hub</span>
+    <div className="flex min-h-full flex-col">
+      {/* ヘッダー（白地・下線のみ） */}
+      <header className="flex items-baseline gap-4 border-b border-line bg-page px-4 py-2 sm:px-6">
+        <Link to="/wiki" className="text-ink no-underline hover:no-underline">
+          <span className="font-serif text-xl">Sales Hub</span>
+          <span className="ml-2 text-xs text-ink-sub">営業Wiki — 誰も入力しない百科事典</span>
         </Link>
-        <span className="text-sm font-semibold text-white" aria-current="page">
-          {currentLabel}
-        </span>
-        <div className="ml-auto flex items-center gap-3">
-          {/* 検索はスペースの限られるモバイルでは省略 */}
-          <label className="hidden items-center gap-2 rounded-lg bg-white/15 px-3 py-1.5 text-sm text-white/80 focus-within:bg-white/25 sm:flex">
-            <span aria-hidden>🔍</span>
-            <input
-              type="search"
-              placeholder="検索"
-              aria-label="検索"
-              className="w-40 bg-transparent text-white outline-none placeholder:text-white/60"
-            />
-          </label>
-          <div className="flex items-center gap-2 text-sm">
-            <span aria-hidden>👤</span>
-            <span className="hidden sm:inline">山田 内勤</span>
-          </div>
+        <div className="ml-auto flex items-baseline gap-4">
+          <input
+            type="search"
+            placeholder="営業Wiki内を検索"
+            aria-label="検索"
+            className="hidden w-48 border border-line bg-page px-2 py-0.5 text-sm sm:block"
+          />
+          <span className="text-xs text-ink-sub">利用者:山田 内勤</span>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* 左ナビ（幅220px）。モバイルでは下部タブに置き換えるため非表示。 */}
-        <nav
-          className="hidden shrink-0 flex-col gap-1 overflow-y-auto bg-nav p-3 md:flex"
-          style={{ width: 220 }}
-        >
-          <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-nav-text/70">
-            メニュー
-          </p>
-          {items.map((it) => (
-            <NavLink
-              key={it.to}
-              to={it.to}
-              end={it.end}
-              className={({ isActive }) =>
-                `${navBase} ${
-                  isActive
-                    ? 'bg-nav-active font-semibold text-white shadow-sm'
-                    : 'text-nav-text hover:bg-nav-hover hover:text-white'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {/* 選択中は左端にインジケータ帯で「今ここ」を示す。 */}
-                  {isActive && (
-                    <span aria-hidden className="absolute inset-y-1 left-0 w-1 rounded-r bg-white" />
-                  )}
-                  <span aria-hidden>{it.icon}</span>
-                  {it.label}
-                  {it.count !== undefined && <NavBadge count={it.count} active={isActive} />}
-                </>
-              )}
-            </NavLink>
-          ))}
+      {/* モバイル: サイドバーの代わりの横並びリンク */}
+      <nav className="flex flex-wrap gap-x-4 gap-y-1 border-b border-line-light px-4 py-1.5 text-[13px] md:hidden" aria-label="メインナビゲーション">
+        {items.map(renderItem)}
+      </nav>
+
+      <div className="flex flex-1">
+        {/* 左サイドバー（テキストリンクの列） */}
+        <nav className="hidden w-44 shrink-0 flex-col gap-1 px-4 py-4 text-[13px] md:flex" aria-label="メインナビゲーション">
+          <p className="text-xs text-ink-sub">ナビゲーション</p>
+          {items.map(renderItem)}
+          <p className="mt-4 text-xs text-ink-sub">ヘルプ</p>
+          <span className="text-ink-sub">痕跡は昇り、助言は降りる</span>
         </nav>
 
-        {/* コンテンツ。モバイルは下部タブ分の余白を確保。 */}
-        <main className="flex-1 overflow-y-auto bg-page">
-          <div className="mx-auto max-w-4xl p-4 pb-24 sm:px-6 sm:pt-6 md:p-6">
+        {/* コンテンツ（記事領域。左罫で区切る） */}
+        <main className="min-w-0 flex-1 border-line bg-page md:border-l">
+          <div className="mx-auto max-w-[960px] px-4 py-4 sm:px-6">
             <Outlet />
           </div>
         </main>
       </div>
-
-      {/* 下部タブ（モバイル専用）。セーフエリアを考慮。 */}
-      <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
-        aria-label="メインナビゲーション"
-      >
-        {items.map((it) => (
-          <NavLink
-            key={it.to}
-            to={it.to}
-            end={it.end}
-            className={({ isActive }) =>
-              `relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
-                isActive ? 'text-accent' : 'text-ink-sub'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {/* 選択中は上端にインジケータ帯で「今ここ」を示す。 */}
-                {isActive && (
-                  <span aria-hidden className="absolute inset-x-5 top-0 h-0.5 rounded-b bg-accent" />
-                )}
-                <span className="relative text-lg leading-none" aria-hidden>
-                  {it.icon}
-                  {it.count !== undefined && it.count > 0 && (
-                    <span className="absolute -right-2.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-nav-badge px-1 text-[10px] font-semibold leading-tight text-white">
-                      {it.count}
-                    </span>
-                  )}
-                </span>
-                {it.label}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
 
       <Toaster />
     </div>
