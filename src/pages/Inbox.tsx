@@ -1,19 +1,16 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { InboxItem, InboxSource } from '../types';
 import { useStore } from '../store/StoreContext';
 import { SOURCE_META } from '../data/inbox';
 import { elapsedSince } from '../lib/time';
 
-const SWIPE_CANCEL_WIDTH = 96;
-const SWIPE_CANCEL_THRESHOLD = 60;
-
 type Filter = 'すべて' | InboxSource;
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'すべて', label: 'すべて' },
-  { value: 'slack', label: `${SOURCE_META.slack.icon} Slack` },
-  { value: 'mail', label: `${SOURCE_META.mail.icon} メール` },
+  { value: 'slack', label: 'Slack' },
+  { value: 'mail', label: 'メール' },
 ];
 
 function formatTime(iso: string): string {
@@ -21,165 +18,39 @@ function formatTime(iso: string): string {
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** 目視確認待ちカード。ロジックの警告（未マスクの疑い・案件不明）があれば前面に出す。 */
-function ReviewCard({ item, onArchive }: { item: InboxItem; onArchive: () => void }) {
+/** 査読待ちの1行。Wikipedia の「最近の更新」の行の引用（リンクと素のテキストのみ）。 */
+function ReviewRow({ item, onArchive }: { item: InboxItem; onArchive: () => void }) {
   const navigate = useNavigate();
   const meta = SOURCE_META[item.source];
   const { label: elapsed } = elapsedSince(item.receivedAt);
-  const hasWarning = (item.attention ?? []).length > 0;
-
-  const touchStartX = useRef(0);
-  const [swipeDx, setSwipeDx] = useState(0);
-  const [dragging, setDragging] = useState(false);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    setDragging(true);
-  };
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const dx = e.touches[0].clientX - touchStartX.current;
-    if (dx < 0) setSwipeDx(Math.max(dx, -SWIPE_CANCEL_WIDTH));
-  };
-  const handleTouchEnd = () => {
-    setDragging(false);
-    if (swipeDx <= -SWIPE_CANCEL_THRESHOLD) onArchive();
-    setSwipeDx(0);
-  };
-
-  const showArchiveLabel = swipeDx < -5;
-
+  const warnings = item.attention ?? [];
   return (
-    <div
-      className="group relative overflow-hidden rounded-lg"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Swipe-reveal: アーカイブ（モバイルのみ）。半透明カードに透けないようスワイプ中のみ描画 */}
-      <div className={`absolute inset-y-0 right-0 w-24 items-center justify-center rounded-r-lg bg-ink/70 md:hidden ${swipeDx < 0 ? 'flex' : 'hidden'}`}>
-        <span className={`text-xs font-semibold text-white transition-opacity duration-100 ${showArchiveLabel ? 'opacity-100' : 'opacity-0'}`}>
-          アーカイブ
-        </span>
-      </div>
-
-      <div
-        style={{
-          transform: `translateX(${swipeDx}px)`,
-          transition: dragging ? 'none' : 'transform 0.2s ease',
-        }}
-      >
-        <button
-          onClick={() => navigate(`/inbox/${item.id}`)}
-          className={`flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-all hover:brightness-95 ${
-            hasWarning ? 'border-warn/40 bg-warn/10' : 'border-line bg-white'
-          }`}
-          aria-label={`${meta.label} ${item.title} をレビューする`}
-        >
-          <span className={`grid size-9 shrink-0 place-items-center rounded-lg text-lg ${hasWarning ? 'bg-white' : 'bg-surface'}`} aria-hidden>
-            {meta.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-bold text-ink">
-              {item.title}
-              {item.memo && <span className="ml-1.5 text-sm font-normal text-ink-sub/60">📝</span>}
-            </p>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-ink-sub">
-              {item.source === 'mail' && <span>From: {item.sender}</span>}
-              {item.source === 'slack' && item.sender && <span>{item.sender}</span>}
-              {item.counterparty && (
-                <><span aria-hidden>·</span><span className="font-semibold text-ink">{item.counterparty}</span></>
-              )}
-            </p>
-            {(item.attention ?? []).map((r, i) => (
-              <p key={i} className="mt-1 flex items-start gap-1 text-xs font-medium text-warn">
-                <span aria-hidden className="shrink-0">⚠</span>
-                <span>{r}</span>
-              </p>
-            ))}
-            {!hasWarning && (
-              <p className="mt-1 flex items-center gap-1 text-xs text-good">
-                <span aria-hidden>✓</span>自動マスク済み — 目視確認してAIに渡せます
-              </p>
-            )}
-          </div>
-          <span className="w-16 shrink-0 self-start text-right tabular-nums text-xs text-ink-sub">
-            {elapsed}前
-          </span>
-        </button>
-      </div>
-
-      {/* Desktop: アーカイブ — 右上に hover 表示 */}
-      <button
-        onClick={onArchive}
-        className="absolute right-1.5 top-1.5 hidden size-5 items-center justify-center rounded-full text-xs text-ink-sub/40 opacity-0 transition-all group-hover:opacity-100 hover:bg-ink/10 hover:text-ink md:flex"
-        aria-label={`${item.title} をアーカイブ`}
-        title="アーカイブ（AIに渡さない）"
-      >
-        ×
-      </button>
-    </div>
-  );
-}
-
-/** 処理ログの1行。目視確認→AI解析→Wiki取込の結果を出す。 */
-function ProcessedRow({ item, actionButton }: { item: InboxItem; actionButton?: React.ReactNode }) {
-  const navigate = useNavigate();
-  const meta = SOURCE_META[item.source];
-  const note = item.analysisNote ?? 'Wiki更新なし';
-  const noUpdate = note.includes('Wiki更新な');
-  return (
-    <div className="group relative">
-      <button
-        onClick={() => navigate(`/inbox/${item.id}`)}
-        className="flex w-full items-center gap-2 rounded-lg border border-line bg-white px-4 py-2 text-left transition-all hover:bg-surface"
-        aria-label={`${meta.label} ${item.title} を開く`}
-      >
-        <span className="shrink-0 text-base" aria-hidden>{meta.icon}</span>
-        <span className="min-w-0 flex-1 truncate text-sm text-ink">
-          {item.title}
-          {item.memo && <span className="ml-1.5 text-ink-sub/60">📝</span>}
-        </span>
-        {item.counterparty && (
-          <span className="hidden shrink-0 text-xs font-semibold text-ink sm:inline">{item.counterparty}</span>
-        )}
-        {item.status === '処理済み' && (
-          <span className={`shrink-0 text-xs font-medium ${noUpdate ? 'text-ink-sub/70' : 'text-good'}`}>
-            {noUpdate ? `– ${note}` : `✔ ${note}`}
-          </span>
-        )}
-        <span className="w-20 shrink-0 text-right tabular-nums text-xs text-ink-sub">
-          {item.processedAt ? formatTime(item.processedAt) : ''}
-        </span>
-      </button>
-      {actionButton && (
-        <div className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-          {actionButton}
-        </div>
+    <li className="my-1.5">
+      （<a onClick={() => navigate(`/inbox/${item.id}`)}>査読</a> | <a onClick={onArchive}>アーカイブ</a>）
+      　{meta.label}　<a onClick={() => navigate(`/inbox/${item.id}`)} className="font-bold">{item.title}</a>
+      <span className="text-xs text-ink-sub">
+        　{item.sender && `${item.sender}　·　`}
+        {item.counterparty || '案件未確定'}　·　{elapsed}前
+      </span>
+      {warnings.map((r, i) => (
+        <div key={i} className="ambox ambox-warning my-1">⚠ {r}</div>
+      ))}
+      {warnings.length === 0 && (
+        <div className="text-xs text-ink-sub">自動マスク済み — 目視確認してAIに渡せます</div>
       )}
-    </div>
-  );
-}
-
-/** セクション見出し（小見出し＋件数）。 */
-function SectionHeader({ title, count }: { title: string; count: number }) {
-  return (
-    <div className="mb-2 mt-6 flex items-center gap-2 first:mt-0">
-      <h2 className="text-sm font-bold text-ink">{title}</h2>
-      <span className="text-xs font-semibold tabular-nums text-ink-sub">{count}</span>
-    </div>
+    </li>
   );
 }
 
 /**
- * 受信箱（②加工 / マスキング目視ゲート）。逆V字の「昇り」。
- * 機密情報がないことを保証できるのは人間のみ。すべてのアイテムは
- * 人が目視確認してからAIに渡り、痕跡として商談Wikiに取り込まれる。
+ * 特別:受信箱（/inbox）。Wikipedia の「最近の更新」＋巡回（パトロール）の拡張:
+ * 現場の痕跡（メール・Slack）が「記事への更新候補」としてここに並び、
+ * 巡回者（人間）が全件を査読（目視確認）してからAIが記事に反映する。
+ * 機密情報がないことを保証できるのは人間のみ。
  */
 export function Inbox() {
   const { inboxItems, archiveInboxItem, unarchiveInboxItem } = useStore();
   const [filter, setFilter] = useState<Filter>('すべて');
-  const [showProcessed, setShowProcessed] = useState(true);
-  const [showArchived, setShowArchived] = useState(false);
 
   const { reviewItems, processedItems, archivedItems } = useMemo(() => {
     const filtered = inboxItems.filter((i) => filter === 'すべて' || i.source === filter);
@@ -194,104 +65,78 @@ export function Inbox() {
     };
   }, [inboxItems, filter]);
 
+  const navigate = useNavigate();
+
   return (
     <div>
-      <h1 className="mb-3 text-xl font-semibold text-ink">受信箱</h1>
+      <h1 className="wiki-h1">特別:受信箱</h1>
+      <p className="text-[13px] text-ink-sub">
+        記事への更新候補（痕跡）の巡回ページです。<b>全件、人が査読（目視確認）してからAIに渡ります</b>
+        — 機密情報がないことを保証できるのは人間のみ。未確認のデータはAIに渡りません。
+      </p>
 
-      {/* 目視ゲートの原則。機密がないことを保証できるのは人だけ（自動マスクは補助） */}
-      <div className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-sub">
-        <span aria-hidden>🛡️</span>
-        <span className="font-medium text-ink">全件 目視確認制</span>
-        <span aria-hidden>·</span>
-        <span>未確認のデータはAIに渡りません</span>
-      </div>
-
-      <div className="mb-3 flex items-center gap-3 overflow-x-auto text-sm">
-        {FILTERS.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={`whitespace-nowrap transition-colors ${filter === f.value ? 'font-medium text-ink' : 'text-ink-sub hover:text-ink'}`}
-          >
-            {f.label}
-          </button>
+      <p className="mt-2 border-b border-line-light pb-1 text-[13px]">
+        表示:{' '}
+        {FILTERS.map((f, i) => (
+          <span key={f.value}>
+            {i > 0 && ' | '}
+            {filter === f.value ? <b>{f.label}</b> : <a onClick={() => setFilter(f.value)}>{f.label}</a>}
+          </span>
         ))}
-      </div>
+      </p>
 
-      {/* 目視確認待ち: 全件、人が確認してからAIに渡る */}
-      {reviewItems.length > 0 ? (
-        <section>
-          <SectionHeader title="目視確認待ち" count={reviewItems.length} />
-          <div className="flex flex-col gap-2">
-            {reviewItems.map((i) => (
-              <ReviewCard key={i.id} item={i} onArchive={() => archiveInboxItem(i.id)} />
-            ))}
-          </div>
-        </section>
+      <h2 className="wiki-h2">査読待ち（{reviewItems.length}）</h2>
+      {reviewItems.length === 0 ? (
+        <p className="text-[13px] text-ink-sub">査読待ちはありません。</p>
       ) : (
-        <p className="rounded-lg border border-line bg-surface px-4 py-5 text-center text-sm text-ink-sub">
-          目視確認待ちはありません
-        </p>
+        <ul className="list-none pl-0">
+          {reviewItems.map((i) => (
+            <ReviewRow key={i.id} item={i} onArchive={() => archiveInboxItem(i.id)} />
+          ))}
+        </ul>
       )}
 
-      {/* 処理ログ（ゲート通過→AI解析→Wiki取込の記録） */}
       {processedItems.length > 0 && (
-        <section>
-          <div className="mb-2 mt-6 flex items-center gap-2">
-            <button
-              onClick={() => setShowProcessed((v) => !v)}
-              aria-expanded={showProcessed}
-              className="flex items-center gap-2 text-sm font-bold tracking-wide text-ink"
-            >
-              <span aria-hidden className={`text-[10px] text-ink-sub transition-transform ${showProcessed ? 'rotate-90' : ''}`}>❯</span>
-              処理ログ
-              <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-sub">
-                {processedItems.length}
-              </span>
-            </button>
-          </div>
-          {showProcessed && (
-            <div className="flex flex-col gap-1">
+        <>
+          <h2 className="wiki-h2">処理記録（{processedItems.length}）</h2>
+          <table className="wikitable">
+            <thead>
+              <tr>
+                <th>日時</th>
+                <th>痕跡</th>
+                <th>記事</th>
+                <th>結果</th>
+              </tr>
+            </thead>
+            <tbody>
               {processedItems.map((i) => (
-                <ProcessedRow key={i.id} item={i} />
+                <tr key={i.id}>
+                  <td className="whitespace-nowrap tabular-nums">{i.processedAt ? formatTime(i.processedAt) : ''}</td>
+                  <td>
+                    {SOURCE_META[i.source].label}　<a onClick={() => navigate(`/inbox/${i.id}`)}>{i.title}</a>
+                  </td>
+                  <td className="whitespace-nowrap">{i.counterparty || '—'}</td>
+                  <td>{i.analysisNote ?? 'Wiki更新なし'}</td>
+                </tr>
               ))}
-            </div>
-          )}
-        </section>
+            </tbody>
+          </table>
+        </>
       )}
 
-      {/* アーカイブ済み */}
       {archivedItems.length > 0 && (
-        <div className="mt-4">
-          <button
-            onClick={() => setShowArchived((v) => !v)}
-            className="flex w-full items-center gap-2 text-xs text-ink-sub/60 transition-colors hover:text-ink-sub"
-            aria-expanded={showArchived}
-          >
-            <span aria-hidden className={`text-[10px] transition-transform ${showArchived ? 'rotate-90' : ''}`}>❯</span>
-            アーカイブ {archivedItems.length}件
-          </button>
-          {showArchived && (
-            <div className="mt-2 flex flex-col gap-1">
-              {archivedItems.map((i) => (
-                <ProcessedRow
-                  key={i.id}
-                  item={i}
-                  actionButton={
-                    <button
-                      onClick={() => unarchiveInboxItem(i.id)}
-                      className="flex size-5 items-center justify-center rounded-full bg-surface text-xs text-ink-sub/60 hover:bg-white hover:text-ink"
-                      aria-label={`${i.title} を要確認に戻す`}
-                      title="要確認に戻す"
-                    >
-                      ↩
-                    </button>
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <>
+          <h2 className="wiki-h2">アーカイブ（{archivedItems.length}）</h2>
+          <ul className="list-none pl-0 text-[13px]">
+            {archivedItems.map((i) => (
+              <li key={i.id} className="my-1">
+                （<a onClick={() => unarchiveInboxItem(i.id)}>査読待ちに戻す</a>）
+                <a onClick={() => navigate(`/inbox/${i.id}`)}>{i.title}</a>
+                <span className="text-xs text-ink-sub">　AIに渡していません</span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

@@ -59,7 +59,8 @@ npm run preview    # ビルド結果の確認
 - Vite + React + TypeScript + Tailwind CSS v4
 - React Router の **HashRouter**（GitHub Pages のサブパス直リンク404対策）
 - 状態管理は React の `useState` / Context のみ。外部状態管理ライブラリは使わない
-- UIコンポーネントライブラリは不使用（`DESIGN.md` に従い自作）
+- UIコンポーネントライブラリは不使用。**Wikipedia / MediaWiki Vector 風**（`DESIGN.md`）。
+  専用コンポーネントは作らず、リンク・wikitable・infobox・ambox・素の button で構成する
 
 ## アーキテクチャ
 
@@ -77,28 +78,26 @@ src/
   lib/snapshot.ts        # 当日スナップショットへの実行時パッチ適用（取込の追記・ヨミ変化）
   store/StoreContext.tsx # 全状態と状態遷移（取込→Wiki更新→助言生成、伝達コピー→relayログ）
   components/
-    Shell.tsx            # 左ナビ＋上部バー＋トースト層（共通シェル。ナビ4項目）
-    MarkdownView.tsx     # 極小Markdownレンダラ（[tr:xxx]→痕跡チップ、マスクトークン→復元チップ）
-    WikiParts.tsx        # 共通部品（SourceChip / TraceChip / UpdateTimeline / Field）
-    Button.tsx           # 主/副/危険/警告/リンク のボタン
-    ConfirmDialog.tsx    # 確認ダイアログ
-    Toaster.tsx          # トースト（右下・2.5秒。助言生成時は「助言を見る」リンク）
+    Shell.tsx            # 白ヘッダー＋左サイドバー（テキストリンク）。Wikipedia風の共通シェル
+    MarkdownView.tsx     # 極小Markdownレンダラ（[tr:xxx]→脚注[1]、References=出典節、マスク復元）
+    WikiParts.tsx        # 共通部品（SourceLink / TraceLink / UpdateTimeline=履歴wikitable）
+    Toaster.tsx          # 操作結果の通知（装飾・アニメーションなしの素朴な枠）
   pages/
-    Inbox.tsx            # 受信箱（/inbox。②加工: 目視確認待ち＋処理ログ）
-    InboxDetail.tsx      # 原文詳細（目視確認: マスク補正→案件選択→確認してAIに渡す）
-    WikiList.tsx         # 商談Wiki一覧（/wiki。4案件のヨミ＋前日比インジケータ）
-    DealWiki.tsx         # 商談Wikiページ（/wiki/:dealId。日付タブ・前日比diff・Markdown・更新履歴）
-    Advice.tsx           # 助言（/advice。?tab=daily|weekly。当日助言＋週次ヘルスレポート）
-    AdviceDetail.tsx     # 助言詳細（/advice/:id。frontmatter＋Markdownレンダリング＋④チャット・伝達・伝達ログ）
-    Settings.tsx         # 設定（ブランクのプレースホルダ）
+    Inbox.tsx            # 特別:受信箱（/inbox。「最近の更新＋巡回」の拡張。査読待ち＋処理記録）
+    InboxDetail.tsx      # 痕跡の査読ページ（マスク補正→記事選択→確認してAIに渡す。確認は window.confirm）
+    WikiList.tsx         # メインページ（/wiki。商談記事の一覧 wikitable）
+    DealWiki.tsx         # 商談記事（/wiki/:dealId。タブ=本文|前日比|履歴、版切替、infobox、脚注）
+    Advice.tsx           # 特別:助言（/advice。ウォッチリストの拡張。未読=太字。?tab=daily|weekly）
+    AdviceDetail.tsx     # 助言記事（/advice/:id。infobox＋Markdown＋出典節＋ノート対話＋伝達）
+    Settings.tsx         # 特別:設定（ブランクのプレースホルダ）
 ```
 
-### ナビゲーション（4項目・逆V字順）
+### ナビゲーション（4項目・Wikipedia風の命名）
 
-1. **受信箱** `/inbox` — ②加工のマスキング目視ゲート（全件人が確認）。バッジ=目視確認待ち件数
-2. **Wiki** `/wiki` — 商談Wiki（頂点）。読み取り専用レンダリング。バッジなし
-3. **助言** `/advice` — ③④の降り。バッジ=未読助言件数（詳細を開くと既読）
-4. **設定** — ブランクのプレースホルダ（モックでは中身なし）
+1. **メインページ** `/wiki` — 商談Wiki（頂点・記事一覧）。読み取り専用レンダリング
+2. **特別:受信箱** `/inbox` — 「最近の更新＋巡回」の拡張。全件人が査読（目視確認）。件数=（n）の素のテキスト
+3. **特別:助言** `/advice` — ウォッチリストの拡張（差分からの変更通知と提案）。未読は太字
+4. **特別:設定** — ブランクのプレースホルダ（モックでは中身なし）
 
 旧URL（`/digest` `/projects/*` `/action/*` 等）は catch-all で `/inbox` へ。
 
@@ -125,10 +124,10 @@ src/
 ## 実装上の約束
 
 - **金額は伏せ字にしない**（ヨミの amount・本文内の数字はそのまま表示）。マスク種別は `氏名` / `会社` / `連絡先` / `契約番号` の4種
-- 経過バッジの色: 24h未満=緑(good) / 24h以上72h未満=黄(warn) / 72h以上=赤(danger)。境界は上位区分に含める
-- 助言の優先度: 高=gold / 中=accent-soft / 低=surface。契約フェーズ入りが最優先
-- アニメーションはトースト150ms / パネル150-200ms のみ。`prefers-reduced-motion` で無効化
-- デザイントークンは `src/index.css` の `@theme` に定義
+- 根拠は脚注 `[1]`（上付き）→ ページ末尾の「出典」節（`References`）で解決する
+- 状態・件数は文字で表す（未読=太字、件数=（3））。ピル・バッジ・チップ・カード・影・トースト演出・モーダルは作らない
+- 助言の優先度: 契約フェーズ入りが最優先（並びで表現。色は使わない）
+- デザイントークンは `src/index.css` の `@theme` に定義（wikitable / infobox / ambox / btn もここ）
 - **デザイン仕様は `DESIGN.md` を参照すること。** UIに関する判断はすべて `DESIGN.md` のトークンに従う
 - 仕様にない判断が必要なら、勝手に決めず確認する
 

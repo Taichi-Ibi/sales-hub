@@ -1,37 +1,29 @@
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/StoreContext';
 
-/** トースト（§10）。右下に2.5秒表示。 */
+/** 操作結果の通知。装飾・アニメーションなしの素朴な枠（DESIGN.md §4）。 */
 export function Toaster() {
   const { toasts, dismissToast } = useStore();
   const navigate = useNavigate();
+  if (toasts.length === 0) return null;
   return (
-    <div
-      className="pointer-events-none fixed inset-x-4 bottom-20 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-6 sm:items-end md:bottom-6"
-      role="status"
-      aria-live="polite"
-    >
+    <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-1" role="status" aria-live="polite">
       {toasts.map((t) => (
-        <div
-          key={t.id}
-          className="pointer-events-auto flex max-w-xs items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white shadow-lg sm:max-w-sm"
-          style={{ animation: 'toast-in 150ms ease-out' }}
-        >
-          <span className="min-w-0 flex-1">{t.message}</span>
+        <div key={t.id} className="border border-line bg-surface px-3 py-1.5 text-[13px]">
+          {t.message}
           {t.adviceId && (
-            <button
+            <a
+              className="ml-2"
               onClick={() => {
                 dismissToast(t.id);
                 navigate(`/advice/${t.adviceId}`);
               }}
-              className="shrink-0 whitespace-nowrap text-xs font-normal text-white/70 underline hover:text-white"
             >
-              助言を見る →
-            </button>
+              助言を見る
+            </a>
           )}
         </div>
       ))}
-      <style>{`@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
     </div>
   );
 }

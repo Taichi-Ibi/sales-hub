@@ -1,51 +1,29 @@
 @import 'tailwindcss';
 
 /*
- * デザイントークンの単一の出典（DESIGN.md §9）。
- * 内勤担当が毎日・大量に・速く捌く業務ツール。走査性と落ち着きを優先。
- *
- * 色は下記8系統だけを使う。コンポーネントで生 hex や Tailwind 既定色
- * （amber/green/blue/purple…）を直接書かない。濃淡が要るときは
- * トークンの不透明度修飾（例: bg-warn/10, border-good/30）で表す。
- *   ニュートラル: page / surface / line / ink / ink-sub
- *   ブランド    : accent（青）/ accent-soft（淡い青）/ gold（金）
- *   セマンティック: good（緑・成功/進行中）/ warn（橙・注意/待ち）/ danger（赤・危険/緊急）
+ * デザイントークンの単一の出典（DESIGN.md §9）。Wikipedia / MediaWiki Vector 風。
+ * コンテンツ（本文と出典）が主役。装飾コンポーネントは作らない。
+ *   ニュートラル: page / surface / line / line-light / ink / ink-sub
+ *   リンク      : accent（リンク青。装飾には使わない）
+ *   セマンティック: good / warn / danger（意味のある場所のみ）
  */
 @theme {
-  /* ベース（DESIGN.md §2 Neutral） */
   --color-page: #ffffff; /* Page Background */
-  --color-surface: #f9f9f9; /* Background Secondary（カード地） */
-  --color-line: #dfdfdf; /* Border */
-  --color-ink: #333333; /* Text Primary */
-  --color-ink-sub: #6b7280; /* 補助文字 */
+  --color-surface: #f8f9fa; /* infobox・特別ページ枠・コード背景 */
+  --color-line: #a2a9b1; /* Border（infobox・表・ボタン） */
+  --color-line-light: #eaecf0; /* 区切り罫・見出し下線 */
+  --color-ink: #202122; /* Text Primary */
+  --color-ink-sub: #54595d; /* 補助文字 */
 
-  /* Primary / Accent（DESIGN.md §2 Primary） */
-  --color-accent: #074194; /* Brand Blue: 主アクション・ナビ・見出し・情報 */
-  --color-gold: #ffd742; /* Attention Gold: 優先タグ・高リスクバッジ限定 */
-  --color-accent-soft: #edf4fc; /* Light Blue: 背景アクセント */
+  --color-accent: #3366cc; /* Link Blue: リンク・操作の文字色 */
 
-  /* Semantic（意味で使い分ける3色。装飾目的では使わない） */
-  --color-danger: #cc111a; /* Important Red: 危険/緊急/棄却 */
-  --color-warn: #b45309; /* 注意/警告/FS承認待ち/経過24-72h（淡背景上で可読な濃いめの橙） */
-  --color-good: #059669; /* 成功/進行中/完了済み/経過24h未満 */
-
-  /*
-   * ナビ用パレット（DESIGN.md §4 Navigation）。
-   * Brand Blue ベタ塗りのクロム（左ナビ・上部バー）、白文字。
-   * 選択中はわずかに明るい青で「今ここ」を示す。未読件数は Important Red。
-   */
-  --color-nav: #074194; /* 左ナビ地（Brand Blue） */
-  --color-nav-bar: #074194; /* 上部バー地（同色） */
-  --color-nav-hover: #0a4fa8; /* ホバー（わずかに明るく） */
-  --color-nav-active: #0a4fa8; /* 選択中 */
-  --color-nav-text: #ffffff; /* 通常文字（白） */
-  --color-nav-badge: #cc111a; /* 未読件数バッジ（Important Red） */
+  --color-danger: #d33; /* 破壊的操作・エラー */
+  --color-warn: #ac6600; /* 注意喚起（ambox） */
+  --color-good: #14866d; /* 完了・成功 */
 
   --font-sans:
-    'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-
-  --radius: 8px; /* カード角丸（DESIGN.md §4 Cards） */
-  --radius-button: 4px; /* ボタン・入力角丸（DESIGN.md §4 Buttons） */
+    'Helvetica Neue', 'Noto Sans JP', system-ui, -apple-system, Arial, sans-serif;
+  --font-serif: 'Linux Libertine', Georgia, 'Times New Roman', 'Noto Serif JP', serif;
 }
 
 html,
@@ -57,19 +35,152 @@ body,
 body {
   margin: 0;
   font-family: var(--font-sans);
+  font-size: 14px;
   color: var(--color-ink);
   background: var(--color-page);
-  line-height: 1.75;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-/* フォーカスリングを常に視認できるように（受け入れ基準: キーボード操作） */
+/* 記事タイトル・節見出し（serif＋下線。Wikipedia の引用） */
+.wiki-h1 {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.3;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: 2px;
+  margin: 0 0 12px;
+}
+.wiki-h2 {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.3;
+  border-bottom: 1px solid var(--color-line-light);
+  padding-bottom: 2px;
+  margin: 24px 0 8px;
+}
+
+/* リンク（操作も原則テキストリンクで表す） */
+.wiki-link,
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+.wiki-link:hover,
+a:hover {
+  text-decoration: underline;
+}
+
+/* ボタン（リンクで表せないフォーム送信等のみ） */
+.btn {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.btn:hover {
+  background: #ffffff;
+}
+.btn:disabled {
+  color: var(--color-ink-sub);
+  cursor: not-allowed;
+}
+.btn-primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #ffffff;
+}
+.btn-primary:hover {
+  background: #2a4b8d;
+}
+.btn-primary:disabled {
+  border-color: var(--color-line);
+  background: var(--color-surface);
+}
+
+/* wikitable（履歴・伝達記録・前日比・一覧） */
+.wikitable {
+  border-collapse: collapse;
+  border: 1px solid var(--color-line);
+  font-size: 13px;
+  width: 100%;
+}
+.wikitable th,
+.wikitable td {
+  border: 1px solid var(--color-line);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.wikitable th {
+  background: var(--color-line-light);
+  font-weight: 700;
+}
+
+/* infobox（記事右上の概要表） */
+.infobox {
+  float: right;
+  clear: right;
+  width: 256px;
+  margin: 0 0 16px 16px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.infobox caption {
+  font-weight: 700;
+  padding: 6px 8px 2px;
+  text-align: center;
+}
+.infobox th,
+.infobox td {
+  padding: 3px 8px;
+  vertical-align: top;
+  text-align: left;
+}
+.infobox th {
+  width: 88px;
+  color: var(--color-ink-sub);
+  font-weight: 400;
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .infobox {
+    float: none;
+    width: 100%;
+    margin: 0 0 16px;
+  }
+}
+
+/* ambox（告知ボックス。警告/情報/成功） */
+.ambox {
+  border: 1px solid var(--color-line-light);
+  border-left: 4px solid var(--color-accent);
+  background: var(--color-surface);
+  padding: 6px 12px;
+  font-size: 13px;
+  margin: 8px 0;
+}
+.ambox-warning {
+  border-left-color: var(--color-warn);
+}
+.ambox-success {
+  border-left-color: var(--color-good);
+}
+
+/* フォーカスリングを常に視認できるように（キーボード操作） */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-/* prefers-reduced-motion: スライド等を無効化（§10） */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
